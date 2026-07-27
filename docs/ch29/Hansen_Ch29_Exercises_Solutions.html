@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="zh-CN" xml:lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <meta name="author" content="按 Hansen 计量经济学体系整理" />
+  <meta name="dcterms.date" content="2026-07-28" />
+  <title>Bruce Hansen《Econometrics》第 29 章习题解答</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="none" />
+  
+  <style>
+    :root {
+      --text: #1a1a1a;
+      --muted: #555;
+      --border: #e5e7eb;
+      --bg: #ffffff;
+      --code-bg: #f6f8fa;
+      --callout-note: #0ea5e9;
+      --callout-tip: #10b981;
+      --callout-important: #f59e0b;
+      --callout-warning: #ef4444;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: "Noto Sans CJK SC", "Source Han Sans SC", "PingFang SC",
+                   "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.7;
+      color: var(--text);
+      background: var(--bg);
+      max-width: 52rem;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 4rem;
+    }
+    h1, h2, h3, h4 {
+      line-height: 1.3;
+      font-weight: 650;
+      margin-top: 1.8em;
+    }
+    h1.title { margin-top: 0; font-size: 1.85rem; }
+    p.subtitle { color: var(--muted); margin-top: -0.5rem; font-size: 1.05rem; }
+    p.author, p.date { color: var(--muted); margin: 0.15rem 0; }
+    #TOC {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      margin: 1.5rem 0 2rem;
+    }
+    #TOC ul { padding-left: 1.2rem; }
+    #TOC a { text-decoration: none; color: #0f172a; }
+    #TOC a:hover { color: #0369a1; text-decoration: underline; }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 1rem 0 1.5rem;
+      font-size: 0.95rem;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 0.5rem 0.7rem;
+      text-align: left;
+    }
+    th { background: #f1f5f9; }
+    tr:nth-child(even) td { background: #fafafa; }
+    code {
+      background: var(--code-bg);
+      padding: 0.1em 0.35em;
+      border-radius: 4px;
+      font-size: 0.92em;
+    }
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      overflow-x: auto;
+    }
+    pre code { background: transparent; padding: 0; }
+    blockquote {
+      border-left: 4px solid #94a3b8;
+      margin: 1rem 0;
+      padding: 0.25rem 1rem;
+      color: var(--muted);
+    }
+    .callout {
+      border: 1px solid var(--border);
+      border-left-width: 5px;
+      border-radius: 8px;
+      padding: 0.75rem 1rem 0.9rem;
+      margin: 1.25rem 0;
+      background: #fafafa;
+    }
+    .callout > :first-child { margin-top: 0; }
+    .callout > :last-child { margin-bottom: 0; }
+    .callout-note { border-left-color: var(--callout-note); background: #f0f9ff; }
+    .callout-tip { border-left-color: var(--callout-tip); background: #ecfdf5; }
+    .callout-important { border-left-color: var(--callout-important); background: #fffbeb; }
+    .callout-warning { border-left-color: var(--callout-warning); background: #fef2f2; }
+    .math.display, mjx-container[display="true"] {
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 0.25rem 0;
+    }
+    hr { border: 0; border-top: 1px solid var(--border); margin: 2rem 0; }
+    a { color: #0369a1; }
+    @media print {
+      body { max-width: none; padding: 0; }
+      #TOC { break-after: page; }
+      .callout { break-inside: avoid; }
+    }
+  </style>
+
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)'], ['$', '$']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    processEscapes: true,
+    processEnvironments: true,
+    tags: 'ams',
+    packages: {'[+]': ['ams', 'noerrors', 'noundefined', 'boldsymbol']}
+  },
+  options: {
+    skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+    ignoreHtmlClass: 'tex2jax_ignore|no-mathjax',
+    processHtmlClass: 'tex2jax_process'
+  },
+  chtml: {
+    scale: 1.05,
+    displayAlign: 'center',
+    matchFontHeight: true
+  },
+  startup: {
+    pageReady: () => MathJax.startup.defaultPageReady().then(() => {
+      document.documentElement.classList.add('mathjax-ready');
+    })
+  }
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js"></script>
+<script>
+// Fallback CDN if jsdelivr fails
+window.addEventListener('error', function (e) {
+  const t = e && e.target;
+  if (t && t.src && t.src.indexOf('mathjax') !== -1 && t.src.indexOf('jsdelivr') !== -1) {
+    const s = document.createElement('script');
+    s.defer = true;
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-chtml-full.min.js';
+    document.head.appendChild(s);
+  }
+}, true);
+</script>
+
+</head>
+<body class="tex2jax_process">
+<header id="title-block-header">
+<h1 class="title">Bruce Hansen《Econometrics》第 29 章习题解答</h1>
+<p class="subtitle">Chapter 29 Machine Learning — Exercises
+29.1–29.10</p>
+<p class="author">按 Hansen 计量经济学体系整理</p>
+<p class="date">2026-07-28</p>
+</header>
+<nav id="TOC" role="doc-toc">
+<ul>
+<li><a href="#说明" id="toc-说明">说明</a></li>
+<li><a href="#sec-notation" id="toc-sec-notation">预备记号</a></li>
+<li><a href="#sec-ex291" id="toc-sec-ex291">Exercise 29.1　证明 Theorem
+29.1</a>
+<ul>
+<li><a href="#theorem-29.1" id="toc-theorem-29.1">Theorem 29.1</a></li>
+<li><a href="#证明" id="toc-证明">证明</a>
+<ul>
+<li><a href="#注记" id="toc-注记">注记</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#sec-ex292" id="toc-sec-ex292">Exercise 29.2　证明 (29.7)
+是岭回归的 Mallows 准则</a>
+<ul>
+<li><a href="#证明-1" id="toc-证明-1">证明</a>
+<ul>
+<li><a href="#解释hansen-观点" id="toc-解释hansen-观点">解释（Hansen
+观点）</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#sec-ex293" id="toc-sec-ex293">Exercise
+29.3　推导岭估计的条件偏误与方差</a>
+<ul>
+<li><a href="#a-偏误" id="toc-a-偏误">(a) 偏误</a></li>
+<li><a href="#b-方差" id="toc-b-方差">(b) 方差</a>
+<ul>
+<li><a href="#补充" id="toc-补充">补充</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#sec-ex294" id="toc-sec-ex294">Exercise 29.4　岭回归 =
+增广数据上的 OLS</a>
+<ul>
+<li><a href="#构造" id="toc-构造">构造</a></li>
+<li><a href="#证明-2" id="toc-证明-2">证明</a></li>
+</ul></li>
+<li><a href="#sec-ex295" id="toc-sec-ex295">Exercise 29.5　谁的回归
+<span class="math inline">\(R^2\)</span> 更大：OLS 还是 Ridge？</a>
+<ul>
+<li><a href="#答案" id="toc-答案">答案</a></li>
+<li><a href="#证明-3" id="toc-证明-3">证明</a>
+<ul>
+<li><a href="#直观" id="toc-直观">直观</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#sec-ex296" id="toc-sec-ex296">Exercise
+29.6　岭回归与重复回归元</a>
+<ul>
+<li><a href="#答案-1" id="toc-答案-1">答案</a></li>
+<li><a href="#重复回归元设定" id="toc-重复回归元设定">重复回归元设定</a>
+<ul>
+<li><a href="#含义" id="toc-含义">含义</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#sec-ex297" id="toc-sec-ex297">Exercise 29.7　Lasso
+在重复回归元下的性质</a>
+<ul>
+<li><a href="#i-单个-hatbeta_1hatbeta_2-不可识别"
+id="toc-i-单个-hatbeta_1hatbeta_2-不可识别">(i) 单个 <span
+class="math inline">\(\hat\beta_1,\hat\beta_2\)</span> 不可识别</a></li>
+<li><a href="#ii-其和等于对-x-的-lasso"
+id="toc-ii-其和等于对-x-的-lasso">(ii) 其和等于对 <span
+class="math inline">\(X\)</span> 的 Lasso</a>
+<ul>
+<li><a href="#与岭的对比" id="toc-与岭的对比">与岭的对比</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#sec-ex298" id="toc-sec-ex298">Exercise 29.8　回归树中加入
+<span class="math inline">\(X^2\)</span> 是否有意义？</a>
+<ul>
+<li><a href="#答案-2" id="toc-答案-2">答案</a></li>
+<li><a href="#理由hansen-cart-框架"
+id="toc-理由hansen-cart-框架">理由（Hansen CART 框架）</a>
+<ul>
+<li><a href="#何时二次项有用"
+id="toc-何时二次项有用">何时二次项有用？</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#sec-ex299" id="toc-sec-ex299">Exercise
+29.9　cps09mar：亚裔女性样本 Lasso</a>
+<ul>
+<li><a href="#数据与设定hansen-惯例"
+id="toc-数据与设定hansen-惯例">数据与设定（Hansen 惯例）</a>
+<ul>
+<li><a href="#说明-1" id="toc-说明-1">说明</a></li>
+</ul></li>
+<li><a href="#估计结果" id="toc-估计结果">估计结果</a></li>
+<li><a href="#解读hansen-ml-视角"
+id="toc-解读hansen-ml-视角">解读（Hansen ML 视角）</a></li>
+</ul></li>
+<li><a href="#sec-ex2910" id="toc-sec-ex2910">Exercise
+29.10　cps09mar：西班牙裔男性样本 Lasso</a>
+<ul>
+<li><a href="#估计结果-1" id="toc-估计结果-1">估计结果</a></li>
+<li><a href="#与-exercise-29.9-对比" id="toc-与-exercise-29.9-对比">与
+Exercise 29.9 对比</a></li>
+</ul></li>
+<li><a href="#sec-summary" id="toc-sec-summary">小结</a></li>
+<li><a href="#sec-appendix" id="toc-sec-appendix">计算附录：复现
+29.9–29.10</a>
+<ul>
+<li><a href="#软件说明" id="toc-软件说明">软件说明</a></li>
+<li><a href="#渲染命令" id="toc-渲染命令">渲染命令</a></li>
+</ul></li>
+</ul>
+</nav>
+<section id="说明" class="callout callout-note">
+<h3>说明</h3>
+<ul>
+<li><strong>章节：</strong> Chapter 29 Machine Learning<br />
+</li>
+<li><strong>习题：</strong> Exercises 29.1–29.10（教材 PDF
+最后一页）<br />
+</li>
+<li><strong>体系：</strong> 记号与推导均按 Hansen
+教材（惩罚估计、Mallows <span
+class="math inline">\(C_p\)</span>、leave-one-out、投影模型等）</li>
+</ul>
+</section>
+<h1 id="sec-notation">预备记号</h1>
+<p>线性模型（样本矩阵形式）</p>
+<p><span class="math display">\[
+Y = X\beta + e,\qquad X\in\mathbb{R}^{n\times p},\quad
+\beta\in\mathbb{R}^p.
+\]</span></p>
+<p>岭回归（允许对角惩罚矩阵 <span
+class="math inline">\(\Lambda\)</span>）</p>
+<p><span class="math display">\[
+\hat\beta_{\mathrm{ridge}}(\Lambda) =
+(X&#39;X+\Lambda)^{-1}X&#39;Y,\label{eq-ridge}
+\]</span></p>
+<p>残差 <span class="math inline">\(\hat
+e(\Lambda)=Y-X\hat\beta_{\mathrm{ridge}}(\Lambda)\)</span>，拟合矩阵（hat
+matrix）</p>
+<p><span class="math display">\[
+A(\Lambda)=X(X&#39;X+\Lambda)^{-1}X&#39;,\qquad \hat m =
+A(\Lambda)Y.\label{eq-hat}
+\]</span></p>
+<p>Lasso 目标</p>
+<p><span class="math display">\[
+\mathrm{SSE}_1(\beta,\lambda)=\|Y-X\beta\|_2^2+\lambda\|\beta\|_1.\label{eq-lasso-obj}
+\]</span></p>
+<p>回归 <span class="math inline">\(R^2\)</span> 定义为</p>
+<p><span class="math display">\[
+R^2 = 1-\frac{\|Y-X\hat\beta\|_2^2}{\|Y-\bar
+Y\cdot\mathbf{1}\|_2^2}.\label{eq-rsq}
+\]</span></p>
+<h1 id="sec-ex291">Exercise 29.1　证明 Theorem 29.1</h1>
+<section id="theorem-29.1" class="callout callout-tip">
+<h3>Theorem 29.1</h3>
+<p>岭回归 leave-one-out 预测误差满足</p>
+<p><span class="math display">\[
+\tilde
+e_i(\lambda)=\bigl(1-X_i&#39;(X&#39;X+\Lambda)^{-1}X_i\bigr)^{-1}\hat
+e_i(\lambda),\label{eq-29-6}
+\]</span></p>
+<p>其中 <span class="math inline">\(\hat
+e_i(\lambda)=Y_i-X_i&#39;\hat\beta_{\mathrm{ridge}}(\lambda)\)</span>
+为岭残差。</p>
+<p><strong>提示：</strong> 证明与 Theorem 3.7（OLS
+leave-one-out）同构。</p>
+</section>
+<h2 id="证明">证明</h2>
+<p>记 <span class="math inline">\(A:=X&#39;X+\Lambda\)</span>（<span
+class="math inline">\(\Lambda\)</span> 对称半正定且 <span
+class="math inline">\(A\)</span> 可逆；岭回归中 <span
+class="math inline">\(\Lambda=\lambda I_p\)</span>
+或对角惩罚矩阵）。全样本岭估计为</p>
+<p><span class="math display">\[
+\hat\beta=A^{-1}X&#39;Y.
+\]</span></p>
+<p>删去第 <span class="math inline">\(i\)</span> 个观测后</p>
+<p><span class="math display">\[
+\hat\beta_{(-i)}=(A-X_iX_i&#39;)^{-1}(X&#39;Y-X_iY_i).\label{eq-loo-beta}
+\]</span></p>
+<p>用 <span class="math inline">\(A^{-1}(A-X_iX_i&#39;)\)</span> 左乘
+式 loo-beta 的两侧：</p>
+<p><span class="math display">\[\begin{align*}
+A^{-1}(A-X_iX_i&#39;)\hat\beta_{(-i)}
+&amp;=A^{-1}(X&#39;Y-X_iY_i)\\
+\hat\beta_{(-i)}-A^{-1}X_iX_i&#39;\hat\beta_{(-i)}
+&amp;=\hat\beta-A^{-1}X_iY_i.
+\end{align*}\]</span></p>
+<p>整理得</p>
+<p><span class="math display">\[
+\hat\beta_{(-i)}=\hat\beta-A^{-1}X_i\bigl(Y_i-X_i&#39;\hat\beta_{(-i)}\bigr)
+=\hat\beta-A^{-1}X_i\tilde e_i,
+\]</span></p>
+<p>其中 leave-one-out 预测误差 <span class="math inline">\(\tilde
+e_i:=Y_i-X_i&#39;\hat\beta_{(-i)}\)</span>。</p>
+<p>再左乘 <span class="math inline">\(X_i&#39;\)</span>：</p>
+<p><span class="math display">\[
+X_i&#39;\hat\beta_{(-i)}=X_i&#39;\hat\beta-h_{ii}\tilde e_i,
+\qquad
+h_{ii}:=X_i&#39;A^{-1}X_i=X_i&#39;(X&#39;X+\Lambda)^{-1}X_i.
+\]</span></p>
+<p>于是</p>
+<p><span class="math display">\[
+\tilde e_i
+=Y_i-X_i&#39;\hat\beta_{(-i)}
+=Y_i-X_i&#39;\hat\beta+h_{ii}\tilde e_i
+=\hat e_i+h_{ii}\tilde e_i.
+\]</span></p>
+<p>故</p>
+<p><span class="math display">\[
+\tilde e_i=(1-h_{ii})^{-1}\hat e_i,
+\]</span></p>
+<p>即 式 29-6。□</p>
+<section id="注记" class="callout callout-note">
+<h3>注记</h3>
+<p>这与 Theorem 3.7 中 <span class="math inline">\(\tilde
+e_i=(1-h_{ii})^{-1}\hat e_i\)</span>、<span
+class="math inline">\(h_{ii}=X_i&#39;(X&#39;X)^{-1}X_i\)</span>
+完全平行；岭回归只是把 Gram 矩阵 <span
+class="math inline">\(X&#39;X\)</span> 换成 <span
+class="math inline">\(X&#39;X+\Lambda\)</span>。该公式使 <span
+class="math inline">\(CV(\lambda)=\sum_i\tilde e_i(\lambda)^2\)</span>
+无需做 <span class="math inline">\(n\)</span> 次回归。</p>
+</section>
+<h1 id="sec-ex292">Exercise 29.2　证明 (29.7) 是岭回归的 Mallows
+准则</h1>
+<p>目标式 (29.7)：</p>
+<p><span class="math display">\[
+C(\lambda)=\sum_{i=1}^n\hat
+e_i(\lambda)^2+2\hat\sigma^2\,\mathrm{tr}\!\Bigl((X&#39;X+\Lambda)^{-1}(X&#39;X)\Bigr),\label{eq-29-7}
+\]</span></p>
+<p>其中 <span class="math inline">\(\hat\sigma^2\)</span> 来自 OLS。</p>
+<p>Section 28.6 定义：对线性估计量 <span class="math inline">\(\hat
+m=AY\)</span>（<span
+class="math inline">\(A=A(X)\)</span>），在条件同方差模型 <span
+class="math inline">\(E[e\mid X]=0\)</span>、<span
+class="math inline">\(E[e^2\mid X]=\sigma^2\)</span> 下，Mallows
+准则为</p>
+<p><span class="math display">\[
+C_p=\hat e&#39;\hat e+2\tilde\sigma^2\,\mathrm{tr}(A).\label{eq-28-14}
+\]</span></p>
+<h2 id="证明-1">证明</h2>
+<p>岭回归拟合为</p>
+<p><span class="math display">\[
+\hat
+m=X\hat\beta_{\mathrm{ridge}}=X(X&#39;X+\Lambda)^{-1}X&#39;Y=:A(\Lambda)Y.
+\]</span></p>
+<p>故 hat 矩阵</p>
+<p><span class="math display">\[
+A(\Lambda)=X(X&#39;X+\Lambda)^{-1}X&#39;.
+\]</span></p>
+<p>迹的循环性质：</p>
+<p><span class="math display">\[\begin{align*}
+\mathrm{tr}\bigl(A(\Lambda)\bigr)
+&amp;=\mathrm{tr}\!\Bigl(X(X&#39;X+\Lambda)^{-1}X&#39;\Bigr)
+=\mathrm{tr}\!\Bigl((X&#39;X+\Lambda)^{-1}X&#39;X\Bigr).
+\end{align*}\]</span></p>
+<p>残差平方和 <span class="math inline">\(\hat e&#39;\hat e=\sum_i\hat
+e_i(\lambda)^2\)</span>。取 <span
+class="math inline">\(\tilde\sigma^2=\hat\sigma^2\)</span>（大模型/OLS
+方差估计），代入 式 28-14 即得 式 29-7。□</p>
+<section id="解释hansen-观点" class="callout callout-note">
+<h3>解释（Hansen 观点）</h3>
+<p><span class="math inline">\(C_p\)</span> 是拟合风险</p>
+<p><span class="math display">\[
+R=E\Bigl[\sum_i(\hat m_i-m_i)^2\Bigr]
+\]</span></p>
+<p>的（经常数平移后的）无偏估计；对岭回归，有效自由度是 <span
+class="math inline">\(\mathrm{tr}(A(\Lambda))\)</span> 而非参数个数
+<span class="math inline">\(p\)</span>。</p>
+</section>
+<h1 id="sec-ex293">Exercise 29.3　推导岭估计的条件偏误与方差</h1>
+<p>模型：<span class="math inline">\(Y=X\beta+e\)</span>，<span
+class="math inline">\(E[e\mid X]=0\)</span>，<span
+class="math inline">\(D=\mathrm{diag}\{\sigma^2(X_1),\ldots,\sigma^2(X_n)\}\)</span>，<span
+class="math inline">\(\sigma^2(x)=E[e^2\mid X=x]\)</span>。</p>
+<h2 id="a-偏误">(a) 偏误</h2>
+<p><span class="math display">\[
+\hat\beta_{\mathrm{ridge}}=(X&#39;X+\lambda I_p)^{-1}X&#39;Y
+=(X&#39;X+\lambda I_p)^{-1}X&#39;(X\beta+e).
+\]</span></p>
+<p>故</p>
+<p><span class="math display">\[\begin{align*}
+E[\hat\beta_{\mathrm{ridge}}\mid X]
+&amp;=(X&#39;X+\lambda I_p)^{-1}X&#39;X\,\beta\\
+&amp;=(X&#39;X+\lambda I_p)^{-1}\bigl((X&#39;X+\lambda I_p)-\lambda
+I_p\bigr)\beta\\
+&amp;=\beta-\lambda(X&#39;X+\lambda I_p)^{-1}\beta.
+\end{align*}\]</span></p>
+<p>因此</p>
+<p><span class="math display">\[
+\mathrm{bias}(\hat\beta_{\mathrm{ridge}}\mid X)
+=E[\hat\beta_{\mathrm{ridge}}\mid X]-\beta
+=-\lambda(X&#39;X+\lambda I_p)^{-1}\beta.\label{eq-29-8}
+\]</span></p>
+<h2 id="b-方差">(b) 方差</h2>
+<p><span class="math display">\[
+\hat\beta_{\mathrm{ridge}}-E[\hat\beta_{\mathrm{ridge}}\mid X]
+=(X&#39;X+\lambda I_p)^{-1}X&#39;e,
+\]</span></p>
+<p>故（独立观测下 <span class="math inline">\(\mathrm{var}(e\mid
+X)=D\)</span>）</p>
+<p><span class="math display">\[
+\begin{aligned}
+\mathrm{var}(\hat\beta_{\mathrm{ridge}}\mid X)
+&amp;=(X&#39;X+\lambda I_p)^{-1}X&#39;\,\mathrm{var}(e\mid
+X)\,X\,(X&#39;X+\lambda I_p)^{-1}\\
+&amp;=(X&#39;X+\lambda I_p)^{-1}(X&#39;DX)(X&#39;X+\lambda I_p)^{-1}.
+\end{aligned}\label{eq-29-9}
+\]</span></p>
+<p>□</p>
+<section id="补充" class="callout callout-note">
+<h3>补充</h3>
+<p>MSE 矩阵为 <span
+class="math inline">\(\mathrm{var}+\mathrm{bias}\,\mathrm{bias}&#39;\)</span>，即
+Theorem 29.2 证明所用表达式。</p>
+</section>
+<h1 id="sec-ex294">Exercise 29.4　岭回归 = 增广数据上的 OLS</h1>
+<h2 id="构造">构造</h2>
+<p>原数据 <span class="math inline">\((Y,X)\)</span>。增广</p>
+<p><span class="math display">\[
+Y^*=\begin{pmatrix}Y\\ 0_p\end{pmatrix}\in\mathbb{R}^{n+p},
+\qquad
+X^*=\begin{pmatrix}X\\
+\sqrt{\lambda}\,I_p\end{pmatrix}\in\mathbb{R}^{(n+p)\times
+p}.\label{eq-augmented}
+\]</span></p>
+<p>（教材写 “<span class="math inline">\(p\)</span> 行 <span
+class="math inline">\(\sqrt{\lambda}I_p\)</span>”，与 <span
+class="math inline">\(\lambda I_p\)</span> 惩罚一致。）</p>
+<h2 id="证明-2">证明</h2>
+<p>对 <span class="math inline">\((Y^*,X^*)\)</span> 做 OLS：</p>
+<p><span class="math display">\[\begin{align*}
+\hat\beta_{\mathrm{OLS}}^*
+&amp;=(X^{*&#39;}X^*)^{-1}X^{*&#39;}Y^*\\
+&amp;=\Bigl(X&#39;X+\lambda
+I_p\Bigr)^{-1}\bigl(X&#39;Y+\sqrt{\lambda}\,I_p\cdot 0_p\bigr)\\
+&amp;=(X&#39;X+\lambda I_p)^{-1}X&#39;Y
+=\hat\beta_{\mathrm{ridge}}.
+\end{align*}\]</span></p>
+<p>等价地，增广平方和为</p>
+<p><span class="math display">\[
+\|Y^*-X^*\beta\|_2^2=\|Y-X\beta\|_2^2+\lambda\|\beta\|_2^2,
+\]</span></p>
+<p>正是岭惩罚准则。□</p>
+<h1 id="sec-ex295">Exercise 29.5　谁的回归 <span
+class="math inline">\(R^2\)</span> 更大：OLS 还是 Ridge？</h1>
+<section id="答案" class="callout callout-important">
+<h3>答案</h3>
+<p><strong>OLS 的 <span class="math inline">\(R^2\)</span> 不会低于
+Ridge</strong>；在 <span class="math inline">\(\lambda&gt;0\)</span> 且
+<span class="math inline">\(\hat\beta_{\mathrm{ols}}\neq 0\)</span>
+的通常情形下严格更大。</p>
+</section>
+<h2 id="证明-3">证明</h2>
+<p>在列满秩（<span class="math inline">\(X&#39;X\)</span> 可逆）时，OLS
+是无约束最小化问题的无约束解：</p>
+<p><span class="math display">\[
+\hat\beta_{\mathrm{ols}}=\arg\min_{\beta\in\mathbb{R}^p}\|Y-X\beta\|_2^2.
+\]</span></p>
+<p>岭估计是<strong>同一目标</strong>在惩罚/约束下的解，等价于对某个
+<span class="math inline">\(\tau&gt;0\)</span></p>
+<p><span class="math display">\[
+\hat\beta_{\mathrm{ridge}}=\arg\min_{\|\beta\|_2^2\le\tau}\|Y-X\beta\|_2^2
+\]</span></p>
+<p>（对偶形式）。因此</p>
+<p><span class="math display">\[
+\|Y-X\hat\beta_{\mathrm{ols}}\|_2^2\le\|Y-X\hat\beta_{\mathrm{ridge}}\|_2^2.
+\]</span></p>
+<p>分母 <span class="math inline">\(\|Y-\bar Y\mathbf{1}\|_2^2\)</span>
+与估计量无关，故</p>
+<p><span class="math display">\[
+R^2_{\mathrm{ols}}\ge R^2_{\mathrm{ridge}}.\label{eq-rsq-compare}
+\]</span></p>
+<p>当 <span class="math inline">\(\lambda&gt;0\)</span> 且 <span
+class="math inline">\(\hat\beta_{\mathrm{ols}}\neq 0\)</span> 时，约束
+<span class="math inline">\(\|\beta\|_2^2\le\tau\)</span>
+在最优点通常是紧的，且 <span
+class="math inline">\(\hat\beta_{\mathrm{ridge}}\neq\hat\beta_{\mathrm{ols}}\)</span>，严格不等式成立。</p>
+<section id="直观" class="callout callout-note">
+<h3>直观</h3>
+<p><span class="math inline">\(R^2\)</span>
+只度量<strong>样本内拟合</strong>；岭回归牺牲样本内 SSE
+以换取更小的预测/系数方差（正则化）。Hansen 体系中评价预测应看 CV /
+Mallows，而非 <span class="math inline">\(R^2\)</span>。</p>
+<p>若 <span class="math inline">\(p&gt;n\)</span>，OLS
+在列空间上仍最小化 SSE（投影唯一），<span
+class="math inline">\(R^2\)</span> 可达 1（插值），岭回归一般 <span
+class="math inline">\(R^2&lt;1\)</span>。</p>
+</section>
+<h1 id="sec-ex296">Exercise 29.6　岭回归与重复回归元</h1>
+<section id="答案-1" class="callout callout-important">
+<h3>答案</h3>
+<p><strong>不要求</strong> <span class="math inline">\(X\)</span>
+列线性无关。只要 <span
+class="math inline">\(\lambda&gt;0\)</span>，<span
+class="math inline">\(X&#39;X+\lambda I_p\)</span> 正定，即使 <span
+class="math inline">\(X\)</span> 列相关（甚至 <span
+class="math inline">\(p&gt;n\)</span>）岭估计仍唯一。</p>
+</section>
+<h2 id="重复回归元设定">重复回归元设定</h2>
+<p>设 <span class="math inline">\(\tilde X=(X,X)\in\mathbb{R}^{n\times
+2p}\)</span>，对 <span class="math inline">\(Y\)</span> 关于 <span
+class="math inline">\(\tilde X\)</span> 做岭回归（惩罚参数 <span
+class="math inline">\(\lambda&gt;0\)</span>），系数分块 <span
+class="math inline">\((\hat\beta_1&#39;,\hat\beta_2&#39;)&#39;\)</span>。</p>
+<p>目标函数</p>
+<p><span class="math display">\[
+S(\beta_1,\beta_2)=\|Y-X\beta_1-X\beta_2\|_2^2+\lambda\|\beta_1\|_2^2+\lambda\|\beta_2\|_2^2.
+\]</span></p>
+<p>一阶条件：</p>
+<p><span class="math display">\[\begin{align*}
+X&#39;(Y-X(\beta_1+\beta_2))-\lambda\beta_1&amp;=0,\\
+X&#39;(Y-X(\beta_1+\beta_2))-\lambda\beta_2&amp;=0.
+\end{align*}\]</span></p>
+<p>两式相减得 <span
+class="math inline">\(\lambda(\beta_1-\beta_2)=0\Rightarrow\hat\beta_1=\hat\beta_2\)</span>。<br />
+两式相加：</p>
+<p><span class="math display">\[
+2X&#39;(Y-X(\hat\beta_1+\hat\beta_2))-\lambda(\hat\beta_1+\hat\beta_2)=0.
+\]</span></p>
+<p>令 <span
+class="math inline">\(\gamma:=\hat\beta_1+\hat\beta_2=2\hat\beta_1\)</span>，则</p>
+<p><span class="math display">\[
+2X&#39;Y-2X&#39;X\gamma-\lambda\gamma=0
+\Rightarrow
+\bigl(X&#39;X+\tfrac{\lambda}{2}I_p\bigr)\gamma=X&#39;Y.
+\]</span></p>
+<p>故</p>
+<p><span class="math display">\[
+\hat\beta_1=\hat\beta_2=\frac12\bigl(X&#39;X+\tilde\lambda
+I_p\bigr)^{-1}X&#39;Y,
+\qquad \tilde\lambda=\lambda/2.\label{eq-dup-ridge}
+\]</span></p>
+<p>这正是教材要求的结论。□</p>
+<section id="含义" class="callout callout-note">
+<h3>含义</h3>
+<p>重复变量被均分系数；有效惩罚因“两个相同变量”而改变标定，但预测 <span
+class="math inline">\(X(\hat\beta_1+\hat\beta_2)\)</span> 等于对 <span
+class="math inline">\(X\)</span> 做惩罚 <span
+class="math inline">\(\tilde\lambda=\lambda/2\)</span> 的岭拟合。</p>
+</section>
+<h1 id="sec-ex297">Exercise 29.7　Lasso 在重复回归元下的性质</h1>
+<p>同一 <span class="math inline">\(\tilde X=(X,X)\)</span>，Lasso
+目标</p>
+<p><span class="math display">\[
+S(\beta_1,\beta_2)=\|Y-X(\beta_1+\beta_2)\|_2^2+\lambda\|\beta_1\|_1+\lambda\|\beta_2\|_1.
+\]</span></p>
+<h2 id="i-单个-hatbeta_1hatbeta_2-不可识别">(i) 单个 <span
+class="math inline">\(\hat\beta_1,\hat\beta_2\)</span> 不可识别</h2>
+<p>拟合只依赖和 <span
+class="math inline">\(\gamma=\beta_1+\beta_2\)</span>。对任意分解 <span
+class="math inline">\(\beta_1+\beta_2=\gamma\)</span>，</p>
+<p><span class="math display">\[
+\|\beta_1\|_1+\|\beta_2\|_1\ge\|\gamma\|_1,
+\]</span></p>
+<p>等号当 <span class="math inline">\(\beta_{1j},\beta_{2j}\)</span>
+同号且和为 <span class="math inline">\(\gamma_j\)</span>（坐标
+wise）。最小化要求</p>
+<p><span class="math display">\[
+\|\beta_1\|_1+\|\beta_2\|_1=\|\gamma\|_1,
+\]</span></p>
+<p>满足该式的 <span class="math inline">\((\beta_1,\beta_2)\)</span>
+<strong>不唯一</strong>（例如把第 <span class="math inline">\(j\)</span>
+个分量的质量在 <span class="math inline">\(\beta_{1j}\)</span> 与 <span
+class="math inline">\(\beta_{2j}\)</span> 之间任意拆分）。故 <span
+class="math inline">\(\hat\beta_1,\hat\beta_2\)</span> individually
+indeterminate。</p>
+<h2 id="ii-其和等于对-x-的-lasso">(ii) 其和等于对 <span
+class="math inline">\(X\)</span> 的 Lasso</h2>
+<p>在最优处必有 <span
+class="math inline">\(\|\hat\beta_1\|_1+\|\hat\beta_2\|_1=\|\hat\gamma\|_1\)</span>，且</p>
+<p><span class="math display">\[
+\hat\gamma=\arg\min_\gamma\Bigl(\|Y-X\gamma\|_2^2+\lambda\|\gamma\|_1\Bigr)=\hat\beta_{\mathrm{Lasso}}.
+\]</span></p>
+<p>因此</p>
+<p><span class="math display">\[
+\hat\beta_1+\hat\beta_2=\hat\beta_{\mathrm{Lasso}}.\label{eq-dup-lasso}
+\]</span></p>
+<p>□</p>
+<section id="与岭的对比" class="callout callout-note">
+<h3>与岭的对比</h3>
+<p>岭的 <span class="math inline">\(\ell_2\)</span>
+惩罚严格凸，重复列时系数被唯一均分；Lasso 的 <span
+class="math inline">\(\ell_1\)</span>
+惩罚只凸不严格凸，解集是凸集，单个系数不定，但<strong>和</strong>及<strong>拟合</strong>唯一（在一般位置下）。</p>
+</section>
+<h1 id="sec-ex298">Exercise 29.8　回归树中加入 <span
+class="math inline">\(X^2\)</span> 是否有意义？</h1>
+<p>设定：连续变量 <span class="math inline">\((Y,X)\)</span>，<span
+class="math inline">\(X\ge 0\)</span>，估计回归树逼近 <span
+class="math inline">\(E[Y\mid X]\)</span>。友人建议加入二次项 <span
+class="math inline">\(X^2\)</span>。</p>
+<section id="答案-2" class="callout callout-important">
+<h3>答案</h3>
+<p><strong>没有实质意义</strong>；不增加回归树的近似能力。</p>
+</section>
+<h2 id="理由hansen-cart-框架">理由（Hansen CART 框架）</h2>
+<p>回归树通过对<strong>单个坐标</strong>做阈值阈值分割</p>
+<p><span class="math display">\[
+Y=\mu_1\,1\{X_d\le\gamma\}+\mu_2\,1\{X_d&gt;\gamma\}+e
+\]</span></p>
+<p>递归生长（Section
+29.15）。分割点搜索只依赖协变量的<strong>排序/分位数</strong>。</p>
+<p>当 <span class="math inline">\(X\ge 0\)</span> 时，映射 <span
+class="math inline">\(x\mapsto x^2\)</span>
+<strong>严格递增</strong>，因而</p>
+<p><span class="math display">\[
+\{X\le\gamma\}\quad\Longleftrightarrow\quad\{X^2\le\gamma^2\}
+\]</span></p>
+<p>（<span class="math inline">\(\gamma\ge 0\)</span>）。对 <span
+class="math inline">\(X^2\)</span> 的任意一次最优分割，都存在对 <span
+class="math inline">\(X\)</span>
+的等价分割，给出<strong>完全相同</strong>的样本划分与叶均值。多维时若再加入
+<span class="math inline">\(X^2\)</span>，它与 <span
+class="math inline">\(X\)</span>
+诱导同一序，不会产生新的矩形划分族。</p>
+<p>进一步：树模型本身已是高度灵活的分段常数逼近；在单一连续 <span
+class="math inline">\(X\)</span>
+上，充分多的分裂已可逼近任意可测回归函数，无需多项式基。加入 <span
+class="math inline">\(X^2\)</span>
+只增加冗余候选分裂维数，浪费计算，不改善偏差。</p>
+<section id="何时二次项有用" class="callout callout-note">
+<h3>何时二次项有用？</h3>
+<p>在<strong>线性/多项式参数模型</strong>或样条/级数回归中有用；在<strong>轴平行回归树</strong>里，对
+<span class="math inline">\(X\ge 0\)</span> 的单调变换冗余。</p>
+</section>
+<h1 id="sec-ex299">Exercise 29.9　cps09mar：亚裔女性样本 Lasso</h1>
+<h2 id="数据与设定hansen-惯例">数据与设定（Hansen 惯例）</h2>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>项目</th>
+<th>设定</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>数据</td>
+<td><code>cps09mar</code>（March 2009 CPS）</td>
+</tr>
+<tr class="even">
+<td>子样本</td>
+<td><code>race == 4</code>（Asian only）且
+<code>female == 1</code>，<span
+class="math inline">\(n=1149\)</span></td>
+</tr>
+<tr class="odd">
+<td>因变量</td>
+<td><span
+class="math inline">\(\log(\mathrm{wage})=\log(\mathrm{earnings}/(\mathrm{hours}\cdot\mathrm{week}))\)</span></td>
+</tr>
+<tr class="even">
+<td>经验</td>
+<td><span
+class="math inline">\(\mathrm{experience}=\mathrm{age}-\mathrm{education}-6\)</span>，回归元
+<span class="math inline">\((\mathrm{experience}/40)^k\)</span>，<span
+class="math inline">\(k=1,\ldots,9\)</span></td>
+</tr>
+<tr class="odd">
+<td>婚姻</td>
+<td>married（marital <span
+class="math inline">\(\in\{1,2,3\}\)</span>）、divorced、separated、widowed、never
+married</td>
+</tr>
+<tr class="even">
+<td>地区</td>
+<td>region 1–4 虚拟变量</td>
+</tr>
+<tr class="odd">
+<td>其他</td>
+<td>education 水平值；education <span
+class="math inline">\(\in\{12,13,14,15,16,18,20\}\)</span>
+虚拟变量；union</td>
+</tr>
+</tbody>
+</table>
+<p><strong>估计：</strong> 回归元标准化后 10 折交叉验证 Lasso（与教材
+<code>glmnet</code> / <code>cv.glmnet</code>
+默认一致：惩罚斜率、不惩罚截距）。</p>
+<section id="说明-1" class="callout callout-warning">
+<h3>说明</h3>
+<p>样本中 <strong>education = 15 无人</strong>，该虚拟变量退化为
+0；婚姻五类与地区四类各自与截距完全共线（设计阵秩 25/27），Lasso
+解在系数层面取稀疏代表。</p>
+</section>
+<h2 id="估计结果">估计结果</h2>
+<p>CV 最优 <span class="math inline">\(\lambda\approx
+0.00142\)</span>。非零系数（原始尺度，未标准化回归元）：</p>
+<table>
+<thead>
+<tr class="header">
+<th>变量</th>
+<th style="text-align: right;">系数</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>intercept</td>
+<td style="text-align: right;">2.102</td>
+</tr>
+<tr class="even">
+<td>education</td>
+<td style="text-align: right;">0.023</td>
+</tr>
+<tr class="odd">
+<td>edu12</td>
+<td style="text-align: right;">0.039</td>
+</tr>
+<tr class="even">
+<td>edu13</td>
+<td style="text-align: right;">0.163</td>
+</tr>
+<tr class="odd">
+<td>edu14</td>
+<td style="text-align: right;">0.324</td>
+</tr>
+<tr class="even">
+<td>edu16</td>
+<td style="text-align: right;">0.604</td>
+</tr>
+<tr class="odd">
+<td>edu18</td>
+<td style="text-align: right;">0.708</td>
+</tr>
+<tr class="even">
+<td>edu20</td>
+<td style="text-align: right;">0.887</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\((\mathrm{exp}/40)\)</span></td>
+<td style="text-align: right;">0.452</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\((\mathrm{exp}/40)^{2}\)</span></td>
+<td style="text-align: right;">−0.353</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\((\mathrm{exp}/40)^{9}\)</span></td>
+<td style="text-align: right;">0.002</td>
+</tr>
+<tr class="even">
+<td>divorced</td>
+<td style="text-align: right;">0.044</td>
+</tr>
+<tr class="odd">
+<td>separated</td>
+<td style="text-align: right;">−0.145</td>
+</tr>
+<tr class="even">
+<td>widowed</td>
+<td style="text-align: right;">−0.047</td>
+</tr>
+<tr class="odd">
+<td>nevermarried</td>
+<td style="text-align: right;">−0.052</td>
+</tr>
+<tr class="even">
+<td>region1 (Northeast)</td>
+<td style="text-align: right;">0.073</td>
+</tr>
+<tr class="odd">
+<td>region2 (Midwest)</td>
+<td style="text-align: right;">−0.131</td>
+</tr>
+<tr class="even">
+<td>region3 (South)</td>
+<td style="text-align: right;">−0.058</td>
+</tr>
+<tr class="odd">
+<td>union</td>
+<td style="text-align: right;">−0.015</td>
+</tr>
+</tbody>
+</table>
+<p><strong>被 Lasso 置零（或不可识别吸收）的：</strong>
+edu15（无观测）、married、region4（West，作地区基准）、<span
+class="math inline">\((\mathrm{exp}/40)^{3}\)</span>–<span
+class="math inline">\((\mathrm{exp}/40)^{8}\)</span> 等。</p>
+<h2 id="解读hansen-ml-视角">解读（Hansen ML 视角）</h2>
+<ol type="1">
+<li><strong>教育：</strong> 水平值系数为正，且相对“低于 12
+年”的阶梯虚拟变量随学历上升而增大（BA、硕士、专业/博士学位溢价明显）——稀疏模型保留了分段教育溢价。<br />
+</li>
+<li><strong>经验：</strong> 主要保留 1、2 次幂（凹形经验剖面），高次仅
+<span class="math inline">\(k=9\)</span> 极小，体现 Lasso
+的稀疏化。<br />
+</li>
+<li><strong>婚姻：</strong> 相对 married
+基准，分居惩罚最大；未婚略负。<br />
+</li>
+<li><strong>地区：</strong> 东北为正，中西与南部为负（相对西部）。<br />
+</li>
+<li><strong>工会：</strong>
+亚裔女性子样本中系数为小幅负（样本内工会人数少，宜谨慎解读）。</li>
+</ol>
+<p>样本内 <span class="math inline">\(R^2\approx
+0.29\)</span>（正则化估计；比较模型应看 CV 而非 <span
+class="math inline">\(R^2\)</span>）。</p>
+<h1 id="sec-ex2910">Exercise 29.10　cps09mar：西班牙裔男性样本
+Lasso</h1>
+<ul>
+<li>子样本：<code>hisp == 1</code> 且 <code>female == 0</code>，<span
+class="math inline">\(n=4547\)</span><br />
+</li>
+<li>回归元与 §ex299 相同；10 折 CV Lasso</li>
+</ul>
+<h2 id="估计结果-1">估计结果</h2>
+<p>CV 最优 <span class="math inline">\(\lambda\approx
+0.00027\)</span>：</p>
+<table>
+<thead>
+<tr class="header">
+<th>变量</th>
+<th style="text-align: right;">系数</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>intercept</td>
+<td style="text-align: right;">1.750</td>
+</tr>
+<tr class="even">
+<td>education</td>
+<td style="text-align: right;">0.029</td>
+</tr>
+<tr class="odd">
+<td>edu12</td>
+<td style="text-align: right;">0.157</td>
+</tr>
+<tr class="even">
+<td>edu13</td>
+<td style="text-align: right;">0.344</td>
+</tr>
+<tr class="odd">
+<td>edu14</td>
+<td style="text-align: right;">0.431</td>
+</tr>
+<tr class="even">
+<td>edu16</td>
+<td style="text-align: right;">0.544</td>
+</tr>
+<tr class="odd">
+<td>edu18</td>
+<td style="text-align: right;">0.789</td>
+</tr>
+<tr class="even">
+<td>edu20</td>
+<td style="text-align: right;">1.051</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\((\mathrm{exp}/40)\)</span></td>
+<td style="text-align: right;">1.588</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\((\mathrm{exp}/40)^{2}\)</span></td>
+<td style="text-align: right;">−1.319</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\((\mathrm{exp}/40)^{4}\)</span></td>
+<td style="text-align: right;">0.254</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\((\mathrm{exp}/40)^{8}\)</span></td>
+<td style="text-align: right;">−0.011</td>
+</tr>
+<tr class="odd">
+<td>married</td>
+<td style="text-align: right;">0.068</td>
+</tr>
+<tr class="even">
+<td>separated</td>
+<td style="text-align: right;">−0.073</td>
+</tr>
+<tr class="odd">
+<td>widowed</td>
+<td style="text-align: right;">0.149</td>
+</tr>
+<tr class="even">
+<td>nevermarried</td>
+<td style="text-align: right;">−0.092</td>
+</tr>
+<tr class="odd">
+<td>region1</td>
+<td style="text-align: right;">0.026</td>
+</tr>
+<tr class="even">
+<td>region2</td>
+<td style="text-align: right;">−0.032</td>
+</tr>
+<tr class="odd">
+<td>region3</td>
+<td style="text-align: right;">−0.102</td>
+</tr>
+<tr class="even">
+<td>union</td>
+<td style="text-align: right;">0.309</td>
+</tr>
+</tbody>
+</table>
+<p><strong>置零：</strong>
+edu15（无观测）、divorced、region4、部分高次经验项等。</p>
+<h2 id="与-exercise-29.9-对比">与 Exercise 29.9 对比</h2>
+<ol type="1">
+<li><strong>教育溢价形态类似</strong>，但西班牙裔男性高学历虚拟变量（尤其
+edu20）系数更大。<br />
+</li>
+<li><strong>经验剖面更陡</strong>：一次项约 1.59、二次项 −1.32，并保留
+4、8 次项——样本更大（<span class="math inline">\(n=4547\)</span>），CV
+允许稍低 <span class="math inline">\(\lambda\)</span>、稍密模型。<br />
+</li>
+<li><strong>工会溢价显著为正</strong>（约 0.31 log
+点），与亚裔女性子样本形成鲜明对比。<br />
+</li>
+<li><strong>婚姻：</strong>
+已婚为正、未婚为负；丧偶系数为正但该组人数少。<br />
+</li>
+<li><strong>南部（region3）惩罚</strong>在两个子样本中都出现。</li>
+</ol>
+<h1 id="sec-summary">小结</h1>
+<table>
+<colgroup>
+<col style="width: 37%" />
+<col style="width: 62%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: center;">题号</th>
+<th>核心结论</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">29.1</td>
+<td>岭 LOO 误差 <span class="math inline">\(\tilde
+e_i=(1-h_{ii})^{-1}\hat e_i\)</span>，<span
+class="math inline">\(h_{ii}=X_i&#39;(X&#39;X+\Lambda)^{-1}X_i\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">29.2</td>
+<td>式 29-7 = Mallows <span class="math inline">\(C_p\)</span>，因 <span
+class="math inline">\(\mathrm{tr}(A)=\mathrm{tr}((X&#39;X+\Lambda)^{-1}X&#39;X)\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">29.3</td>
+<td><span class="math inline">\(\mathrm{bias}=-\lambda(X&#39;X+\lambda
+I)^{-1}\beta\)</span>；见 式 29-8、式 29-9</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">29.4</td>
+<td>增广 <span class="math inline">\((Y^*,X^*)\)</span> 的 OLS =
+岭估计</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">29.5</td>
+<td>OLS 的 <span class="math inline">\(R^2\)</span> ≥ Ridge 的 <span
+class="math inline">\(R^2\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">29.6</td>
+<td>岭不需列满秩；重复列时见 式 dup-ridge</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">29.7</td>
+<td>Lasso 下 <span
+class="math inline">\(\hat\beta_1,\hat\beta_2\)</span> 不定，但 <span
+class="math inline">\(\hat\beta_1+\hat\beta_2=\hat\beta_{\mathrm{Lasso}}\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">29.8</td>
+<td><span class="math inline">\(X\ge 0\)</span> 时加 <span
+class="math inline">\(X^2\)</span> 对轴平行回归树无实质益处</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">29.9</td>
+<td>亚裔女性 <span class="math inline">\(n=1149\)</span>
+CV-Lasso：教育阶梯 + 凹经验 + 地区/婚姻稀疏</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">29.10</td>
+<td>西裔男性 <span class="math inline">\(n=4547\)</span>
+CV-Lasso：更陡经验曲线 + 显著正工会溢价</td>
+</tr>
+</tbody>
+</table>
+<h1 id="sec-appendix">计算附录：复现 29.9–29.10</h1>
+<p>数据来源：Hansen 教材配套 <a
+href="https://users.ssc.wisc.edu/~bhansen/econometrics/">Econometrics
+Data</a> 中的 <code>cps09mar</code>。</p>
+<p>将 <code>cps09mar.xlsx</code>（或 <code>.txt</code> /
+<code>.dta</code>）放到工作目录后，可执行下列代码块（YAML 中默认
+<code>execute.eval: false</code>；本地渲染时改为 <code>true</code>
+或在块上设 <code>#| eval: true</code>）。</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.linear_model <span class="im">import</span> LassoCV</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.preprocessing <span class="im">import</span> StandardScaler</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># 路径按本地数据位置修改</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> pd.read_excel(<span class="st">&quot;cps09mar.xlsx&quot;</span>)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>df[<span class="st">&quot;lwage&quot;</span>] <span class="op">=</span> np.log(df[<span class="st">&quot;earnings&quot;</span>] <span class="op">/</span> (df[<span class="st">&quot;hours&quot;</span>] <span class="op">*</span> df[<span class="st">&quot;week&quot;</span>]))</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>df[<span class="st">&quot;experience&quot;</span>] <span class="op">=</span> df[<span class="st">&quot;age&quot;</span>] <span class="op">-</span> df[<span class="st">&quot;education&quot;</span>] <span class="op">-</span> <span class="dv">6</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>df[<span class="st">&quot;exp40&quot;</span>] <span class="op">=</span> df[<span class="st">&quot;experience&quot;</span>] <span class="op">/</span> <span class="fl">40.0</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>df[<span class="st">&quot;married&quot;</span>] <span class="op">=</span> df[<span class="st">&quot;marital&quot;</span>].isin([<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>]).astype(<span class="bu">int</span>)</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>df[<span class="st">&quot;widowed&quot;</span>] <span class="op">=</span> (df[<span class="st">&quot;marital&quot;</span>] <span class="op">==</span> <span class="dv">4</span>).astype(<span class="bu">int</span>)</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>df[<span class="st">&quot;divorced&quot;</span>] <span class="op">=</span> (df[<span class="st">&quot;marital&quot;</span>] <span class="op">==</span> <span class="dv">5</span>).astype(<span class="bu">int</span>)</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>df[<span class="st">&quot;separated&quot;</span>] <span class="op">=</span> (df[<span class="st">&quot;marital&quot;</span>] <span class="op">==</span> <span class="dv">6</span>).astype(<span class="bu">int</span>)</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>df[<span class="st">&quot;nevermarried&quot;</span>] <span class="op">=</span> (df[<span class="st">&quot;marital&quot;</span>] <span class="op">==</span> <span class="dv">7</span>).astype(<span class="bu">int</span>)</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> r <span class="kw">in</span> [<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">4</span>]:</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    df[<span class="ss">f&quot;region</span><span class="sc">{</span>r<span class="sc">}</span><span class="ss">&quot;</span>] <span class="op">=</span> (df[<span class="st">&quot;region&quot;</span>] <span class="op">==</span> r).astype(<span class="bu">int</span>)</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> e <span class="kw">in</span> [<span class="dv">12</span>, <span class="dv">13</span>, <span class="dv">14</span>, <span class="dv">15</span>, <span class="dv">16</span>, <span class="dv">18</span>, <span class="dv">20</span>]:</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    df[<span class="ss">f&quot;edu</span><span class="sc">{</span>e<span class="sc">}</span><span class="ss">&quot;</span>] <span class="op">=</span> (df[<span class="st">&quot;education&quot;</span>] <span class="op">==</span> e).astype(<span class="bu">int</span>)</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> k <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, <span class="dv">10</span>):</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>    df[<span class="ss">f&quot;exp40_p</span><span class="sc">{</span>k<span class="sc">}</span><span class="ss">&quot;</span>] <span class="op">=</span> df[<span class="st">&quot;exp40&quot;</span>] <span class="op">**</span> k</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>features <span class="op">=</span> (</span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>    [<span class="st">&quot;education&quot;</span>]</span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>    <span class="op">+</span> [<span class="ss">f&quot;edu</span><span class="sc">{</span>e<span class="sc">}</span><span class="ss">&quot;</span> <span class="cf">for</span> e <span class="kw">in</span> [<span class="dv">12</span>, <span class="dv">13</span>, <span class="dv">14</span>, <span class="dv">15</span>, <span class="dv">16</span>, <span class="dv">18</span>, <span class="dv">20</span>]]</span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>    <span class="op">+</span> [<span class="ss">f&quot;exp40_p</span><span class="sc">{</span>k<span class="sc">}</span><span class="ss">&quot;</span> <span class="cf">for</span> k <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, <span class="dv">10</span>)]</span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>    <span class="op">+</span> [<span class="st">&quot;married&quot;</span>, <span class="st">&quot;divorced&quot;</span>, <span class="st">&quot;separated&quot;</span>, <span class="st">&quot;widowed&quot;</span>, <span class="st">&quot;nevermarried&quot;</span>]</span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>    <span class="op">+</span> [<span class="ss">f&quot;region</span><span class="sc">{</span>r<span class="sc">}</span><span class="ss">&quot;</span> <span class="cf">for</span> r <span class="kw">in</span> [<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">4</span>]]</span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>    <span class="op">+</span> [<span class="st">&quot;union&quot;</span>]</span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> fit_lasso(sub: pd.DataFrame):</span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a>    y <span class="op">=</span> sub[<span class="st">&quot;lwage&quot;</span>].to_numpy(dtype<span class="op">=</span><span class="bu">float</span>)</span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>    X <span class="op">=</span> sub[features].to_numpy(dtype<span class="op">=</span><span class="bu">float</span>)</span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>    sc <span class="op">=</span> StandardScaler().fit(X)</span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a>    Xs <span class="op">=</span> sc.transform(X)</span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a>    model <span class="op">=</span> LassoCV(</span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a>        cv<span class="op">=</span><span class="dv">10</span>, random_state<span class="op">=</span><span class="dv">1</span>, max_iter<span class="op">=</span><span class="dv">100_000</span>, alphas<span class="op">=</span><span class="dv">200</span>, fit_intercept<span class="op">=</span><span class="va">True</span></span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a>    model.fit(Xs, y)</span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a>    beta <span class="op">=</span> model.coef_ <span class="op">/</span> sc.scale_</span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a>    intercept <span class="op">=</span> model.intercept_ <span class="op">-</span> np.<span class="bu">sum</span>(beta <span class="op">*</span> sc.mean_)</span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> intercept, beta, model.alpha_</span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> report(label: <span class="bu">str</span>, mask: pd.Series):</span>
+<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a>    a0, b, lam <span class="op">=</span> fit_lasso(df.loc[mask])</span>
+<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;</span><span class="ch">\n</span><span class="ss">=== </span><span class="sc">{</span>label<span class="sc">}</span><span class="ss"> | n = </span><span class="sc">{</span><span class="bu">int</span>(mask.<span class="bu">sum</span>())<span class="sc">}</span><span class="ss"> | lambda ≈ </span><span class="sc">{</span>lam<span class="sc">:.6g}</span><span class="ss"> ===&quot;</span>)</span>
+<span id="cb1-56"><a href="#cb1-56" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;</span><span class="sc">{</span><span class="st">&#39;intercept&#39;</span><span class="sc">:20s}</span><span class="ss"> </span><span class="sc">{</span>a0<span class="sc">:10.4f}</span><span class="ss">&quot;</span>)</span>
+<span id="cb1-57"><a href="#cb1-57" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> name, bi <span class="kw">in</span> <span class="bu">zip</span>(features, b):</span>
+<span id="cb1-58"><a href="#cb1-58" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="bu">abs</span>(bi) <span class="op">&gt;</span> <span class="fl">1e-8</span>:</span>
+<span id="cb1-59"><a href="#cb1-59" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="ss">f&quot;</span><span class="sc">{</span>name<span class="sc">:20s}</span><span class="ss"> </span><span class="sc">{</span>bi<span class="sc">:10.4f}</span><span class="ss">&quot;</span>)</span>
+<span id="cb1-60"><a href="#cb1-60" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-61"><a href="#cb1-61" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-62"><a href="#cb1-62" aria-hidden="true" tabindex="-1"></a>report(<span class="st">&quot;Asian women&quot;</span>, (df[<span class="st">&quot;race&quot;</span>] <span class="op">==</span> <span class="dv">4</span>) <span class="op">&amp;</span> (df[<span class="st">&quot;female&quot;</span>] <span class="op">==</span> <span class="dv">1</span>))</span>
+<span id="cb1-63"><a href="#cb1-63" aria-hidden="true" tabindex="-1"></a>report(<span class="st">&quot;Hispanic men&quot;</span>, (df[<span class="st">&quot;hisp&quot;</span>] <span class="op">==</span> <span class="dv">1</span>) <span class="op">&amp;</span> (df[<span class="st">&quot;female&quot;</span>] <span class="op">==</span> <span class="dv">0</span>))</span></code></pre></div>
+<section id="软件说明" class="callout callout-note">
+<h3>软件说明</h3>
+<ul>
+<li><code>scikit-learn</code> 的 <code>LassoCV</code> 目标为 <span
+class="math inline">\(\frac{1}{2n}\|Y-X\beta\|_2^2+\alpha\|\beta\|_1\)</span>，其中
+<span class="math inline">\(\alpha\)</span> 与 <code>glmnet</code> 的
+<span class="math inline">\(\lambda\)</span> 参数化一致。<br />
+</li>
+<li>系数对 CV 折划分与 <span class="math inline">\(\lambda\)</span>
+网格略敏感；正文表格为 10 折 CV 下的代表结果。<br />
+</li>
+<li>用 R <code>glmnet</code> / <code>cv.glmnet</code> 或 Stata
+<code>lasso</code> 应得到同阶、符号一致的稀疏模型。</li>
+</ul>
+</section>
+<h2 id="渲染命令">渲染命令</h2>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># HTML</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto</span> render docs/Hansen_Ch29_Exercises_Solutions.qmd <span class="at">--to</span> html</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># PDF（需 LaTeX）</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto</span> render docs/Hansen_Ch29_Exercises_Solutions.qmd <span class="at">--to</span> pdf</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co"># 执行 Python 代码块</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto</span> render docs/Hansen_Ch29_Exercises_Solutions.qmd <span class="at">-P</span> eval:true</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co"># 或在 YAML 中将 execute.eval 改为 true</span></span></code></pre></div>
+</body>
+</html>
