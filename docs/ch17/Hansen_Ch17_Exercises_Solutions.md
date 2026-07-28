@@ -1,7 +1,75 @@
-# Hansen《Econometrics》第 17 章习题完整解答
+# Bruce Hansen《Econometrics》第 17 章习题解答（详细注释版）
 
 **章节：** Chapter 17 Panel Data  
 **书稿：** PDF 第 667–669 页（印刷页 647–649），§17.45 Exercises（**17.1–17.18 全部**）
+
+---
+
+## 0. 读题前必看：本章到底在讲什么
+
+**承上启下：**
+- 第 2–13 章：**横截面**数据（每个个体观测一次），i.i.d.
+- 第 14–16 章：**时间序列**（同一个体连续观测），序列相关。
+- **第 17 章：面板数据（panel data）—— 同一组个体（$i=1,\ldots,N$）在多期（$t=1,\ldots,T$）被观测。** 兼有横截面和时间两个维度。
+
+**核心直觉：** 面板数据的关键特征是**个体效应** $u_i$——不随时间变化的不可观测异质性（如企业文化、个人能力）。$u_i$ 与回归元 $X_{it}$ 相关时，混合 OLS **有偏**。消除 $u_i$ 的方法：
+
+| 方法 | 怎么消除 $u_i$ | 何时有效 | 代价 |
+|---|---|---|---|
+| **固定效应 FE** | 减个体均值（within）$\dot Y_{it}=Y_{it}-\bar Y_i$ | $u_i$ 与 $X$ 相关 | 损失组间变异 |
+| **一阶差分 FD** | 相邻差分 $\Delta Y_{it}=Y_{it}-Y_{i,t-1}$ | $u_i$ 与 $X$ 相关 | 损失一期、效率低于 FE |
+| **随机效应 RE** | GLS 加权（不消 $u_i$，但建模其方差） | $u_i$ 与 $X$ **不相关** | 若相关则不一致 |
+
+**Hausman 检验：** 比较 FE（一致但效率低）vs RE（效率高但需 $u_i\perp X$）。若两者显著不同 ⇒ $u_i$ 与 $X$ 相关 ⇒ 用 FE。
+
+**动态面板（本章难点）：** $Y_{it}=\alpha Y_{i,t-1}+u_i+\varepsilon_{it}$。FE 有 **Nickell 偏误**（因 $Y_{i,t-1}$ 与 $\bar Y_i$ 相关）。**Arellano–Bond GMM**：差分消 $u_i$，用滞后水平作工具。**Blundell–Bond（系统 GMM）**：加水平方程矩，改善弱工具。
+
+**聚类标准误：** 面板数据中同一个体的误差相关（通过 $u_i$ 或序列相关）。**不聚类会严重低估 SE**（已验证：混合 OLS 中非聚类 SE=0.042 vs 聚类 0.090，**偏小 2.2 倍**）。
+
+> **和本科对照：** 陈强系统讲 **面板数据**（`xtreg, fe/re`、Hausman、动态面板 `xtabond2`）。李子奈有基本的面板介绍。Hansen 的贡献：严格推出 FE/RE 的渐近理论（$N\to\infty$、$T$ 固定）、Stock–Watson 异方差稳健方差校正、以及动态面板 GMM 的完整框架。
+
+> **实证（蒙特卡洛，已验证）：**
+> - **FE vs 混合 OLS**：$u_i$ 与 $X$ 相关时，混合 OLS 均值≈2.0（偏，真 β=1），FE 均值≈1.0（一致）。
+> - **组内变异损失**：var($\dot X$)=0.82 ≪ var($X$)=5.04（within 损失 84% 变异——这是 FE 的效率代价）。
+> - **$T=2$ 时 FD=FE**：逐样本数值完全相同。
+> - **聚类 SE 必要**：混合 OLS 中不聚类 SE 偏小 **2.2 倍**。
+
+---
+
+## 1. 记号、概念速查与"面板工具箱"
+
+| Hansen 记号 | 中文/本科说法 | 一句话解释 |
+|---|---|---|
+| $Y_{it}=X_{it}'\beta+u_i+\varepsilon_{it}$ | 面板回归模型 | $u_i$ 个体效应，$\varepsilon_{it}$ 特异误差 |
+| $u_i$ | 个体效应 / 不可观测异质性 | 不随时间变；与 $X$ 相关⇒FE，不相关⇒RE |
+| $\dot Y_{it}=Y_{it}-\bar Y_i$ | within 变换 / 去个体均值 | 消除 $u_i$ |
+| $\Delta Y_{it}=Y_{it}-Y_{i,t-1}$ | 一阶差分 | 也消除 $u_i$ |
+| FE $\hat\beta_{\mathrm{fe}}$ | 固定效应估计量 | 对 within 变换后做 OLS |
+| RE $\hat\beta_{\mathrm{re}}$ | 随机效应 / GLS 估计量 | 对 $\Omega^{-1/2}$ 变换后做 OLS |
+| Hausman 检验 | Hausman 检验 | FE vs RE 是否显著不同 |
+| 聚类 SE | cluster-robust SE | 按个体聚类修正标准误 |
+| AB GMM | Arellano–Bond GMM | 动态面板：差分 + 滞后水平作工具 |
+| BB GMM | Blundell–Bond 系统 GMM | 加水平矩，改善弱工具 |
+
+**面板工具箱（本章反复用）：**
+
+> **(P1) Within 变换消除 $u_i$。** $\bar Y_i=T_i^{-1}\sum_t Y_{it}=\bar X_i'\beta+u_i+\bar\varepsilon_i$（$u_i$ 不随 $t$ 变）。故 $\dot Y_{it}=Y_{it}-\bar Y_i=\dot X_{it}'\beta+\dot\varepsilon_{it}$——**$u_i$ 被消去**。FE = 对 $\dot Y$ 关于 $\dot X$ 做 OLS。
+
+> **(P2) FE 的方差（"夹心"再现）。** $\hat\beta_{\mathrm{fe}}-\beta=(\sum\dot X'\dot X)^{-1}\sum\dot X'\varepsilon$。条件方差 = 夹心 $(\sum\dot X'\dot X)^{-1}(\sum\dot X'\Sigma\dot X)(\sum\dot X'\dot X)^{-1}$（$\Sigma=E[\varepsilon\varepsilon'|X]$）。
+
+> **(P3) $T=2$ 时 FD=FE。** 差分 $\Delta Y_{i2}=Y_{i2}-Y_{i1}$ 和 within $\dot Y_{it}=Y_{it}-\bar Y_i$ 给出**完全相同**的正规方程（$T=2$ 时两者仅差一个常数因子）。
+
+> **(P4) 聚类修正。** 面板中 $\mathrm{Cov}(\varepsilon_{it},\varepsilon_{is})\ne0$（通过 $u_i$ 或序列相关）。聚类 SE 把每个个体当成一个"超级观测"："肉"$=\sum_i(\sum_t\dot X_{it}\hat\varepsilon_{it})^2$。不聚类会**严重低估**。
+
+> **(P5) 动态面板 + Nickell 偏误。** $Y_{it}=\alpha Y_{i,t-1}+u_i+\varepsilon_{it}$ 中，FE 有偏：因 $Y_{i,t-1}$ 含 $u_i$，与 within 后的 $\bar Y_i$ 相关。AB GMM 用差分消 $u_i$ 后、以 $Y_{i,t-2},Y_{i,t-3},\ldots$ 作 $\Delta Y_{i,t-1}$ 的工具。
+
+---
+
+## 预备记号
+
+面板模型 $Y_{it}=X_{it}'\beta+u_i+\varepsilon_{it}$，$i=1,\ldots,N$，$t\in S_i$（可能非平衡）。$n=\sum_i T_i$。
+个体均值 $\bar Y_i=T_i^{-1}\sum_{t\in S_i}Y_{it}$；within 变换 $\dot Y_{it}=Y_{it}-\bar Y_i$；差分 $\Delta Y_{it}=Y_{it}-Y_{i,t-1}$。
+$M_i=I_{T_i}-\iota_{T_i}\iota_{T_i}'/T_i$（within 矩阵，幂等）。FE 估计量 $\hat\beta_{\mathrm{fe}}=(\sum\dot X_i'\dot X_i)^{-1}\sum\dot X_i'\dot Y_i$。
 
 ---
 
