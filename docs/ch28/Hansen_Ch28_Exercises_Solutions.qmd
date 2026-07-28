@@ -446,87 +446,102 @@ $$
 #| label: companion
 # helpers: see setup chunk (source _common.R)
 ## Chapter 28 — Hispanic women model selection (parallel to §28.18)
-## Translated from docs/ch28 notebook
-
-## bootstrap common helpers
-local({
-  for (cand in c("../..", "..", ".", "../../..")) {
-    f <- file.path(cand, "scripts/r_companions/_common.R")
-    if (file.exists(f)) { source(f, local = FALSE); break }
-  }
-})
+## Experience scaled by /10 for numerical stability of high powers.
 
 cps <- read_hansen_dta("cps09mar", "cps09mar.dta")
 df <- cps[cps$female == 1 & cps$hisp == 1, ]
 wage <- as.numeric(df$earnings) / (as.numeric(df$hours) * as.numeric(df$week))
 ok <- is.finite(wage) & wage > 0
 df <- df[ok, ]
-y <- log(wage[ok])
+y <- log(wage)
 educ <- as.numeric(df$education)
-exp <- as.numeric(df$age) - educ - 6
+expv <- (as.numeric(df$age) - educ - 6) / 10  # scale: 30 years -> 3
 married <- as.numeric(df$marital == 1)
 reg <- as.numeric(df$region)
-R2 <- as.numeric(reg == 2); R3 <- as.numeric(reg == 3); R4 <- as.numeric(reg == 4)
 n <- length(y)
 cat("n =", n, "\n")
 
-design <- function(ed_type, exp_pow) {
-  base <- cbind(1, married, R2, R3, R4)
+make_X <- function(ed_type, exp_pow) {
+  X <- cbind(
+    const = 1,
+    married = married,
+    R2 = as.numeric(reg == 2),
+    R3 = as.numeric(reg == 3),
+    R4 = as.numeric(reg == 4)
+  )
   if (ed_type == "college") {
-    E <- cbind(as.numeric(educ >= 16))
+    X <- cbind(X, college = as.numeric(educ >= 16))
   } else if (ed_type == "spline") {
-    E <- cbind(educ, pmax(educ - 9, 0))
+    X <- cbind(X, educ = educ, educ_sp9 = pmax(educ - 9, 0))
   } else {
-    E <- sapply(c(12, 13, 14, 16, 18, 20), function(e) as.numeric(educ == e))
+    X <- cbind(
+      X,
+      e12 = as.numeric(educ == 12), e13 = as.numeric(educ == 13),
+      e14 = as.numeric(educ == 14), e16 = as.numeric(educ == 16),
+      e18 = as.numeric(educ == 18), e20 = as.numeric(educ == 20)
+    )
   }
-  P <- sapply(seq_len(exp_pow), function(k) exp^k)
-  cbind(base, E, P)
+  for (k in seq_len(exp_pow)) X <- cbind(X, expv^k)
+  colnames(X)[(NCOL(X) - exp_pow + 1):NCOL(X)] <- paste0("z", seq_len(exp_pow))
+  ## drop zero-variance / collinear via QR
+  q <- qr(X)
+  X[, q$pivot[seq_len(q$rank)], drop = FALSE]
 }
 
 ols_metrics <- function(X, y) {
   X <- as.matrix(X); y <- as.numeric(y)
   n <- NROW(X); k <- NCOL(X)
-  XtX_inv <- solve(crossprod(X))
-  b <- as.numeric(XtX_inv %*% crossprod(X, y))
-  e <- y - as.numeric(X %*% b)
-  h <- rowSums((X %*% XtX_inv) * X)
+  fit <- lm.fit(X, y)
+  b <- as.numeric(fit$coefficients)
+  names(b) <- colnames(X)
+  e <- as.numeric(fit$residuals)
+  ## leverage via hat diagonal approximation
+  Q <- qr.Q(qr(X))
+  h <- pmin(rowSums(Q * Q), 0.999999)
   cv <- sum((e / (1 - h))^2)
-  sigma2 <- sum(e^2) / n
-  bic <- n * log(sigma2) + k * log(n)
-  aic <- n * log(sigma2) + 2 * k
-  meat <- crossprod(X * e)
-  V <- XtX_inv %*% meat %*% XtX_inv * (n / (n - k))
-  list(b = b, V = V, k = k, bic = bic, aic = aic, cv = cv)
+  sigma2 <- max(sum(e^2) / n, 1e-12)
+  ## HC1 vcov
+  XtX_inv <- chol2inv(chol(crossprod(X)))
+  V <- XtX_inv %*% crossprod(X * e) %*% XtX_inv * (n / max(n - k, 1))
+  list(b = b, V = V, k = k,
+       bic = n * log(sigma2) + k * log(n),
+       aic = n * log(sigma2) + 2 * k, cv = cv)
 }
 
-focus_delta <- function(b, ed_type, exp_pow) {
-  n_base <- 5
-  n_ed <- c(college = 1, spline = 2, dummy = 6)[[ed_type]]
-  idx <- (n_base + n_ed + 1):(n_base + n_ed + exp_pow)
-  d <- sum(b[idx] * (30^(seq_len(exp_pow))))
-  g <- rep(0, length(b)); g[idx] <- 30^(seq_len(exp_pow))
-  list(d = d, g = g)
+## Delta log wage for exp years 0 -> 30 (z: 0 -> 3)
+focus_delta <- function(b, exp_pow) {
+  z30 <- 3
+  d <- 0
+  g <- setNames(rep(0, length(b)), names(b))
+  for (k in seq_len(exp_pow)) {
+    nm <- paste0("z", k)
+    if (nm %in% names(b) && is.finite(b[[nm]])) {
+      d <- d + b[[nm]] * (z30^k)
+      g[[nm]] <- z30^k
+    }
+  }
+  list(d = d, g = as.numeric(g))
 }
 
 specs <- list(
-  list(1, "college", 2), list(2, "spline", 2), list(3, "dummy", 2),
-  list(4, "college", 4), list(5, "spline", 4), list(6, "dummy", 4),
-  list(7, "college", 6), list(8, "spline", 6), list(9, "dummy", 6)
+  list(1, "college", 2L), list(2, "spline", 2L), list(3, "dummy", 2L),
+  list(4, "college", 4L), list(5, "spline", 4L), list(6, "dummy", 4L),
+  list(7, "college", 6L), list(8, "spline", 6L), list(9, "dummy", 6L)
 )
 
-X9 <- design("dummy", 6)
+X9 <- make_X("dummy", 6L)
 m9 <- ols_metrics(X9, y)
-mu_hat <- focus_delta(m9$b, "dummy", 6)$d
+mu_hat <- focus_delta(m9$b, 6L)$d
 
 rows <- list()
 cat(sprintf("%2s %8s %2s %7s %6s %7s %9s %9s %8s %8s\n",
             "M", "educ", "p", "100d", "se", "ret%", "BIC", "AIC", "CV", "FIC*"))
 for (sp in specs) {
   mid <- sp[[1]]; ed <- sp[[2]]; p <- sp[[3]]
-  X <- design(ed, p)
+  X <- make_X(ed, p)
   m <- ols_metrics(X, y)
-  fd <- focus_delta(m$b, ed, p)
-  se <- sqrt(as.numeric(t(fd$g) %*% m$V %*% fd$g))
+  fd <- focus_delta(m$b, p)
+  se <- sqrt(max(as.numeric(crossprod(fd$g, m$V %*% fd$g)), 0))
   ret <- 100 * (exp(fd$d) - 1)
   fic <- n * (fd$d - mu_hat)^2 + 2 * n * se^2
   cat(sprintf("%2d %8s %2d %7.1f %6.1f %7.1f %9.1f %9.1f %8.1f %8.1f\n",
@@ -534,7 +549,6 @@ for (sp in specs) {
   rows[[length(rows) + 1]] <- list(mid = mid, ed = ed, p = p, d = 100 * fd$d,
                                    bic = m$bic, aic = m$aic, cv = m$cv, fic = fic, ret = ret)
 }
-
 for (crit in c("bic", "aic", "cv", "fic")) {
   vals <- sapply(rows, `[[`, crit)
   best <- rows[[which.min(vals)]]
