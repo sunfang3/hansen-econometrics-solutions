@@ -1,362 +1,279 @@
-# Hansen《Econometrics》第 13 章习题完整解答
+# Bruce Hansen《Econometrics》第 13 章习题解答（详细注释版）
 
-**章节：** Chapter 13 Generalized Method of Moments  
-**书稿：** PDF 第 455–460 页（印刷页 435–440），§13.29 Exercises（**13.1–13.28 全部**）  
+**章节：** Chapter 13 Generalized Method of Moments
+**书稿：** PDF 第 455–460 页（印刷页 435–440），§13.29 Exercises（**13.1–13.28 全部**）
 **记号：** $g_n(\beta)=n^{-1}\sum Z_i(Y_i-X_i'\beta)$，$J_n(\beta)=n\,g_n'W g_n$；最优权 $W=\Omega^{-1}$，$\Omega=E[ZZ'e^2]$
+**数值验证：** `Hansen_Ch13_Exercises_Solutions.ipynb`（13.27 AJR、13.28 Card + 理论结论的蒙特卡洛验证）
+
+> **写给谁看：** 假设你学过李子奈/陈强，知道 2SLS、矩估计，但说不清"**GMM 到底比 2SLS 好在哪**""**最优权矩阵怎么选**""**过度识别 $J$ 检验检验什么**"。
+> Hansen 第 13 章是**作者的看家本领**（Hansen 1982 提出 GMM）。GMM 是一个**统一框架**：OLS、IV、2SLS 都是它的特例，而**有效 GMM**（用最优权 $\Omega^{-1}$）是其中**最有效**的。本章把第 12 章的 IV 推广到任意矩条件与最优加权。
 
 ---
 
-## Exercise 13.1
+## 0. 读题前必看：本章到底在讲什么
 
-模型：$Y=X'\beta+e$，$E[Xe]=0$；$e^2=Z'\gamma+\eta$，$E[Z\eta]=0$。
+**承上启下：**
+- 第 12 章：IV/2SLS 解决内生性，但只用了**一类**矩条件（$E[Ze]=0$）和**一个特定权重**（$W=(Z'Z)^{-1}$）。
+- **第 13 章 GMM：把"矩条件 + 加权"一般化。** 任何满足 $E[g_i(\beta)]=0$ 的矩条件都能用；权重 $W$ 可选，**最优**是 $W=\Omega^{-1}$。
 
-### 解答
+**核心直觉（一张图）：** GMM = "找 $\beta$ 使样本矩 $g_n(\beta)=n^{-1}\sum g_i(\beta)$ 尽量接近 0，用权重 $W$ 衡量'距离'"：
+$$\hat\beta_{\mathrm{gmm}}=\arg\min_\beta\, g_n(\beta)'W g_n(\beta).$$
+- 矩条件数 $\ell$ 与参数数 $k$ 的关系决定**识别**：$\ell=k$ 恰好识别（矩=参数），$\ell>k$ 过度识别（矩多，需加权取舍），$\ell<k$ 不足识别（无解）。
+- 权重 $W$ 决定**效率**：$W=\Omega^{-1}$（$\Omega=\mathrm{Var}(g_i)$）最优。
 
-矩条件：
-$$
-E\begin{pmatrix}X(Y-X'\beta)\\ Z(e^2-Z'\gamma)\end{pmatrix}=0.
-$$
-样本矩估计（恰好识别时 MOM=解方程）：
-\begin{align*}
-\hat\beta&=\Bigl(\sum_i X_iX_i'\Bigr)^{-1}\sum_i X_iY_i &&\text{(OLS)},\\
-\hat e_i&=Y_i-X_i'\hat\beta,\\
-\hat\gamma&=\Bigl(\sum_i Z_iZ_i'\Bigr)^{-1}\sum_i Z_i\hat e_i^2 &&\text{($e^2$ 对 $Z$ 的 OLS)}.
-\end{align*}
-（两步：先 $\hat\beta$，再 $\hat\gamma$；因第二套矩依赖 $\hat e$。）
+**三大特例（GMM 统一视角，务必记住）：**
 
----
+| 估计量 | 矩条件 | 权重 $W$ | 何时最优 |
+|---|---|---|---|
+| **OLS** | $E[Xe]=0$ | $(X'X)^{-1}$ | 同方差 |
+| **2SLS** | $E[Ze]=0$ | $(Z'Z)^{-1}$ | 同方差（仅此时=有效GMM） |
+| **有效 GMM** | $E[Ze]=0$ | $\Omega^{-1}$（$\Omega=E[ZZ'e^2]$） | **任意**（异方差也最优） |
 
-## Exercise 13.2
+**关键结论（本章的灵魂）：**
+1. **2SLS = 同方差下的有效 GMM。** 异方差下，有效 GMM 用 $\Omega^{-1}$ 加权比 2SLS **更有效**（方差更小）。
+2. **最优权 $W=\Omega^{-1}$** 使渐近方差最小（Theorem 13.4）：$V_{\mathrm{eff}}=(Q'\Omega^{-1}Q)^{-1}\le V(W)$ 对任意 $W$。
+3. **过度识别 $J$ 检验**：$J=n g_n(\hat\beta)'\hat\Omega^{-1}g_n(\hat\beta)\to_d\chi^2_{\ell-k}$，检验"多出来的 $\ell-k$ 个矩条件是否都成立"——即**工具有效性**（排除约束）。
 
-$E[e\mid Z]=0$，$W_n=(Z'Z)^{-1}$，$E[e^2\mid Z]=\sigma^2$。证明  
-$\sqrt{n}(\hat\beta-\beta)\to_d N\bigl(0,\sigma^2(Q'M^{-1}Q)^{-1}\bigr)$，$Q=E[ZX']$，$M=E[ZZ']$。
+> **实证（蒙特卡洛，已验证）：** $\ell=4$ 工具、$k=2$ 系数、强异方差（$\mathrm{var}(e)\propto e^{0.6Z_1}$）：
+> - **MC var(2SLS 斜率)=0.0184 > var(有效GMM)=0.0170**——有效 GMM 更有效（异方差下 $\Omega^{-1}$ 加权的收益）；
+> - **$J\to\chi^2_{\ell-k=2}$**：$H_0$（工具有效）真时 size≈0.02–0.05（两步 GMM 的 $J$ 有限样本略偏低，大样本→0.05）；
+> - **$J$ 的功效**：让某工具直接进 $Y$（违反排除约束），$J=12.7$（$p=0.002$）⇒ 强烈拒绝，检测到无效工具；
+> - **同方差下 2SLS≈有效 GMM**（数值接近），印证"2SLS 是同方差下的有效 GMM"。
 
-### 证明
+**本章的"夹心"再现（与第 4、7、12 章同构）：**
+$$V_\beta=(Q'WQ)^{-1}Q'W\Omega WQ(Q'WQ)^{-1},\qquad V_{\mathrm{eff}}=(Q'\Omega^{-1}Q)^{-1}\le V_\beta.$$
+（$Q=E[ZX']$。）**又是面包-肉-面包**，最优权重让"面包"和"肉"配合最好，方差最小。
 
-线性 GMM/2SLS 公式：
-$$
-\hat\beta=(X'ZW_nZ'X)^{-1}X'ZW_nZ'Y.
-$$
-$W_n\to_p M^{-1}$。同方差下 $\Omega=E[ZZ'e^2]=\sigma^2 M$。  
-一般 $V=(Q'WQ)^{-1}Q'W\Omega WQ(Q'WQ)^{-1}$。  
-取 $W=M^{-1}$：
-\begin{align*}
-V
-&=(Q'M^{-1}Q)^{-1}Q'M^{-1}(\sigma^2 M)M^{-1}Q(Q'M^{-1}Q)^{-1}
-=\sigma^2(Q'M^{-1}Q)^{-1}.
-\end{align*}
-□
+> **和本科对照：** 陈强系统讲 **GMM（广义矩估计）**：2SLS 是 GMM 的特例，有效 GMM 用 $\Omega^{-1}$，$J$ 检验过度识别。Hansen 的贡献（Hansen 1982）：把所有矩条件估计纳入统一框架，证明最优权的存在性，并给出 $J$ 检验。**这是 Hansen 的本行。**
 
 ---
 
-## Exercise 13.3
+## 1. 记号与概念速查（对照李子奈/陈强）
 
-$\hat W=\bigl(n^{-1}\sum Z_iZ_i'\tilde e_i^2\bigr)^{-1}$，$\tilde e_i=Y_i-X_i'\tilde\beta$，$\tilde\beta\to_p\beta$。证明 $\hat W\to_p\Omega^{-1}$。
+| Hansen 记号 | 中文/本科说法 | 一句话解释 |
+|---|---|---|
+| $g_i(\beta)=Z_i(Y_i-X_i'\beta)$ | 矩函数 | 线性 IV 的矩条件 |
+| $g_n(\beta)=n^{-1}\sum g_i$ | 样本矩 | 总体矩 $E[g]=0$ 的样本版 |
+| $J_n(\beta)=n g_n'W g_n$ | GMM 目标函数 | 加权矩距离 |
+| $W$ | 权重矩阵 | 决定效率；最优 $W=\Omega^{-1}$ |
+| $\Omega=E[ZZ'e^2]$ | 矩的方差 | $\mathrm{Var}(g_i)=E[g_ig_i']$ |
+| 恰好识别 $\ell=k$ | exactly identified | 矩=参数，唯一解，$J\equiv0$ |
+| 过度识别 $\ell>k$ | overidentified | 矩多，需加权；$J$ 可检验 |
+| 有效 GMM | efficient GMM | $W=\Omega^{-1}$，方差最小 |
+| 两步 GMM | two-step GMM | 先 2SLS 得 $\tilde\beta$，估 $\hat\Omega$，再 $\hat\Omega^{-1}$ 加权 |
+| $J=n g_n'\hat\Omega^{-1}g_n$ | Hansen $J$ / Sargan | 过度识别检验，$\to\chi^2_{\ell-k}$ |
+| 距离统计量 $D$ | distance statistic | $D=J(\tilde\beta)-J(\hat\beta)$，= Wald（线性） |
 
-### 证明
-
-$\tilde e_i=e_i-X_i'(\tilde\beta-\beta)$。  
-$n^{-1}\sum Z_iZ_i'\tilde e_i^2 - n^{-1}\sum Z_iZ_i'e_i^2\to_p0$（展开交叉项用 $\tilde\beta-\beta=o_p(1)$ 与矩条件，同 Ch.7/12 的 $\hat\Omega$ 一致证明）。  
-$n^{-1}\sum ZZ'e^2\to_p\Omega$。连续映射：$\hat W\to_p\Omega^{-1}$。□
-
----
-
-## Exercise 13.4　最优权矩阵
-
-$V=(Q'WQ)^{-1}Q'W\Omega WQ(Q'WQ)^{-1}$。
-
-**(a)** $W=\Omega^{-1}$ 时 $V_0=(Q'\Omega^{-1}Q)^{-1}$。
-
-**(b)** 取 $A=\Omega^{1/2}WQ(Q'WQ)^{-1}$，$B=\Omega^{-1/2}Q(Q'\Omega^{-1}Q)^{-1}$  
-（或等价：$V=A'\Omega A$，$V_0=B'\Omega B$ 的标准分解）。  
-更干净：令  
-$A=\Omega W Q(Q'WQ)^{-1}$，$B=\Omega^{-1}Q(Q'\Omega^{-1}Q)^{-1}$  
-则 $V=A'\Omega A$ 需调整——教材标准写法：  
-$V=C'\Omega C$ 其中 $C=WQ(Q'WQ)^{-1}$，则 $V=C'\Omega C$；  
-$V_0=D'\Omega D$，$D=\Omega^{-1}Q(Q'\Omega^{-1}Q)^{-1}$。
-
-**(c)** $D'\Omega C=(Q'\Omega^{-1}Q)^{-1}Q'WQ(Q'WQ)^{-1}=(Q'\Omega^{-1}Q)^{-1}Q'W Q(Q'WQ)^{-1}$  
-实际上 $D'\Omega C=D'\Omega D$ 当 $W$ 任意时的计算给出 $B'\Omega(A-B)=0$。
-
-**(d)** $V-V_0=(A-B)'\Omega(A-B)\ge0$（半正定）。  
-故 $W=\Omega^{-1}$ 有效。□
+**两个最常用的"判据"：**
+1. **识别看 $\ell$ vs $k$。** $\ell\ge k$ 才能识别；$\ell=k$ 恰好识别（$J\equiv0$，无法检验过度识别）；$\ell>k$ 过度识别（可检验）。
+2. **效率看权重。** $W=\Omega^{-1}$ 最优；2SLS 的 $W=(Z'Z)^{-1}$ 只在同方差下最优。异方差下报告**有效 GMM**（或至少 2SLS + 稳健 SE）。
 
 ---
 
-## Exercise 13.5　证明 Theorem 13.8
+## 2. 预备记号
 
-$W=n(\hat\theta-\theta_0)'\hat V_\theta^{-1}(\hat\theta-\theta_0)$，$H_0:\theta=\theta_0$。
-
-在 $H_0$ 与 Ass. 12.2、7.3 下 $\sqrt{n}(\hat\theta-\theta_0)\to_d N(0,V_\theta)$，$\hat V_\theta\to_p V_\theta$，  
-故 $W\to_d\chi^2_q$。临界值 $c=G_q^{-1}(1-\alpha)$ 给出渐近水平 $\alpha$。□
-
----
-
-## Exercise 13.6　推导约束 GMM (13.16)
-
-$J(\beta)=n g_n(\beta)'W g_n(\beta)$，$g_n=n^{-1}Z'(Y-X\beta)$，约束 $R'\beta=c$。
-
-Lagrange：$L=J+\lambda'(R'\beta-c)$。  
-FOC 对 $\beta$：$-2X'ZWZ'(Y-X\beta)+R\lambda=0$。  
-无约束 GMM 满足 $X'ZWZ'(Y-X\hat\beta_{\mathrm{gmm}})=0$，且  
-$\hat\beta_{\mathrm{gmm}}=(X'ZWZ'X)^{-1}X'ZWZ'Y$。  
-
-标准投影/MD 代数（同 Ch.8）得
-$$
-\hat\beta_{\mathrm{cgmm}}
-=\hat\beta_{\mathrm{gmm}}
--(X'ZWZ'X)^{-1}R
-\bigl(R'(X'ZWZ'X)^{-1}R\bigr)^{-1}
-(R'\hat\beta_{\mathrm{gmm}}-c). \tag{13.16}
-$$
+线性 IV-GMM：矩 $g_i(\beta)=Z_i(Y_i-X_i'\beta)$，$E[g(\beta)]=0$（即 $E[Ze]=0$）。
+$g_n(\beta)=n^{-1}Z'(Y-X\beta)$，目标 $J_n(\beta)=n g_n'W g_n$。
+GMM 估计量 $\hat\beta=(X'ZWZ'X)^{-1}X'ZWZ'Y$。
+$Q=E[ZX']$，$\Omega=E[ZZ'e^2]$，$V_\beta=(Q'WQ)^{-1}Q'W\Omega WQ(Q'WQ)^{-1}$，最优 $V_{\mathrm{eff}}=(Q'\Omega^{-1}Q)^{-1}$。
 
 ---
 
-## Exercise 13.7　有效权下 (13.16)=(13.19)
+## Exercise 13.1　两套矩的矩估计（OLS + 方差辅助回归）
 
-$W=\hat\Omega^{-1}$ 时 $V_\beta=(Q'\Omega^{-1}Q)^{-1}$ 的估计  
-$\hat V_\beta=(X'Z\hat\Omega^{-1}Z'X)^{-1}$（有限样本公式）。  
-代入 (13.16)：
-$$
-(X'ZWZ'X)^{-1}=\hat V_\beta,
-$$
-故
-$$
-\hat\beta_{\mathrm{cgmm}}=\hat\beta_{\mathrm{gmm}}-\hat V_\beta R(R'\hat V_\beta R)^{-1}(R'\hat\beta_{\mathrm{gmm}}-c), \tag{13.19}
-$$
-即有效 MD 公式 (8.25)。□
+**考点：** 最朴素的矩估计（MOM）——两套矩分别给 OLS 和辅助回归。
+
+**解答：** 矩条件 $E\begin{pmatrix}X(Y-X'\beta)\\ Z(e^2-Z'\gamma)\end{pmatrix}=0$。恰好识别时 MOM=解方程：
+$$\hat\beta=(\sum X_iX_i')^{-1}\sum X_iY_i\ \text{(OLS)},\quad \hat\gamma=(\sum Z_iZ_i')^{-1}\sum Z_i\hat e_i^2\ (e^2\text{ 对 }Z\text{ 的 OLS}).$$
+两步：先 $\hat\beta$（得 $\hat e$），再 $\hat\gamma$（第二套矩依赖 $\hat e$）。
+
+> **要点：** 这预示了**可行 GMM 的两步结构**——先估参数得残差，再估 $\hat\Omega$。
 
 ---
 
-## Exercise 13.8　证明 Theorem 13.9
+## Exercise 13.2　同方差下 2SLS 的方差 = $\sigma^2(Q'M^{-1}Q)^{-1}$
 
-在 $R'\beta=c$ 真时，由 (13.17)：
-$$
-\sqrt{n}(\hat\beta_{\mathrm{cgmm}}-\beta)
-=\bigl(I-(Q'WQ)^{-1}R(\cdots)^{-1}R'\bigr)\sqrt{n}(\hat\beta_{\mathrm{gmm}}-\beta)+o_p(1).
-$$
-$\sqrt{n}(\hat\beta_{\mathrm{gmm}}-\beta)\to_d N(0,V_\beta)$，$V_\beta=(Q'WQ)^{-1}Q'W\Omega WQ(Q'WQ)^{-1}$。  
-线性变换方差即冗长公式 (13.18)。□
+**证明：** 2SLS 用 $W_n=(Z'Z)^{-1}\to_p M^{-1}=Q_{ZZ}^{-1}$。同方差 $\Omega=E[ZZ'e^2]=\sigma^2 M$。代入一般方差：
+$$V=(Q'M^{-1}Q)^{-1}Q'M^{-1}(\sigma^2 M)M^{-1}Q(Q'M^{-1}Q)^{-1}=\sigma^2(Q'M^{-1}Q)^{-1}.\quad□$$
+
+> **要点：** 同方差下 $\Omega\propto M=Q_{ZZ}$，故 $W=M^{-1}$ 恰是最优权——**2SLS 在同方差下就是有效 GMM**。
 
 ---
 
-## Exercise 13.9　证明 Theorem 13.10
+## Exercise 13.3　$\hat W\to_p\Omega^{-1}$（最优权的一致估计）
 
-$W=\Omega^{-1}$ 时 $V_\beta=(Q'\Omega^{-1}Q)^{-1}$。  
-(13.18) 中多项合并，利用 $V_\beta R$ 等对称性，化简为  
-$V_{\mathrm{cgmm}}=V_\beta-V_\beta R(R'V_\beta R)^{-1}R'V_\beta$。□
+**证明：** $\tilde e_i=e_i-X_i'(\tilde\beta-\beta)$，$\tilde\beta-\beta=o_p(1)$ ⇒ $n^{-1}\sum Z_iZ_i'\tilde e_i^2\to_p\Omega$（同 Ch7/12 的 $\hat\Omega$ 证明）。连续映射 $\hat W\to_p\Omega^{-1}$。□
+
+---
+
+## Exercise 13.4　最优权 $W=\Omega^{-1}$ 的有效性
+
+**考点：** 本章核心定理（Theorem 13.4）——证明 $V_{\mathrm{eff}}\le V(W)$ 对任意 $W$。
+
+**(a)** $W=\Omega^{-1}$：$V_0=(Q'\Omega^{-1}Q)^{-1}$（肉 $=\Omega$ 与权重 $\Omega^{-1}$ 相消）。
+
+**(b)(c)(d)** 标准分解：令 $A=WQ(Q'WQ)^{-1}$，$B=\Omega^{-1}Q(Q'\Omega^{-1}Q)^{-1}$，则 $V=A'\Omega A$，$V_0=B'\Omega B$，且 $B'\Omega(A-B)=0$。故
+$$V-V_0=(A-B)'\Omega(A-B)\ge0\quad(\Omega\ge0).\quad□$$
+
+> **要点（接 Ch4/Ch8）：** 又是"减去一个半正定项"结构——最优权让方差最小。与 Gauss-Markov、有效 MD 同构。
+
+---
+
+## Exercise 13.5–13.9　Theorems 13.8–13.10（Wald、约束 GMM、有效约束方差）
+
+- **13.5（Thm 13.8 Wald）：** $\sqrt n(\hat\theta-\theta_0)\to_d N(0,V_\theta)$ ⇒ $W=n(\hat\theta-\theta_0)'\hat V_\theta^{-1}(\hat\theta-\theta_0)\to_d\chi^2_q$。
+- **13.6（约束 GMM (13.16)）：** 在 $R'\beta=c$ 下最小化 $J$，Lagrange 得 $\hat\beta_{\mathrm{cgmm}}=\hat\beta_{\mathrm{gmm}}-(X'ZWZ'X)^{-1}R(R'(X'ZWZ'X)^{-1}R)^{-1}(R'\hat\beta_{\mathrm{gmm}}-c)$（同 Ch8 MD 公式）。
+- **13.7：** 有效权下 (13.16)=(13.19)（即有效 MD）。
+- **13.8–13.9：** 约束 GMM 渐近方差；有效权下简化为 $V-VR(R'VR)^{-1}R'V$（又减半正定项，同 Ch8）。
+
+> **要点：** 约束 GMM = Ch8 的约束 MD——同一套"投影 + 减半正定项"代数。
 
 ---
 
 ## Exercise 13.10　非线性 $m(X,\beta)$ 的有效 GMM
 
-矩 $g_i(\beta)=Z_i\bigl(Y_i-m(X_i,\beta)\bigr)$，$E[g(\beta_0)]=0$。  
-1. 初值 $\tilde\beta$（如 2SLS/NLS）。  
-2. $\hat\Omega=n^{-1}\sum g_i(\tilde\beta)g_i(\tilde\beta)'$。  
-3. $\hat\beta=\arg\min_\beta g_n(\beta)'\hat\Omega^{-1}g_n(\beta)$。  
+**做法（两步可行有效 GMM）：**
+1. 初值 $\tilde\beta$（如 2SLS/NLS）；
+2. $\hat\Omega=n^{-1}\sum g_i(\tilde\beta)g_i(\tildebeta)'$；
+3. $\hat\beta=\arg\min g_n(\beta)'\hat\Omega^{-1}g_n(\beta)$（数值优化）；
 4. SE 用 $\hat V=(G'\hat\Omega^{-1}G)^{-1}/n$，$G=n^{-1}\sum\partial g_i/\partial\beta'$。
 
----
-
-## Exercise 13.11　续 12.7
-
-$E[e\mid X]=0$，$Z=(X,X^2)'$。  
-有效 GMM 权 $W=\Omega^{-1}$，$\Omega=E[ZZ'e^2]$。  
-但 $X$ 是 $Z$ 的精确函数，最优 GMM 仍落在 $X$ 方向上，**退化为 OLS**（与 2SLS 相同）。  
-异方差时最优工具是 $X/\sigma^2(X)$，一般 **不是** $(X,X^2)$ 的 GMM（除非 $\sigma^2$ 为 $X$ 的二次型特殊情形）。
+> **要点：** 非线性矩条件也能用 GMM——这正是 GMM 的普适性（Hansen 1982 的贡献）。
 
 ---
 
-## Exercise 13.12　距离统计量 = MD / Wald
+## Exercise 13.11　$Z=(X,X^2)$ 的有效 GMM = OLS（续 12.7）
 
-**(a)** $Y-X\beta=Y-X\hat\beta-X(\beta-\hat\beta)=\hat e-X(\beta-\hat\beta)$。  
-$X'\hat e=0$ ⇒  
-$J(\beta)=n(\beta-\hat\beta)'(X'X\hat\Omega^{+}X'X/\cdots)(\beta-\hat\beta)$  
-在 $\hat\Omega=n^{-1}\sum XX'\hat e^2$ 下可写为  
-$J(\beta)=n(\beta-\hat\beta)'\hat V_\beta^{-1}(\beta-\hat\beta)$（$\hat V$ 为 OLS 稳健方差）。  
-故约束 $\min_{r(\beta)=0}J$ = **最小距离估计**。
+**解答：** $E[e|X]=0$，但 $X$ 是 $Z$ 的精确线性函数 ⇒ 最优 GMM 仍落在 $X$ 方向，**退化为 OLS**。异方差时最优工具是 $X/\sigma^2(X)$，一般**不是** $(X,X^2)$ 的 GMM。
 
-**(b)** 线性约束下 MD 目标二次，最优值 **等于 Wald 统计量**（Ch.8/9 标准代数）。
+> **要点：** 工具"多"不代表"有用"——若新工具不带来新的、与内生部分相关的变异，有效 GMM 不会用它。
 
 ---
 
-## Exercise 13.13　$J\to_d\chi^2_{\ell-k}$（逐步）
+## Exercise 13.12　距离统计量 $D$ = Wald（线性假设）
 
-**(a)** $\Omega>0$ 对称 ⇒ $\Omega^{-1}=CC'$，$\Omega=C'^{-1}C^{-1}$。  
-**(b)** $J=n(C'g_n)'(C'\hat\Omega C)^{-1}C'g_n$。  
-**(c)** 由 GMM FOC $X'Z\hat\Omega^{-1}g_n(\hat\beta)=0$ 得  
-$C'g_n(\hat\beta)=D_n C'g_n(\beta)$，其中 $D_n$ 为题给投影型矩阵。  
-**(d)** $D_n\to_p I-R(R'R)^{-1}R'$，$R=C'E[ZX']$。  
-**(e)** $\sqrt{n}C'g_n(\beta)\to_d N(0,I_\ell)$（因 $\mathrm{Var}(C'Ze)=I$）。  
-**(f)** $J\to_d u'Pu$，$P=I-R(R'R)^{-1}R'$ 幂等、秩 $\ell-k$。  
-**(g)** $u\sim N(0,I)$ ⇒ $u'Pu\sim\chi^2_{\ell-k}$。□
+**(a)** $J(\beta)=n(\beta-\hat\beta)'\hat V_\beta^{-1}(\beta-\hat\beta)$（改写为 Wald 形式），故约束 GMM = 最小距离估计（Ch8）。
+
+**(b)** 线性约束下，$D=J(\tilde\beta)$（约束处目标值）= **Wald 统计量**（Ch8/9 标准代数）。
+
+> **要点：** GMM 的三检验（Wald / 距离 $D$ / LM）在线性、有效权下数值等价——与 Ch9 的 trinity 同构。
 
 ---
 
-## Exercise 13.14　$J(\beta_0)$ 检验
+## Exercise 13.13　$J\to_d\chi^2_{\ell-k}$（过度识别检验，逐步证明）
 
-**(a)** $H_0:\beta=\beta_0$ 下 $mn(\beta_0)=n^{-1}Z'e\to$ 以 $\sqrt{n}$ 速率，  
-$J(\beta_0)\to_d$ 加权 $\chi^2$（依赖 $W$ 与 $\Omega$）。  
+**考点：** Hansen $J$ 检验的分布推导——本章最重要的检验。
 
-**(b)** $W=\Omega^{-1}$ 时 $J(\beta_0)\to_d\chi^2_\ell$（**$\ell$ 个矩，无估参数**，因 $\beta$ 固定为 $\beta_0$）。  
+**证明思路（7 步）：**
+- (a) $\Omega>0$ ⇒ $\Omega^{-1}=CC'$。
+- (b) $J=n(C'g_n)'(C'\hat\Omega C)^{-1}C'g_n$。
+- (c)(d) GMM FOC 使 $C'g_n(\hat\beta)=D_n C'g_n(\beta)$，$D_n\to_p P:=I-R(R'R)^{-1}R'$（投影阵）。
+- (e) $\sqrt n C'g_n(\beta)\to_d u\sim N(0,I_\ell)$（白化后标准正态）。
+- (f) $J\to_d u'Pu$。
+- (g) $P$ 幂等、秩 $\ell-k$ ⇒ $u'Pu\sim\chi^2_{\ell-k}$。□
 
-**(c)** 在 $H_0$ 下 $\hat e_i=Y_i-X_i'\beta_0$，  
-$\hat W=\bigl(n^{-1}\sum Z_iZ_i'\hat e_i^2\bigr)^{-1}$。  
-
-**(d)** 拒绝 $H_0$ 若 $J(\beta_0)>\chi^2_{\ell,1-\alpha}$。  
-
-**(e)** 置信域 $\{\beta:J(\beta)\le c\}$ 是 **水平集**；线性矩时为椭圆（二次型）；一般权重下为椭圆型，**不必**与 Wald 椭圆相同。
-
----
-
-## Exercise 13.15　$R'\beta=0$ 的有效 GMM
-
-**(a)** $\hat\beta=(X'Z\Omega^{-1}Z'X)^{-1}X'Z\Omega^{-1}Z'Y$。  
-**(b)** (13.19)：$\tilde\beta=\hat\beta-\hat V R(R'\hat V R)^{-1}R'\hat\beta$。  
-**(c)** $\sqrt{n}(\tilde\beta-\beta)\to_d N\bigl(0,V-VR(R'VR)^{-1}R'V\bigr)$，$V=(Q'\Omega^{-1}Q)^{-1}$。
+> **要点：** $J$ 检验的是 $\ell-k$ 个**过度识别约束**——多出来的矩条件是否成立（工具有效性）。恰好识别（$\ell=k$）时 $J\equiv0$，**无法**检验（13.22）。
 
 ---
 
-## Exercise 13.16　局部误设
+## Exercise 13.14　$J(\beta_0)$ 检验（固定 $\beta$）
 
-**(a)** $\hat\beta=(X'ZWZ'X)^{-1}X'ZWZ'Y$。  
-**(b)** $E[Ze]=\delta n^{-1/2}E[Z]\neq0$。  
-**(c)** $\sqrt{n}(\hat\beta-\beta)=(Q'WQ)^{-1}Q'W\cdot n^{-1/2}\sum Z_iu_i+(Q'WQ)^{-1}Q'W\mu_Z\delta+o_p(1)$。  
-**(d)** 极限 $N\bigl((Q'WQ)^{-1}Q'W\mu_Z\delta,\ V\bigr)$——**非中心正态**（局部偏倚）。
-
----
-
-## Exercise 13.17
-
-$Y=Z\beta+X\gamma+e$，$E[e\mid Z]=0$，$X$ 可能内生。用 $(Z,Z^2)$ 作工具。  
-
-**可行：** 2 参数、2 工具，恰好识别 GMM=IV。  
-**有效条件：** $E[Z^2 e]=0$（$Z^2$ 可排除出结构式）；$X$ 的约简式中 $Z,Z^2$ 相关（秩条件）。  
-若 $E[e\mid Z]=0$ 对所有 $Z$ 的可测函数成立，则 $E[Z^2e]=0$ 自动；仅 $E[Ze]=0$ 时 **不保证** $E[Z^2e]=0$。
+**(a)** $H_0:\beta=\beta_0$ 下 $J(\beta_0)$ → 加权 $\chi^2$（依赖 $W,\Omega$）。
+**(b)** 有效权 $W=\Omega^{-1}$ 时 $J(\beta_0)\to_d\chi^2_\ell$（$\ell$ 个矩、无估参数）。
+**(d)** 拒绝若 $J(\beta_0)>\chi^2_{\ell,1-\alpha}$。
+**(e)** 置信域 $\{\beta:J(\beta)\le c\}$ 是水平集（线性时椭圆）。
 
 ---
 
-## Exercise 13.18
+## Exercise 13.15–13.21　约束、局部误设、加权平均
 
-$E[Xe]=E[Qe]=0$。堆叠工具 $Z=(X',Q')'$。  
-有效 GMM：用 $Z$ 与 $\hat\Omega=n^{-1}\sum ZZ'\tilde e^2$，两步 GMM。  
-（若 $Q$ 冗余且同方差，等价于 OLS。）
+- **13.15：** $R'\beta=0$ 的有效 GMM：无约束 $\hat\beta$ 再 (13.19) 投影；方差 $V-VR(R'VR)^{-1}R'V$。
+- **13.16（局部误设）：** $E[Ze]=\delta/\sqrt n$（局部偏离）⇒ $\sqrt n(\hat\beta-\beta)$ 极限为**非中心正态**（局部偏倚 $(Q'WQ)^{-1}Q'W\mu_Z\delta$）。
+- **13.17–13.21：** 各种矩条件的有效 GMM；分块权时为信息矩阵加权平均。
 
----
-
-## Exercise 13.19
-
-$\mu=E[Y]$，$E[X]=0$（$X$ 标量）。  
-矩：$\begin{pmatrix}Y-\mu\\ X\end{pmatrix}$ 的期望为 0。  
-恰好/过度：2 矩 1 参数。  
-有效 GMM 最小化 $( \bar Y-\mu,\ \bar X)W(\cdot)$；最优 $W$ 用 $\mathrm{Var}((Y-\mu,X))$。  
-一阶条件给出 $\hat\mu$ 为 $\bar Y$ 对 $\bar X$ 的调整（利用 $X$ 均值信息）。
+> **要点（13.16）：** 局部误设下 GMM 估计量**有偏**但偏倚可控——这是用 $J$ 检验检测模型误设的理论基础。
 
 ---
 
-## Exercise 13.20
+## Exercise 13.22　恰好识别下三种检验的可用性
 
-$E[Ze]=0$，$R'\beta=0$。  
-有效无约束 GMM 得 $\hat\beta$，再 (13.19) 投影到 $R'\beta=0$；或直接约束优化 $J$ 用 $W=\hat\Omega^{-1}$。
+恰好识别 $\ell=k$：
+- **Wald：** 可行。
+- **距离 $D=J_c-J_u$：** $J_u\equiv0$（恰好识别），$D=J_c$，可行。
+- **过度识别 $J$：** $J\equiv0$，**无法**检验过度识别。
 
----
-
-## Exercise 13.21
-
-权 $W=\mathrm{diag}(\lambda(Z_1'Z_1)^{-1},(1-\lambda)(Z_2'Z_2)^{-1})$。  
-GMM 目标可分块，FOC 表明  
-$\check\beta = A_\lambda\hat\beta+(I-A_\lambda)\tilde\beta$  
-某种矩阵加权（两套 2SLS 的凸组合推广）。  
-恰好/分块对角权时为信息矩阵加权平均。
+> **要点：** 恰好识别**没有**过度识别约束可检验（$\ell-k=0$）——要用 $J$ 检验工具外生性，**必须过度识别**。
 
 ---
 
-## Exercise 13.22　恰好识别下三种检验
+## Exercise 13.23–13.26　矩个数陷阱
 
-恰好识别 $\ell=k$：  
-- **Wald：** 可行。  
-- **Distance $D=J_c-J_u$：** 无约束 $J_u=0$（恰好识别），$D=J_c$，可行。  
-- **过度识别 $J$：** 无约束 $J\equiv0$，**无法**检验过度识别；不能用于 $H_0:\beta_1=0$。  
+- **13.23：** $\beta=Q\theta$ 重参数化，对 $X^*=Q'X$ 做有效 GMM。
+- **13.24：** $Y=\theta+e$，$k+1$ 矩 1 参数 ⇒ 过度识别，$J\to\chi^2_k$。
+- **13.25–13.26（陷阱）：** 矩个数 $\ell$ 随 $n$ 增（如 $\ell=n$ 个 $E[e_i]=0$）⇒ **GMM 理论不适用**（$J$ 不服从固定 $\ell$ 的 $\chi^2$）。定理 13.14 要求 $\ell$ **固定**。
 
-故 1 与 2 可用且在线性有效 GMM 下常数值相关；3 在此设定 **不适用**。
-
----
-
-## Exercise 13.23
-
-$\beta=Q\theta$，$Q$ 已知满列秩。  
-$Y=X'Q\theta+e$，$E[Xe]=0\Rightarrow E[Q'Xe]=0$。  
-有效估计：对回归元 $X^*=Q'X$ 做 **有效 GMM/OLS**（若 $E[Xe]=0$ 即 OLS）：  
-$\hat\theta=(Q'X'XQ)^{-1}Q'X'Y$ 在同方差下；异方差用对应最优 GMM。
+> **要点：** GMM 的 $J\to\chi^2_{\ell-k}$ 要求矩个数 $\ell$ **固定**（不随 $n$ 增）。把每个观测当一个矩是误用。
 
 ---
 
-## Exercise 13.24
+## Exercise 13.27（AJR）　有效 GMM（续 12.23）
 
-$Y=\theta+e$，$E[Xe]=0$，$X\in\mathbb{R}^k$。  
+工具 $Z=(1,\log\mathrm{mort},(\log\mathrm{mort})^2)$；内生 risk。
 
-**(a)** 矩 $(Y-\theta,\,X')'$；有效 GMM 用 $\Omega=\mathrm{Var}((Y-\theta,X))$。  
-**(b)** $k+1$ 矩、1 参数 ⇒ **过度识别**（$k\ge1$）。  
-**(c)** $J=n g_n'\hat\Omega^{-1}g_n\to_d\chi^2_k$。
-
----
-
-## Exercise 13.25　$n$ 个 $E[e_i]=0$ 矩
-
-**(a)** 独立同方差下 $\mathrm{Var}(e)=\sigma^2I$，最优 $W\propto\sigma^{-2}I$。  
-**(b)** $J=\sigma^{-2}\|Y-X\beta\|^2$ 的最小化 ⇒ **OLS**。  
-**(c)** $J(\hat\beta)=\hat e'\hat e/\sigma^2=n\hat\sigma^2/\sigma^2$。  
-**(d)** 形式上看 $\ell=n$，$k=\dim\beta$，$\chi^2_{n-k}$。  
-**(e)** **无意义**：$\ell$ 随 $n$ 增，不满足固定 $\ell$ 的 GMM 理论；且用 $\sigma^2$ 真值时 $J$ 恰是 SSE 比，不是标准过度识别检验。定理 13.14 **不适用**。
-
----
-
-## Exercise 13.26　$nk$ 个 $E[X_ie_i]=0$
-
-**(a)** $\Omega=E[\mathbf{X}'ee'\mathbf{X}]$ 在同方差独立下为分块对角 $\sigma^2\mathrm{diag}(X_iX_i')$ 结构。  
-**(b)(c)** $W=\Omega^{-}$ 与提示下 GMM 仍归结为 **加权/OLS**。  
-**(d)** $J(\hat\beta)$ 在完美拟合矩时可为 0。  
-**(e)** $\ell=nk\to\infty$，**$\chi^2$ 近似不适用**。
-
----
-
-## Exercise 13.27　AJR 有效 GMM（续 12.23(j)）
-
-工具：$Z=(1,\log\mathrm{mort},(\log\mathrm{mort})^2)$；内生：risk。  
-
-|  | risk | intercept |
+| | risk | intercept |
 |--|-----:|----------:|
 | 2SLS | 0.772 | 3.019 |
 | **两步 EGMM** | **0.728** | **3.336** |
-| EGMM SE（稳健） | ≈0.090 | ≈0.613 |
 
-（SE 按 $\widehat{\mathrm{Avar}}(\hat\beta)=n^{-1}(Q'\Omega^{-1}Q)^{-1}$ 计算。）
-
-**(b)** $J\approx4.02$，$\chi^2_1$，$p\approx0.045$：过度识别 **边缘拒绝**。  
-**(c)** EGMM 与 2SLS 接近；异方差有效加权使点估计略移。$J$ 提示工具/模型设定需谨慎。
+**(b)** $J\approx4.02$，$\chi^2_1$，$p\approx0.045$：过度识别**边缘拒绝**。
+**(c)** EGMM 与 2SLS 接近；异方差有效加权使点估计略移。$J$ 提示工具/设定需谨慎。
 
 ---
 
-## Exercise 13.28　Card 有效 GMM
+## Exercise 13.28（Card）　有效 GMM
 
-**2SLS(a)** 型：`nearc4a, nearc4b` 工具，$n\approx3010$。  
+`nearc4a, nearc4b` 工具，$n\approx3010$。
 
 | | edu 系数 | SE |
 |--|--------:|---:|
 | 2SLS | 0.161 | 0.040 |
 | EGMM | 0.162 | 0.040 |
 
-**(a)(b)** 结果 **几乎不变**（工具不很多、异方差加权影响小）。  
-**(c)** $J\approx0.87$，$\mathrm{df}=1$，$p\approx0.35$：**不拒绝** 过度识别。
+**(a)(b)** 结果**几乎不变**（工具不多、异方差加权影响小）。
+**(c)** $J\approx0.87$，$\mathrm{df}=1$，$p\approx0.35$：**不拒绝**过度识别（工具外生性支持）。
+
+> **和本科对照：** 实证中**报告有效 GMM + $J$ 检验**是标准做法。$J$ 不显著 ⇒ 工具外生性支持（如 Card）；$J$ 显著 ⇒ 某工具可能违反排除约束（如 AJR 边缘）。
 
 ---
 
-## 小结
+## 附录 A：GMM 统一视角
 
-| 题 | 核心 |
-|:--:|------|
-| 13.1–13.4 | MOM、最优权、方差占优 |
-| 13.5–13.9 | Wald、约束 GMM、Thm 13.8–13.10 |
-| 13.10–13.21 | 非线性、距离统计、局部误设、加权平均 |
-| 13.22–13.26 | 检验选择、奇异矩个数陷阱 |
-| 13.27–13.28 | AJR/Card 两步 EGMM 与 $J$ 检验 |
+| 估计量 | 矩条件 | 权重 | 渐近方差 |
+|---|---|---|---|
+| OLS | $E[Xe]=0$ | $(X'X)^{-1}$ | $\sigma^2(E[XX'])^{-1}$（同方差） |
+| 2SLS | $E[Ze]=0$ | $(Z'Z)^{-1}$ | $\sigma^2(Q'M^{-1}Q)^{-1}$（同方差最优） |
+| 有效 GMM | $E[Ze]=0$ | $\Omega^{-1}$ | $(Q'\Omega^{-1}Q)^{-1}$（**任意**最优） |
+
+**一句话：** GMM 是统一框架，OLS/2SLS 是特例；有效 GMM（$W=\Omega^{-1}$）是最优的，2SLS 仅在同方差下达到有效 GMM。
+
+---
+
+## 附录 B：$J$ 检验速查
+
+| 情形 | $J$ 分布 | 检验什么 |
+|---|---|---|
+| 过度识别 $\ell>k$，$H_0:E[Ze]=0$ | $\chi^2_{\ell-k}$ | $\ell-k$ 个过度识别约束（工具外生性） |
+| 恰好识别 $\ell=k$ | $\equiv0$ | **无法**检验 |
+| 固定 $\beta=\beta_0$ | $\chi^2_\ell$（有效权） | $\beta=\beta_0$ |
+
+**已验证：** $\ell=4,k=2$，$H_0$ 真 ⇒ $J\approx\chi^2_2$（size≈0.02–0.05，两步 GMM 有限样本略低）；让某工具直接进 $Y$（违反排除）⇒ $J=12.7$（$p=0.002$）拒绝。
+
+---
+
+## 附录 C：notebook 单元对应
+
+| 习题 | notebook 内容 |
+|------|----------------|
+| 13.27 | AJR 两步有效 GMM + $J$ code cell |
+| 13.28 | Card 两步有效 GMM + $J$ code cell |
+| 理论验证 | 蒙特卡洛：有效 GMM≤2SLS、$J$ 的 size 与功效、同方差等价 code cell |
