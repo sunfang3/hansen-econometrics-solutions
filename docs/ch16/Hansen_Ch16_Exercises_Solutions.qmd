@@ -30,22 +30,30 @@ execute:
 ::: {.callout-note}
 ## 说明
 
-- **理论：** 来自同目录 Markdown 逐步解答。
-- **代码：** Python notebook 已融合为 **R**（`scripts/r_companions/ch16.R` 优先；否则为带注释的翻译草稿）。
-- **数据：** `hansen/econometrics/data/`（gitignore）；渲染前请确保数据已下载。
-- 默认 `execute: eval: false`。有数据时改为 `true` 或交互运行代码块。
-- 缺包时：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot"))` 等。
+- **理论：** 同目录 Markdown 逐步解答全文嵌入。
+- **代码：** R 实现（`scripts/r_companions/ch16.R`）**内联**于下文；数据在 `hansen/econometrics/data/`。
+- 默认 `execute: eval: false`。有数据/包时改为 `true`，或在 R 中 `source()` companion。
+- 装包示例：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot","knitr"))`
 :::
 
 ```{r}
 #| label: setup
-root <- if (dir.exists("../../hansen")) "../.." else if (dir.exists("hansen")) "." else "../.."
+#| include: true
+root <- if (dir.exists("../../hansen")) {
+  "../.."
+} else if (dir.exists("hansen")) {
+  "."
+} else {
+  "../.."
+}
 data_root <- file.path(root, "hansen", "econometrics", "data")
 companion_dir <- file.path(root, "scripts", "r_companions")
 if (file.exists(file.path(companion_dir, "_common.R"))) {
   source(file.path(companion_dir, "_common.R"), local = FALSE)
 }
-knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+if (requireNamespace("knitr", quietly = TRUE)) {
+  knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+}
 options(stringsAsFactors = FALSE)
 ```
 
@@ -378,34 +386,42 @@ $-1.9$ 是 **Case 1**（无截距无趋势）的 5% 临界值。去势后应使�
 | 理论验证 | 随机游走非平稳、伪回归(85%假阳性)、DF分布非正态、协整、过度差分 code cell |
 
 
-# 实证与数值代码（R companion）
+# 实证与数值代码（R）
 
-手写/精译 R 脚本：`scripts/r_companions/ch16.R`。
+以下代码来自 `scripts/r_companions/ch16.R`（与 Python notebook 对应）。
 
 ```{r}
-#| label: companion-main
-source(file.path(root, "scripts", "r_companions", "ch16.R"))
+#| label: companion
+# helpers: see setup chunk (source _common.R)
+## Ch.16 Nonstationary — ADF via urca or manual
+## bootstrap common helpers
+local({
+  for (cand in c("../..", "..", ".", "../../..")) {
+    f <- file.path(cand, "scripts/r_companions/_common.R")
+    if (file.exists(f)) { source(f, local = FALSE); break }
+  }
+})
+cat("Ch.16: install.packages('urca'); urca::ur.df(...)\n")
 ```
 
 
-## Notebook 结构说明
+## Notebook 导读
 
-#### ADF / KPSS / Johansen 工具函数
+### ADF / KPSS / Johansen 工具函数
 
-#### 16.12–16.13 FRED-MD：ADF 与 KPSS
+### 16.12–16.13 FRED-MD：ADF 与 KPSS
 
-#### 16.14 Johansen 迹检验
+### 16.14 Johansen 迹检验
 
-##### 实证要点
+#### 实证要点
 
 - **16.12–13：** 收入/劳动力/IP 类序列 ADF 不拒绝单位根且 KPSS 拒绝平稳 → 偏向 I(1)。
 - **houst / claims：** ADF 拒绝单位根；KPSS 仅 borderline。
 - **16.14：** 国债与信用利差月度序列迹检验支持 $r=1$；耐用品/非耐用品 IP 对数拒绝无协整。
 
-#### 理论结论的蒙特卡洛验证（无需外部数据）
+### 理论结论的蒙特卡洛验证（无需外部数据）
 
 以下单元格核对 ch16 的核心结论：(1) 随机游走 var(S_t)=tσ² 非平稳；(2) **伪回归**——两个独立 I(1) 回归有 85% "假显著"；(3) **DF 分布非正态**——单位根下 t 的 5% 分位 ≈ −1.93 而非 −1.645；(4) **协整**——公共趋势模型中 β'Y_t 平稳；(5) **过度差分**——Δ(e_t) 是 MA(1) 且 C(1)=0。可独立运行。
-
 
 # 依赖包
 
@@ -416,10 +432,14 @@ pkgs <- c(
   "haven", "readxl", "data.table", "sandwich", "lmtest", "AER",
   "quantreg", "boot", "MASS", "Matrix", "nnet", "ggplot2", "knitr"
 )
-# 章节扩展：Ch14–16 vars/urca；Ch17 plm；Ch19 np；Ch26 mlogit
+# 扩展：vars/urca (Ch14–16), plm (Ch17), np (Ch19), mlogit (Ch26)
 miss <- setdiff(pkgs, rownames(installed.packages()))
-if (length(miss)) install.packages(miss, repos = "https://cloud.r-project.org")
+if (length(miss)) {
+  install.packages(miss, repos = "https://cloud.r-project.org")
+}
 ```
 
 ---
-*第 16 章 · R/Quarto · md + ipynb 融合*
+
+*第 16 章 · R/Quarto · 理论 Markdown + R companion 融合*  
+*重新生成：`python3 scripts/convert_chapters_to_qmd.py`*

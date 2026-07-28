@@ -1,3 +1,11 @@
+## bootstrap
+local({
+  for (cand in c("../..", "..", ".", "../../..")) {
+    f <- file.path(cand, "scripts/r_companions/_common.R")
+    if (file.exists(f)) { source(f, local = FALSE); break }
+  }
+})
+
 ## Ch.17 Panel — within estimator; AB/BB require custom GMM (see notebook)
 ## bootstrap common helpers
 local({

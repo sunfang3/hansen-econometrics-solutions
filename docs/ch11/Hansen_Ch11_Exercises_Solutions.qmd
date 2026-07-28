@@ -30,22 +30,30 @@ execute:
 ::: {.callout-note}
 ## 说明
 
-- **理论：** 来自同目录 Markdown 逐步解答。
-- **代码：** Python notebook 已融合为 **R**（`scripts/r_companions/ch11.R` 优先；否则为带注释的翻译草稿）。
-- **数据：** `hansen/econometrics/data/`（gitignore）；渲染前请确保数据已下载。
-- 默认 `execute: eval: false`。有数据时改为 `true` 或交互运行代码块。
-- 缺包时：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot"))` 等。
+- **理论：** 同目录 Markdown 逐步解答全文嵌入。
+- **代码：** R 实现（`scripts/r_companions/ch11.R`）**内联**于下文；数据在 `hansen/econometrics/data/`。
+- 默认 `execute: eval: false`。有数据/包时改为 `true`，或在 R 中 `source()` companion。
+- 装包示例：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot","knitr"))`
 :::
 
 ```{r}
 #| label: setup
-root <- if (dir.exists("../../hansen")) "../.." else if (dir.exists("hansen")) "." else "../.."
+#| include: true
+root <- if (dir.exists("../../hansen")) {
+  "../.."
+} else if (dir.exists("hansen")) {
+  "."
+} else {
+  "../.."
+}
 data_root <- file.path(root, "hansen", "econometrics", "data")
 companion_dir <- file.path(root, "scripts", "r_companions")
 if (file.exists(file.path(companion_dir, "_common.R"))) {
   source(file.path(companion_dir, "_common.R"), local = FALSE)
 }
-knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+if (requireNamespace("knitr", quietly = TRUE)) {
+  knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+}
 options(stringsAsFactors = FALSE)
 ```
 
@@ -324,78 +332,25 @@ $$\mathrm{ACov}(\hat\beta_1,\hat\beta_2)=Q_{xx}^{-1}E[XX'e_1e_2]Q_{xx}^{-1}.$$
 | 11.1–11.14 | 证明，详见本 .md |
 
 
-# 实证与数值代码（来自 notebook，R 版）
+# 实证与数值代码（R）
 
-## Hansen Ch.11 Multivariate Regression — 习题解答
-
-**Chapter 11 Multivariate Regression**
-
-完整证明与**面向初学者的详细注释**见同目录 `Hansen_Ch11_Exercises_Solutions.md`（强烈建议先读 §0、§1）。
-
-本 notebook 用模拟核对 **Exercise 11.15**：共同 $X$ 下 $(\hat\beta_1,\hat\beta_2)$ 的联合协方差。
-
-> **写给只学过李子奈/陈强的同学：** 本章 = 把 $m$ 个方程**堆叠**成一个大系统，于是第 4 章（GLS）+ 第 7 章（渐近正态、夹心方差）整体照搬，只是矩阵变大、多了 Kronecker 结构。核心新东西是 **SUR（似无关回归）= 系统的 GLS**：
-> - 回归元不同 + 跨方程误差相关时，SUR **比逐方程 OLS 更有效**（MC 验证：方差可减半）。
-> - **SUR = OLS** 当且仅当：所有方程回归元相同，**或**跨方程误差不相关（$\Sigma$ 对角）。
-> - 跨方程函数（如 $\beta_1-\beta_2$）的推断必须用**联合**方差，**不能漏掉跨方程协方差项**。
+以下代码来自 `scripts/r_companions/ch11.R`（与 Python notebook 对应）。
 
 ```{r}
-#| label: nb-cell-01
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-
-# import numpy as np
-
-# PY: rng = np.random.default_rng(0)
-# PY: n, k = 5000, 2
-# X ~ N(0,I), e ~ bivariate with correlation
-# PY: X = rng.normal(size=(n, k))
-# PY: X = np.column_stack([X, np.ones(n)])  # add intercept? use k=2 without intercept for simplicity
-# PY: X = rng.normal(size=(n, 2))
-# PY: beta1 = np.array([1.0, -0.5])
-# PY: beta2 = np.array([0.2, 0.8])
-# correlated errors
-# PY: z = rng.normal(size=(n, 2))
-# cov [[1, 0.6],[0.6, 1]]
-# PY: L = np.array([[1.0, 0.0], [0.6, np.sqrt(1-0.36)]])
-# PY: e = z @ L.T
-# PY: Y1 = X @ beta1 + e[:, 0]
-# PY: Y2 = X @ beta2 + e[:, 1]
-
-# PY: Q = X.T @ X / n
-# PY: b1 = np.linalg.solve(X.T @ X, X.T @ Y1)
-# PY: b2 = np.linalg.solve(X.T @ X, X.T @ Y2)
-
-# theoretical avar blocks (homosk): Sigma_jl * Qinv / n
-# PY: Sig = np.cov(e.T, bias=True)
-# PY: Qinv = np.linalg.inv(Q)
-# Monte Carlo many reps for sampling var of sqrt(n)(b-beta)
-# PY: B = 400
-# PY: rng2 = np.random.default_rng(1)
-# PY: diffs = []
-# PY: for _ in range(B):
-# PY:     X = rng2.normal(size=(n, 2))
-# PY:     z = rng2.normal(size=(n, 2))
-# PY:     e = z @ L.T
-# PY:     Y1 = X @ beta1 + e[:, 0]
-# PY:     Y2 = X @ beta2 + e[:, 1]
-# PY:     b1 = np.linalg.solve(X.T @ X, X.T @ Y1)
-# PY:     b2 = np.linalg.solve(X.T @ X, X.T @ Y2)
-# PY:     diffs.append(np.concatenate([np.sqrt(n)*(b1-beta1), np.sqrt(n)*(b2-beta2)]))
-# PY: S = np.cov(np.array(diffs).T)
-# theory: kron(Sigma, Q^{-1}) but Q random; use E[Q]=I
-# PY: V_theory = np.kron(np.array([[1, 0.6], [0.6, 1]]), np.eye(2))
-# PY: print("MC cov of sqrt(n)(beta_hat - beta) [approx]:\n", np.round(S, 3))
-# PY: print("Theory Sigma ⊗ I_2:\n", V_theory)
-# PY: print("Frobenius relative error:", np.linalg.norm(S - V_theory) / np.linalg.norm(V_theory))
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
+#| label: companion
+# helpers: see setup chunk (source _common.R)
+## Ch.11 Multivariate regression — SUR-style stacked OLS
+set.seed(11)
+n <- 300L
+X <- cbind(1, rnorm(n))
+Y1 <- as.numeric(X %*% c(1, 0.5) + rnorm(n))
+Y2 <- as.numeric(X %*% c(0, 1.0) + rnorm(n))
+fit1 <- ols_hc1(Y1, X); fit2 <- ols_hc1(Y2, X)
+print(list(eq1 = fit1$beta, eq2 = fit2$beta))
 ```
+
+
+## Notebook 导读
 
 ### 理论题索引
 
@@ -411,59 +366,6 @@ $$\mathrm{ACov}(\hat\beta_1,\hat\beta_2)=Q_{xx}^{-1}E[XX'e_1e_2]Q_{xx}^{-1}.$$
 
 以下单元格核对 ch11 的 SUR 头条结论：(A) 回归元不同 + 跨方程误差相关时 SUR 比 OLS 更有效；(B) 共同回归元时 SUR = OLS。可独立运行。
 
-```{r}
-#| label: nb-cell-02
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-# import numpy as np
-# PY: rng = np.random.default_rng(11)
-
-# PY: n, reps = 4000, 3000
-# PY: rho = 0.7
-# PY: L = np.array([[1.0, 0.0], [rho, np.sqrt(1 - rho**2)]])          # 误差协方差 [[1,ρ],[ρ,1]] 的 Cholesky
-# PY: b1, b2 = 1.0, 0.5
-
-# (A) 回归元不同 + 误差相关: SUR > OLS（借用跨方程信息）
-# PY: ols1, sur1 = [], []
-# PY: for r in range(reps):
-# PY:     X1 = rng.standard_normal(n)
-# PY:     X2 = rng.standard_normal(n) + 0.3 * X1                      # 不同回归元(但相关)
-# PY:     z = rng.standard_normal((n, 2)); e = z @ L.T
-# PY:     Y1 = b1 * X1 + e[:, 0]; Y2 = b2 * X2 + e[:, 1]
-# PY:     ols1.append(np.sum(X1*Y1) / np.sum(X1**2))
-# PY:     Sinv = np.linalg.inv(np.cov(e.T))                           # 已知 Σ 的 GLS = SUR
-# PY:     A = np.array([[np.sum(X1**2)*Sinv[0,0], np.sum(X1*X2)*Sinv[0,1]],
-# PY:                   [np.sum(X1*X2)*Sinv[1,0], np.sum(X2**2)*Sinv[1,1]]])
-# PY:     rhs = np.array([Sinv[0,0]*np.sum(X1*Y1) + Sinv[0,1]*np.sum(X1*Y2),
-# PY:                     Sinv[1,0]*np.sum(X2*Y1) + Sinv[1,1]*np.sum(X2*Y2)])
-# PY:     sur1.append(np.linalg.solve(A, rhs)[0])
-# PY: print(f"[11.12] 回归元不同+误差相关: var(OLS)={np.var(ols1):.5f} > var(SUR)={np.var(sur1):.5f}  (SUR 更有效)")
-
-# (B) 共同回归元: SUR = OLS（逐样本数值相同）
-# PY: ols1c, sur1c = [], []
-# PY: for r in range(reps):
-# PY:     X = rng.standard_normal(n)
-# PY:     z = rng.standard_normal((n, 2)); e = z @ L.T
-# PY:     Y1 = b1 * X + e[:, 0]; Y2 = b2 * X + e[:, 1]
-# PY:     ols1c.append(np.sum(X*Y1) / np.sum(X**2))
-# PY:     Sinv = np.linalg.inv(np.cov(e.T))
-# PY:     A = np.array([[np.sum(X**2)*Sinv[0,0], np.sum(X**2)*Sinv[0,1]],
-# PY:                   [np.sum(X**2)*Sinv[1,0], np.sum(X**2)*Sinv[1,1]]])
-# PY:     rhs = np.array([Sinv[0,0]*np.sum(X*Y1) + Sinv[0,1]*np.sum(X*Y2),
-# PY:                     Sinv[1,0]*np.sum(X*Y1) + Sinv[1,1]*np.sum(X*Y2)])
-# PY:     sur1c.append(np.linalg.solve(A, rhs)[0])
-# PY: print(f"[11.5/11.6] 共同回归元: var(OLS)={np.var(ols1c):.6f} = var(SUR)={np.var(sur1c):.6f}, "
-# PY:       f"逐样本|OLS-SUR|均值={np.mean(np.abs(np.array(ols1c) - np.array(sur1c))):.1e}  (SUR = OLS)")
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
-
-
 # 依赖包
 
 ```{r}
@@ -473,10 +375,14 @@ pkgs <- c(
   "haven", "readxl", "data.table", "sandwich", "lmtest", "AER",
   "quantreg", "boot", "MASS", "Matrix", "nnet", "ggplot2", "knitr"
 )
-# 章节扩展：Ch14–16 vars/urca；Ch17 plm；Ch19 np；Ch26 mlogit
+# 扩展：vars/urca (Ch14–16), plm (Ch17), np (Ch19), mlogit (Ch26)
 miss <- setdiff(pkgs, rownames(installed.packages()))
-if (length(miss)) install.packages(miss, repos = "https://cloud.r-project.org")
+if (length(miss)) {
+  install.packages(miss, repos = "https://cloud.r-project.org")
+}
 ```
 
 ---
-*第 11 章 · R/Quarto · md + ipynb 融合*
+
+*第 11 章 · R/Quarto · 理论 Markdown + R companion 融合*  
+*重新生成：`python3 scripts/convert_chapters_to_qmd.py`*

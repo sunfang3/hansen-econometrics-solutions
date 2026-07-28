@@ -30,22 +30,30 @@ execute:
 ::: {.callout-note}
 ## 说明
 
-- **理论：** 来自同目录 Markdown 逐步解答。
-- **代码：** Python notebook 已融合为 **R**（`scripts/r_companions/ch03.R` 优先；否则为带注释的翻译草稿）。
-- **数据：** `hansen/econometrics/data/`（gitignore）；渲染前请确保数据已下载。
-- 默认 `execute: eval: false`。有数据时改为 `true` 或交互运行代码块。
-- 缺包时：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot"))` 等。
+- **理论：** 同目录 Markdown 逐步解答全文嵌入。
+- **代码：** R 实现（`scripts/r_companions/ch03.R`）**内联**于下文；数据在 `hansen/econometrics/data/`。
+- 默认 `execute: eval: false`。有数据/包时改为 `true`，或在 R 中 `source()` companion。
+- 装包示例：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot","knitr"))`
 :::
 
 ```{r}
 #| label: setup
-root <- if (dir.exists("../../hansen")) "../.." else if (dir.exists("hansen")) "." else "../.."
+#| include: true
+root <- if (dir.exists("../../hansen")) {
+  "../.."
+} else if (dir.exists("hansen")) {
+  "."
+} else {
+  "../.."
+}
 data_root <- file.path(root, "hansen", "econometrics", "data")
 companion_dir <- file.path(root, "scripts", "r_companions")
 if (file.exists(file.path(companion_dir, "_common.R"))) {
   source(file.path(companion_dir, "_common.R"), local = FALSE)
 }
-knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+if (requireNamespace("knitr", quietly = TRUE)) {
+  knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+}
 options(stringsAsFactors = FALSE)
 ```
 
@@ -574,132 +582,34 @@ $$\hat\beta_2=(X_2'M_1X_2)^{-1}X_2'M_1Y,$$
 | 3.26 | 工资回归 + statsmodels 对照 |
 
 
-# 实证与数值代码（来自 notebook，R 版）
+# 实证与数值代码（R）
 
-## Hansen《Econometrics》第 3 章习题解答
+以下代码来自 `scripts/r_companions/ch03.R`（与 Python notebook 对应）。
 
-**Chapter 3 The Algebra of Least Squares**
+```{r}
+#| label: companion
+# helpers: see setup chunk (source _common.R)
+## Ch.3 Algebra of OLS — Frisch-Waugh residual regression
+set.seed(2)
+n <- 200L
+X1 <- rnorm(n); X2 <- rnorm(n); e <- rnorm(n)
+Y <- 1 + X1 + 2*X2 + e
+## residual regression of Y,X1 after partialling X2
+M2Y <- resid(lm(Y ~ X2))
+M2X1 <- resid(lm(X1 ~ X2))
+b_fw <- coef(lm(M2Y ~ 0 + M2X1))
+b_full <- coef(lm(Y ~ X1 + X2))["X1"]
+cat("FW beta1 =", b_fw, " full beta1 =", b_full, "\n")
+```
 
-对应书稿 PDF 第 112–116 页（印刷页 92–96），§3.26 Exercises。
 
-完整推导与**面向初学者的详细注释**见同目录 `Hansen_Ch03_Exercises_Solutions.md`（强烈建议先读它的 §0、§1 概念铺垫）。本 notebook：理论摘要 + **Exercise 3.24–3.26 数值计算**。
-
-> **写给只学过李子奈/陈强的同学：** 本章把 OLS **全部**写成两个矩阵 $P=X(X'X)^{-1}X'$（投影/hat 矩阵）和 $M=I-P$（零化矩阵）的语言。记两句口诀，本章 90% 的题迎刃而解：
-> 1. **"$P$ 保留 col($X$)，$M$ 消灭 col($X$)"**：$PX=X$、$MX=0$。
-> 2. **"$P$、$M$ 幂等"**：$P^2=P$、$M^2=M$、$PM=0$。
->
-> 配合 $\hat Y=PY$、$\hat e=MY$、$X'\hat e=0$（正规方程），所有 OLS 性质统一成"正交"这一个概念。本章**没有概率/统计**（那是第 4 章起），纯粹是线性代数。
-
-### Exercise 3.1–3.11 代数核心（一句话直觉 + 结论）
-
-| 题 | 结论 | 直觉（$P$/$M$ 视角） |
-|:--:|------|------|
-| 3.1 | 矩条件 $\Rightarrow$ 样本均值与 $1/n$ 方差 | 矩方法：两方程解两未知数（Ch2 Ex 2.17 的样本版） |
-| 3.2 | $Z=XC$ 可逆 $\Rightarrow$ 拟合、残差不变，$\hat\beta_Z=C^{-1}\hat\beta_X$ | col($Z$)=col($X$)，投影空间不变 |
-| 3.3 | $X'\hat e=0$ | 正规方程；因 $X'M=0$ |
-| 3.4 | $X_2'\hat e=0$ | $X'\hat e=0$ 的分块 |
-| 3.5 | $\hat e$ 对 $X$ 回归系数 $=0$ | 残差已"榨干"$X$ 的线性信息 |
-| 3.6 | $\hat Y$ 对 $X$ 回归系数 $=\hat\beta$ | $\hat Y\in$col($X$)，再投影不变 |
-| 3.7 | $PX_1=X_1$，$MX_1=0$ | "$P$ 保留、$M$ 消灭" col($X$) |
-| 3.8 | $M^2=M$ | $M=I-P$，用 $P^2=P$ |
-| 3.9 | $\mathrm{tr}(M)=n-k$ | 自由度 $n-k$ 的代数来源 |
-| 3.10 | $X_1'X_2=0\Rightarrow P=P_1+P_2$ | 正交分块→投影可拆（多重共线性的反面） |
-| 3.11 | 含截距 $\Rightarrow\overline{\hat Y}=\bar Y$ | 截距→$\sum\hat e_i=0$→残差均值为 0 |
-
-### Exercise 3.12–3.23（详见 .md）
-
-- **3.12** 虚拟变量陷阱：$D_1+D_2=\iota$ 与截距共线；(3.52) 不可估，(3.53)(3.54) 列空间相同、拟合一致。
-- **3.13** 组内去均值 + FWL = 固定效应/within 估计量雏形（Ch.17 基础）；$\tilde\beta=\hat\beta$。
-- **3.14** Sherman–Morrison 在线更新：$\hat\beta_{n+1}=\hat\beta_n+\text{修正}\times(Y_{n+1}-X_{n+1}'\hat\beta_n)$。
-- **3.15** 含截距时 $R^2=\mathrm{Corr}(Y,\hat Y)^2$。
-- **3.16** 嵌套回归 $R_2^2\ge R_1^2$；相等 iff 新变量系数为 0（→调整 $R^2$ 的动机）。
-- **3.17** $\tilde\sigma^2\ge\hat\sigma^2$（留一误差 ≥ 样本内残差，高杠杆点放大更多）。
-- **3.18** $\hat\beta_{(-i)}=\hat\beta$ iff $\hat e_i=0$（影响点判据）。
-- **3.19** 截距模型：$h_{ii}=1/n$，$\tilde e_i=\frac{n}{n-1}(Y_i-\bar Y)$。
-- **3.20** $\hat\sigma^2_{(-i)}=\frac{n}{n-1}\hat\sigma^2-\frac{\hat e_i^2}{(n-1)(1-h_{ii})}$（推导见 .md，用幂等性）。
-- **3.21** 正交回归元（$X_1'X_2=0$）→ 可逐个回归，系数与联合回归相同。
-- **3.22** 只把 $Y$ 对 $X_1$ 净化、再回归于 $X_2$ **是错的**（FWL 要求 $Y$ 和 $X_2$ 都净化）。
-- **3.23** $Z=[X_1,X_2-X_1]=XC$ 可逆 → 残差相同 → $\hat\sigma^2=\tilde\sigma^2$。
+## Notebook 导读
 
 ### 准备数据：方程 (3.49) 样本
 
 单身亚裔男性（`race==4`, `marital==7`, `female==0`），`experience < 45`。
 
-```{r}
-#| label: nb-cell-01
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-# import numpy as np
-# import pandas as pd
-# from pathlib import Path
-
-# PY: candidates = [
-# PY:     Path("../../hansen/econometrics/data/cps09mar/cps09mar.xlsx"),
-# PY:     Path("/home/fang/Project/zhihu-paper/p1/hansen/econometrics/data/cps09mar/cps09mar.xlsx"),
-# PY: ]
-# PY: DATA = next(p for p in candidates if p.exists())
-# PY: print("data:", DATA.resolve())
-
-# PY: df = pd.read_excel(DATA)
-# PY: df["experience"] = df["age"] - df["education"] - 6
-# PY: df["lwage"] = np.log(df["earnings"] / (df["hours"] * df["week"]))
-# PY: df["exp2"] = (df["experience"] ** 2) / 100
-
-# PY: mask_349 = (
-# PY:     (df["race"] == 4)
-# PY:     & (df["marital"] == 7)
-# PY:     & (df["female"] == 0)
-# PY:     & (df["experience"] < 45)
-# PY: )
-# PY: sub = df.loc[mask_349].copy()
-# PY: print("n =", len(sub))
-# PY: sub[["education", "experience", "lwage"]].describe()
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
-
 ### Exercise 3.24 (a) 估计 (3.49)
-
-```{r}
-#| label: nb-cell-02
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-# PY: def ols(y, X, names=None):
-# PY:     beta = np.linalg.lstsq(X, y, rcond=None)[0]
-# PY:     e = y - X @ beta
-# PY:     yhat = X @ beta
-# PY:     sse = float(np.sum(e ** 2))
-# PY:     sst = float(np.sum((y - y.mean()) ** 2))
-# PY:     r2 = 1 - sse / sst
-# PY:     idx = names if names is not None else list(range(len(beta)))
-# PY:     return pd.Series(beta, index=idx), e, yhat, r2, sse
-
-# PY: y = sub["lwage"].to_numpy(float)
-# PY: X = np.column_stack([
-# PY:     sub["education"].to_numpy(float),
-# PY:     sub["experience"].to_numpy(float),
-# PY:     sub["exp2"].to_numpy(float),
-# PY:     np.ones(len(sub)),
-# PY: ])
-# PY: names = ["education", "experience", "exp2/100", "intercept"]
-# PY: beta, e, yhat, r2, sse = ols(y, X, names)
-# PY: print(beta.to_string())
-# PY: print(f"R^2 = {r2:.6f}")
-# PY: print(f"SSE = {sse:.6f}")
-# PY: print("Book (3.49) approx: 0.144, 0.043, -0.095, 0.531")
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
 
 ### Exercise 3.24 (b)(c) FWL 残差回归
 
@@ -712,217 +622,17 @@ $$\hat\beta_2=(X_2'M_1X_2)^{-1}X_2'M_1Y,$$
 
 **注意（Ex 3.22 的教训）：** 必须 $Y$ **和** $X_2$ 都净化；只净化 $Y$ 是错的。下方代码两步都做。
 
-```{r}
-#| label: nb-cell-03
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-# PY: Z = np.column_stack([
-# PY:     sub["experience"].to_numpy(float),
-# PY:     sub["exp2"].to_numpy(float),
-# PY:     np.ones(len(sub)),
-# PY: ])
-# PY: edu = sub["education"].to_numpy(float)
-
-# PY: b_y = np.linalg.lstsq(Z, y, rcond=None)[0]
-# PY: b_e = np.linalg.lstsq(Z, edu, rcond=None)[0]
-# PY: ry = y - Z @ b_y
-# PY: re = edu - Z @ b_e
-
-# PY: Xfwl = np.column_stack([re, np.ones(len(re))])
-# PY: beta_fwl, e_fwl, _, r2_fwl, sse_fwl = ols(ry, Xfwl, ["education (FWL)", "intercept"])
-# PY: print(beta_fwl.to_string())
-# PY: print(f"FWL R^2 = {r2_fwl:.6f}")
-# PY: print(f"FWL SSE = {sse_fwl:.6f}")
-# PY: print("slope equals full OLS?", np.isclose(beta_fwl.iloc[0], beta["education"]))
-# PY: print("SSE equals full OLS?", np.isclose(sse_fwl, sse))
-# PY: print("R^2 equal? (expect False)", np.isclose(r2_fwl, r2))
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
-
 ### Exercise 3.25 数值核对 OLS 性质
-
-```{r}
-#| label: nb-cell-04
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-# PY: X1 = sub["education"].to_numpy(float)
-# PY: X2 = sub["experience"].to_numpy(float)
-
-# PY: checks = {
-# PY:     "(a) sum e": np.sum(e),
-# PY:     "(b) sum X1*e": np.sum(X1 * e),
-# PY:     "(c) sum X2*e": np.sum(X2 * e),
-# PY:     "(d) sum X1^2*e": np.sum(X1**2 * e),
-# PY:     "(e) sum X2^2*e": np.sum(X2**2 * e),
-# PY:     "(f) sum Yhat*e": np.sum(yhat * e),
-# PY:     "(g) sum e^2": np.sum(e**2),
-# PY: }
-# PY: for k, v in checks.items():
-# PY:     print(f"{k:20s} = {v: .6e}")
-
-# PY: print()
-# PY: print("Theory notes:")
-# PY: print("- (a)(b)(c)(f) ~ 0: intercept, edu, exp in X; Yhat in col(X)")
-# PY: print("- (e) ~ 0: exp^2/100 is in the regression")
-# PY: print("- (d) != 0: education^2 not in the regression")
-# PY: print("- (g) = SSE")
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
 
 ### Exercise 3.26 白人男性西班牙裔 log wage 回归
 
 基准：Midwest；婚姻基准：never married；widowed 与 divorced 合并。
 
-```{r}
-#| label: nb-cell-05
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-# PY: mask_w = (df["race"] == 1) & (df["female"] == 0) & (df["hisp"] == 1)
-# PY: s2 = df.loc[mask_w].copy()
-# PY: print("n white male Hispanic =", len(s2))
-
-# PY: s2["married"] = s2["marital"].isin([1, 2, 3]).astype(float)
-# PY: s2["wid_div"] = s2["marital"].isin([4, 5]).astype(float)
-# PY: s2["separated"] = (s2["marital"] == 6).astype(float)
-# PY: s2["NE"] = (s2["region"] == 1).astype(float)
-# PY: s2["South"] = (s2["region"] == 3).astype(float)
-# PY: s2["West"] = (s2["region"] == 4).astype(float)
-
-# PY: y2 = s2["lwage"].to_numpy(float)
-# PY: X2m = np.column_stack([
-# PY:     s2["education"], s2["experience"], s2["exp2"],
-# PY:     s2["NE"], s2["South"], s2["West"],
-# PY:     s2["married"], s2["wid_div"], s2["separated"],
-# PY:     np.ones(len(s2)),
-# PY: ])
-# PY: names2 = [
-# PY:     "education", "experience", "exp2/100",
-# PY:     "Northeast", "South", "West",
-# PY:     "married", "widowed/divorced", "separated",
-# PY:     "intercept",
-# PY: ]
-# PY: beta2, e2, yhat2, r2_2, sse2 = ols(y2, X2m, names2)
-# PY: print(beta2.to_string())
-# PY: print(f"R^2 = {r2_2:.6f}, SSE = {sse2:.6f}")
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
-
 #### 3.26 (b) 与 statsmodels 对照
-
-```{r}
-#| label: nb-cell-06
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-# PY: try:
-#     import statsmodels.api as sm
-# PY:     res = sm.OLS(y2, X2m).fit()
-# PY:     cmp = pd.DataFrame({
-# PY:         "numpy_lstsq": beta2.values,
-# PY:         "statsmodels": res.params,
-# PY:         "abs_diff": np.abs(beta2.values - res.params),
-# PY:     }, index=names2)
-# PY:     display(cmp) if "display" in dir() else print(cmp)
-# PY:     print("max abs diff =", float(cmp["abs_diff"].max()))
-# PY: except Exception as ex:
-# PY:     print("statsmodels unavailable or error:", ex)
-# PY:     print(beta2)
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
 
 ### 理论结论的蒙特卡洛验证（无需外部数据）
 
 以下单元格用模拟核对 ch03 的关键结论：投影/幂等矩阵、$R^2$、留一（LOO）残差与方差公式。可独立运行。
-
-```{r}
-#| label: nb-cell-07
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-# import numpy as np
-# PY: rng = np.random.default_rng(3)
-
-# 基本设定：含截距的设计矩阵 X，拟合后得到投影 P、零化 M、杠杆 h、残差 e
-# PY: n, k = 80, 4
-# PY: X = np.column_stack([rng.standard_normal((n, k-1)), np.ones(n)])
-# PY: beta = np.array([1.0, -0.5, 2.0, 0.3])
-# PY: Y = X @ beta + rng.standard_normal(n) * 2.0
-# PY: XtXinv = np.linalg.inv(X.T @ X)
-# PY: P = X @ XtXinv @ X.T
-# PY: M = np.eye(n) - P
-# PY: beta_hat = np.linalg.solve(X.T @ X, X.T @ Y)
-# PY: e = Y - X @ beta_hat
-# PY: h = np.diag(P)
-# PY: print("[基本] X'e≈0:", np.allclose(X.T @ e, 0),
-# PY:       " P²=P:", np.allclose(P @ P, P),
-# PY:       " tr(P)=k:", np.isclose(np.trace(P), k),
-# PY:       " tr(M)=n-k:", np.isclose(np.trace(M), n-k))
-
-# Ex 3.15: 含截距时 R² = Corr(Y, Ŷ)²
-# PY: yhat = X @ beta_hat
-# PY: r2 = 1 - (e @ e) / ((Y - Y.mean()) @ Y)
-# PY: print(f"[3.15] R²={r2:.4f}  Corr²={np.corrcoef(Y, yhat)[0,1]**2:.4f}  (应相等)")
-
-# Ex 3.17: 留一误差 σ̃² ≥ 样本内残差 σ̂²（高杠杆点被放大）
-# PY: sig2hat = (e @ e) / n
-# PY: sig2tilde = np.mean((e / (1 - h))**2)
-# PY: print(f"[3.17] σ̂²={sig2hat:.4f} ≤ σ̃²={sig2tilde:.4f}: {sig2tilde >= sig2hat}")
-
-# Ex 3.18 & 3.20: 删一估计（暴力删行 vs 公式）
-# PY: i = 3
-# PY: Xmi, Ymi = np.delete(X, i, 0), np.delete(Y, i)
-# PY: beta_loo = np.linalg.solve(Xmi.T @ Xmi, Xmi.T @ Ymi)
-# PY: e_loo_pred = e[i] / (1 - h[i])                                  # Theorem 3.7 的预测误差
-# PY: sse_loo = ((Ymi - Xmi @ beta_loo)**2).sum()
-# PY: sig2loo_formula = n / (n-1) * sig2hat - e[i]**2 / ((n-1) * (1 - h[i]))   # Ex 3.20 公式
-# PY: print(f"[3.18] β̂(-i) 与 β̂ 的差={np.abs(beta_loo - beta_hat).max():.2e} (ê_i={e[i]:.3f}; 差=0 iff ê_i=0)")
-# PY: print(f"[3.20] σ²(-i) 暴力={sse_loo/(n-1):.5f}  公式={sig2loo_formula:.5f}  (应一致)")
-
-# Ex 3.19: 截距模型 LOO = n/(n-1)(Y - Ȳ)
-# PY: Yc = rng.standard_normal(n) * 2 + 5
-# PY: eh = Yc - Yc.mean()
-# PY: print(f"[3.19] 截距LOO匹配: {np.allclose(eh / (1 - 1/n), n/(n-1) * (Yc - Yc.mean()))}")
-
-# Ex 3.10: 回归元正交分块时 P = P1 + P2
-# PY: X1 = rng.standard_normal((n, 2))
-# PY: Z = rng.standard_normal((n, 2))
-# PY: X2 = Z - X1 @ np.linalg.solve(X1.T @ X1, X1.T @ Z)              # 残差化使 X1'X2 = 0
-# PY: Xo = np.column_stack([X1, X2])
-# PY: Po = Xo @ np.linalg.inv(Xo.T @ Xo) @ Xo.T
-# PY: P1 = X1 @ np.linalg.solve(X1.T @ X1, X1.T)
-# PY: P2 = X2 @ np.linalg.solve(X2.T @ X2, X2.T)
-# PY: print(f"[3.10] X1'X2≈0: {np.allclose(X1.T @ X2, 0)}   P=P1+P2: {np.allclose(Po, P1 + P2)}")
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
-
 
 # 依赖包
 
@@ -933,10 +643,14 @@ pkgs <- c(
   "haven", "readxl", "data.table", "sandwich", "lmtest", "AER",
   "quantreg", "boot", "MASS", "Matrix", "nnet", "ggplot2", "knitr"
 )
-# 章节扩展：Ch14–16 vars/urca；Ch17 plm；Ch19 np；Ch26 mlogit
+# 扩展：vars/urca (Ch14–16), plm (Ch17), np (Ch19), mlogit (Ch26)
 miss <- setdiff(pkgs, rownames(installed.packages()))
-if (length(miss)) install.packages(miss, repos = "https://cloud.r-project.org")
+if (length(miss)) {
+  install.packages(miss, repos = "https://cloud.r-project.org")
+}
 ```
 
 ---
-*第 3 章 · R/Quarto · md + ipynb 融合*
+
+*第 3 章 · R/Quarto · 理论 Markdown + R companion 融合*  
+*重新生成：`python3 scripts/convert_chapters_to_qmd.py`*

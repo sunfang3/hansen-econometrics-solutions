@@ -30,22 +30,30 @@ execute:
 ::: {.callout-note}
 ## 说明
 
-- **理论：** 来自同目录 Markdown 逐步解答。
-- **代码：** Python notebook 已融合为 **R**（`scripts/r_companions/ch14.R` 优先；否则为带注释的翻译草稿）。
-- **数据：** `hansen/econometrics/data/`（gitignore）；渲染前请确保数据已下载。
-- 默认 `execute: eval: false`。有数据时改为 `true` 或交互运行代码块。
-- 缺包时：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot"))` 等。
+- **理论：** 同目录 Markdown 逐步解答全文嵌入。
+- **代码：** R 实现（`scripts/r_companions/ch14.R`）**内联**于下文；数据在 `hansen/econometrics/data/`。
+- 默认 `execute: eval: false`。有数据/包时改为 `true`，或在 R 中 `source()` companion。
+- 装包示例：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot","knitr"))`
 :::
 
 ```{r}
 #| label: setup
-root <- if (dir.exists("../../hansen")) "../.." else if (dir.exists("hansen")) "." else "../.."
+#| include: true
+root <- if (dir.exists("../../hansen")) {
+  "../.."
+} else if (dir.exists("hansen")) {
+  "."
+} else {
+  "../.."
+}
 data_root <- file.path(root, "hansen", "econometrics", "data")
 companion_dir <- file.path(root, "scripts", "r_companions")
 if (file.exists(file.path(companion_dir, "_common.R"))) {
   source(file.path(companion_dir, "_common.R"), local = FALSE)
 }
-knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+if (requireNamespace("knitr", quietly = TRUE)) {
+  knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+}
 options(stringsAsFactors = FALSE)
 ```
 
@@ -528,302 +536,38 @@ OLS 方差"肉"$=\mathrm{Var}(\sum X_te_t)=\sum_s\sum_t E[X_sX_t'e_se_t]$。横�
 | 理论验证 | MA(1) 自协方差、随机游走 var=t、AR(1) IRF、高斯 AR(1) 边际、自协方差一致性、HAC vs HC code cell |
 
 
-# 实证与数值代码（来自 notebook，R 版）
+# 实证与数值代码（R）
+
+以下代码来自 `scripts/r_companions/ch14.R`（与 Python notebook 对应）。
 
 ```{r}
-#| label: nb-cell-01
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-
-# import numpy as np
-# import pandas as pd
-# from pathlib import Path
-# from numpy.linalg import inv
-# from scipy import stats
-
-# PY: ROOT = Path("/home/fang/Project/zhihu-paper/p1/hansen/econometrics/data")
-# PY: qd = pd.read_excel(ROOT / "FRED-QD/FRED-QD.xlsx")
-# PY: md = pd.read_excel(ROOT / "FRED-MD/FRED-MD.xlsx")
-
-# PY: def ols_hc(y, X):
-# PY:     n, k = X.shape
-# PY:     b = inv(X.T @ X) @ (X.T @ y)
-# PY:     e = y - X @ b
-# PY:     u = X * e[:, None]
-# PY:     V = inv(X.T @ X) @ (u.T @ u) @ inv(X.T @ X)
-# PY:     return b, e, V, n, k
-
-# PY: def newey_west(X, e, M=5):
-# PY:     n, k = X.shape
-# PY:     u = X * e[:, None]
-# PY:     S = u.T @ u
-# PY:     for j in range(1, M + 1):
-# PY:         w = 1 - j / (M + 1)
-# PY:         Gj = u[j:].T @ u[:-j]
-# PY:         S += w * (Gj + Gj.T)
-# PY:     return inv(X.T @ X) @ S @ inv(X.T @ X)
-
-# PY: def ar_xy(y, p):
-# PY:     y = np.asarray(y, float)
-# PY:     Y = y[p:]
-# PY:     X = np.column_stack([y[p - j : len(y) - j] for j in range(1, p + 1)] + [np.ones(len(y) - p)])
-# PY:     return Y, X
-
-# PY: def wald(R, b, V):
-# PY:     R = np.atleast_2d(R)
-# PY:     d = R @ b
-# PY:     W = float(d.T @ inv(R @ V @ R.T) @ d)
-# PY:     return W, float(1 - stats.chi2.cdf(W, R.shape[0]))
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
+#| label: companion
+# helpers: see setup chunk (source _common.R)
+## Ch.14 Time series — AR(1) OLS + HAC note
+set.seed(14)
+n <- 400L
+e <- rnorm(n); y <- filter(e, 0.7, method="recursive")
+y <- as.numeric(y)
+yt <- y[-1]; ylag <- y[-n]
+fit <- ols_hc1(yt, cbind(1, ylag))
+print(pretty_coef(fit, c("const","AR1")))
+cat("For HAC: sandwich::NeweyWest(lm(...)) when sandwich installed\n")
 ```
+
+
+## Notebook 导读
 
 ### 14.18 `pnfix` 季度增长率 AR(4)
 
-```{r}
-#| label: nb-cell-02
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-
-# PY: pnfi = qd["pnfix"].astype(float)
-# PY: g = 100 * (pnfi / pnfi.shift(1) - 1).dropna().to_numpy()
-# PY: Y, X = ar_xy(g, 4)
-# PY: b, e, Vhc, n, k = ols_hc(Y, X)
-# PY: Vnw = newey_west(X, e, 5)
-# PY: tab = pd.DataFrame({
-# PY:     "coef": b,
-# PY:     "SE_HC": np.sqrt(np.diag(Vhc)),
-# PY:     "SE_NW_M5": np.sqrt(np.diag(Vnw)),
-# PY: }, index=[f"lag{i}" for i in range(1, 5)] + ["const"])
-# PY: print("n =", n)
-# PY: print(tab)
-# IRF
-# PY: A = np.zeros((4, 4))
-# PY: A[0, :] = b[:4]
-# PY: A[1, 0] = A[2, 1] = A[3, 2] = 1.0
-# PY: x = np.array([1.0, 0, 0, 0])
-# PY: irf = []
-# PY: for j in range(10):
-# PY:     x = A @ x
-# PY:     irf.append(x[0])
-# PY: print("IRF j=1..10:", np.round(irf, 4))
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
-
 ### 14.19 `oilpricex` 一阶差分 AR(4) + 随机游走检验
-
-```{r}
-#| label: nb-cell-03
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-
-# PY: oil = qd["oilpricex"].astype(float)
-# PY: doil = oil.diff().dropna().to_numpy()
-# PY: Y, X = ar_xy(doil, 4)
-# PY: b, e, V, n, k = ols_hc(Y, X)
-# PY: print("n =", n)
-# PY: print(pd.Series(b, index=[f"a{i}" for i in range(1,5)]+["const"]))
-# PY: R = np.zeros((4, 5))
-# PY: for i in range(4):
-# PY:     R[i, i] = 1
-# PY: W, p = wald(R, b, V)
-# PY: print(f"Wald H0: AR coeffs=0: W={W:.3f}, p={p:.4f}")
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
 
 ### 14.20 `unrate` 月度 AR(1)–AR(8)，1960m1 起同一样本
 
-```{r}
-#| label: nb-cell-04
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-
-# PY: un = md["unrate"].astype(float).to_numpy()
-# PY: start = 12  # 1960m1 if series starts 1959m1
-# PY: rows = []
-# PY: for p in range(1, 9):
-# PY:     Y = un[start:]
-# PY:     nT = len(Y)
-# PY:     X = np.column_stack([un[start - j : start - j + nT] for j in range(1, p + 1)] + [np.ones(nT)])
-# PY:     b, e, V, _, _ = ols_hc(Y, X)
-# PY:     s2 = (e @ e) / nT
-# PY:     aic = np.log(s2) + 2 * (p + 1) / nT
-# PY:     rows.append({"p": p, "AIC": aic, "n": nT})
-# PY:     if p == min(range(1,9), key=lambda pp: rows[pp-1]["AIC"] if pp<=len(rows) else 1e9):
-# PY:         pass
-# PY: aic_df = pd.DataFrame(rows)
-# PY: print(aic_df.to_string(index=False))
-# PY: pstar = int(aic_df.loc[aic_df.AIC.idxmin(), "p"])
-# PY: print("Selected p =", pstar)
-# PY: Y = un[start:]
-# PY: nT = len(Y)
-# PY: X = np.column_stack([un[start - j : start - j + nT] for j in range(1, pstar + 1)] + [np.ones(nT)])
-# PY: b, e, V, _, _ = ols_hc(Y, X)
-# PY: print(pd.DataFrame({"coef": b, "SE_HC": np.sqrt(np.diag(V))},
-# PY:                    index=[f"lag{i}" for i in range(1, pstar+1)] + ["const"]))
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
-
 ### 14.21 失业率与 claimsx；14.22 GDP 增长与 houst
-
-```{r}
-#| label: nb-cell-05
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-
-# PY: def lagmat(y, p):
-# PY:     n = len(y)
-# PY:     return np.column_stack([y[p - j : n - j] for j in range(1, p + 1)])
-
-# 14.21
-# PY: df = pd.DataFrame({"un": qd["unrate"].astype(float), "cl": qd["claimsx"].astype(float)}).dropna()
-# PY: un, cl = df.un.values, df.cl.values
-# PY: p = 4
-# PY: Y = un[p:]
-# PY: X = np.column_stack([lagmat(cl, p), np.ones(len(Y))])
-# PY: b, e, V, n, k = ols_hc(Y, X)
-# PY: print("14.21 DL claims -> unrate n=", n)
-# PY: print("coef", b)
-# PY: X2 = np.column_stack([lagmat(un, p), lagmat(cl, p), np.ones(len(Y))])
-# PY: b2, e2, V2, _, _ = ols_hc(Y, X2)
-# PY: R = np.zeros((4, 9))
-# PY: for i in range(4):
-# PY:     R[i, 4 + i] = 1
-# PY: print("ADL Granger claims->un:", wald(R, b2, V2))
-
-# 14.22
-# PY: gdp = qd["gdpc1"].astype(float)
-# PY: g = 100 * (gdp / gdp.shift(1) - 1)
-# PY: df = pd.DataFrame({"g": g, "h": qd["houst"].astype(float)}).dropna()
-# PY: g, h = df.g.values, df.h.values
-# PY: Y = g[4:]
-# PY: X = np.column_stack([g[3:-1], g[2:-2], lagmat(h, 4), np.ones(len(Y))])
-# PY: b, e, V, n, k = ols_hc(Y, X)
-# PY: print("\n14.22 ADL GDP growth <- houst n=", n)
-# PY: print("coef", b)
-# PY: R = np.zeros((4, 7))
-# PY: for i in range(4):
-# PY:     R[i, 2 + i] = 1
-# PY: print("Granger houst->g:", wald(R, b, V))
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
 
 ### 理论结论的蒙特卡洛验证（无需外部数据）
 
 以下单元格用模拟核对 ch14 的核心结论：MA(1) 自协方差、随机游走 var(Y_t)=t、AR(1) 脉冲响应、高斯 AR(1) 边际分布、样本自协方差一致性、以及 **HAC vs HC**（序列相关下 Newey–West 明显大于 HC）。可独立运行。
-
-```{r}
-#| label: nb-cell-06
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-# import numpy as np
-# PY: rng = np.random.default_rng(14)
-
-# ===== 14.6: MA(1) 自协方差 γ(0)=(1+θ²)σ², γ(1)=θσ², ρ(1)=θ/(1+θ²) =====
-# PY: theta, sig2, T = 0.6, 1.0, 200000
-# PY: e = rng.standard_normal(T + 1)
-# PY: Y = e[1:] + theta * e[:-1]                                       # MA(1): Y_t = e_t + θ e_{t-1}
-# PY: g0 = np.var(Y)
-# PY: g1 = np.mean((Y[1:] - Y.mean()) * (Y[:-1] - Y.mean()))
-# PY: print(f"[14.6 MA(1)] γ(0): MC={g0:.3f} 理论={(1+theta**2)*sig2:.3f}")
-# PY: print(f"            γ(1): MC={g1:.3f} 理论={theta*sig2:.3f}; ρ(1): MC={g1/g0:.3f} 理论={theta/(1+theta**2):.3f}")
-
-# ===== 14.8: 随机游走 var(Y_t) = t (非平稳) =====
-# PY: T, reps = 1000, 20000
-# PY: var_500 = [np.concatenate([[0], np.cumsum(rng.standard_normal(T))])[500] ** 2 for _ in range(reps)]
-# PY: print(f"\n[14.8 随机游走] var(Y_500) MC={np.mean(var_500):.1f} 理论=t=500 (方差随t增 ⇒ 非平稳)")
-
-# ===== 14.9: AR(1) 脉冲响应 b_j = α^j =====
-# PY: alpha, T = 0.7, 100000
-# PY: Y = np.zeros(T)
-# PY: for t in range(1, T):
-# PY:     Y[t] = alpha * Y[t-1] + rng.standard_normal()
-# PY: b_hat = np.sum(Y[:-1] * Y[1:]) / np.sum(Y[:-1] ** 2)
-# PY: print(f"\n[14.9 AR(1)] α̂={b_hat:.4f} (真0.7); b_5=α^5: 估计={b_hat**5:.4f} 理论={alpha**5:.4f}")
-
-# ===== 14.15: 高斯 AR(1) 边际 N(α0/(1-α1), σ²/(1-α1²)) =====
-# PY: a0, a1, sig2, T = 2.0, 0.5, 1.0, 200000
-# PY: Y = np.zeros(T)
-# PY: for t in range(1, T):
-# PY:     Y[t] = a0 + a1 * Y[t-1] + rng.standard_normal() * np.sqrt(sig2)
-# PY: print(f"\n[14.15 高斯AR(1)] MC: 均值={Y.mean():.3f} 理论={a0/(1-a1):.3f}; 方差={Y.var():.3f} 理论={sig2/(1-a1**2):.3f}")
-
-# ===== 14.1: 样本自协方差一致性 γ̂(k)→γ(k) (AR(1): γ(k)=σ²α^k/(1-α²)) =====
-# PY: alpha, sig2, T = 0.6, 1.0, 200000
-# PY: Y = np.zeros(T)
-# PY: for t in range(1, T):
-# PY:     Y[t] = alpha * Y[t-1] + rng.standard_normal() * np.sqrt(sig2)
-# PY: g0 = np.mean((Y - Y.mean()) ** 2)
-# PY: g1 = np.mean((Y[1:] - Y.mean()) * (Y[:-1] - Y.mean()))
-# PY: print(f"\n[14.1 自协方差一致] γ̂(0)={g0:.3f} 理论={sig2/(1-alpha**2):.3f}")
-# PY: print(f"                   γ̂(1)={g1:.3f} 理论={sig2*alpha/(1-alpha**2):.3f}")
-
-# ===== HAC vs HC: 序列相关下 Newey-West 明显大于 HC =====
-# 设定: 持久回归元 X(AR(1) ρ=0.9) + AR(1) 误差(ρ=0.8) ⇒ X·e 序列相关 ⇒ NW 必要
-# PY: beta, rho_x, rho_u, T = 1.0, 0.9, 0.8, 2000
-# PY: X = np.zeros(T); u = np.zeros(T)
-# PY: for t in range(1, T):
-# PY:     X[t] = rho_x * X[t-1] + rng.standard_normal()
-# PY:     u[t] = rho_u * u[t-1] + rng.standard_normal()
-# PY: Y = beta * X + u
-# PY: b = np.sum(X * Y) / np.sum(X ** 2); e = Y - X * b
-# PY: XXinv = 1 / np.sum(X ** 2)
-# PY: V_hc = XXinv * np.sum((X * e) ** 2) * XXinv                       # HC: 只用对角(忽略自相关)
-# PY: S = np.sum((X * e) ** 2)
-# PY: for j in range(1, 6):                                             # NW: 加自协方差项
-# PY:     w = 1 - j / 6
-# PY:     S += w * 2 * np.sum((X * e)[j:] * (X * e)[:-j])
-# PY: V_nw = XXinv * S * XXinv
-# MC 真实 SE
-# PY: B = []
-# PY: for r in range(5000):
-# PY:     Xr = np.zeros(T); ur = np.zeros(T)
-# PY:     for t in range(1, T):
-# PY:         Xr[t] = rho_x * Xr[t-1] + rng.standard_normal()
-# PY:         ur[t] = rho_u * ur[t-1] + rng.standard_normal()
-# PY:     B.append(np.sum(Xr * (beta * Xr + ur)) / np.sum(Xr ** 2))
-# PY: print(f"\n[HAC vs HC] 持久回归元 + AR(1) 误差:")
-# PY: print(f"  HC SE     = {np.sqrt(V_hc):.4f} (忽略 X·e 的自相关, 偏小)")
-# PY: print(f"  NW(M=5) SE= {np.sqrt(V_nw):.4f} (含自协方差, 正确)")
-# PY: print(f"  MC 真实   = {np.std(B):.4f} (NW 接近真实, HC 偏小近一半 ⇒ 序列相关下必须用 HAC)")
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
-
 
 # 依赖包
 
@@ -834,10 +578,14 @@ pkgs <- c(
   "haven", "readxl", "data.table", "sandwich", "lmtest", "AER",
   "quantreg", "boot", "MASS", "Matrix", "nnet", "ggplot2", "knitr"
 )
-# 章节扩展：Ch14–16 vars/urca；Ch17 plm；Ch19 np；Ch26 mlogit
+# 扩展：vars/urca (Ch14–16), plm (Ch17), np (Ch19), mlogit (Ch26)
 miss <- setdiff(pkgs, rownames(installed.packages()))
-if (length(miss)) install.packages(miss, repos = "https://cloud.r-project.org")
+if (length(miss)) {
+  install.packages(miss, repos = "https://cloud.r-project.org")
+}
 ```
 
 ---
-*第 14 章 · R/Quarto · md + ipynb 融合*
+
+*第 14 章 · R/Quarto · 理论 Markdown + R companion 融合*  
+*重新生成：`python3 scripts/convert_chapters_to_qmd.py`*

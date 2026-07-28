@@ -30,22 +30,30 @@ execute:
 ::: {.callout-note}
 ## 说明
 
-- **理论：** 来自同目录 Markdown 逐步解答。
-- **代码：** Python notebook 已融合为 **R**（`scripts/r_companions/ch15.R` 优先；否则为带注释的翻译草稿）。
-- **数据：** `hansen/econometrics/data/`（gitignore）；渲染前请确保数据已下载。
-- 默认 `execute: eval: false`。有数据时改为 `true` 或交互运行代码块。
-- 缺包时：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot"))` 等。
+- **理论：** 同目录 Markdown 逐步解答全文嵌入。
+- **代码：** R 实现（`scripts/r_companions/ch15.R`）**内联**于下文；数据在 `hansen/econometrics/data/`。
+- 默认 `execute: eval: false`。有数据/包时改为 `true`，或在 R 中 `source()` companion。
+- 装包示例：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot","knitr"))`
 :::
 
 ```{r}
 #| label: setup
-root <- if (dir.exists("../../hansen")) "../.." else if (dir.exists("hansen")) "." else "../.."
+#| include: true
+root <- if (dir.exists("../../hansen")) {
+  "../.."
+} else if (dir.exists("hansen")) {
+  "."
+} else {
+  "../.."
+}
 data_root <- file.path(root, "hansen", "econometrics", "data")
 companion_dir <- file.path(root, "scripts", "r_companions")
 if (file.exists(file.path(companion_dir, "_common.R"))) {
   source(file.path(companion_dir, "_common.R"), local = FALSE)
 }
-knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+if (requireNamespace("knitr", quietly = TRUE)) {
+  knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+}
 options(stringsAsFactors = FALSE)
 ```
 
@@ -445,237 +453,33 @@ $$A=\begin{pmatrix}a_{11}&0&0\\0&a_{22}&a_{23}\\a_{31}&a_{32}&a_{33}\end{pmatrix
 | 理论验证 | VAR(1) MA、VAR(2) 平稳、Cholesky 排序敏感性、Granger 因果 code cell |
 
 
-# 实证与数值代码（来自 notebook，R 版）
+# 实证与数值代码（R）
+
+以下代码来自 `scripts/r_companions/ch15.R`（与 Python notebook 对应）。
 
 ```{r}
-#| label: nb-cell-01
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-
-# import numpy as np
-# import pandas as pd
-# from pathlib import Path
-# from numpy.linalg import inv, eigvals
-# from scipy.linalg import cholesky
-# from scipy import stats
-
-# PY: ROOT = Path("/home/fang/Project/zhihu-paper/p1/hansen/econometrics/data")
-
-# PY: def max_abs_eig(A):
-# PY:     return float(np.max(np.abs(eigvals(A))))
-
-# 15.1-15.2
-# PY: print("15.1a", max_abs_eig([[0.7,0.2],[0.2,0.7]]))
-# PY: print("15.1b", max_abs_eig([[0.8,0.4],[0.4,0.8]]))
-# PY: print("15.1c", max_abs_eig([[0.8,0.4],[-0.4,0.8]]))
-# PY: A1=np.array([[0.3,0.2],[0.2,0.3]]); A2=np.array([[0.4,-0.1],[-0.1,0.4]])
-# PY: C=np.block([[A1,A2],[np.eye(2),np.zeros((2,2))]])
-# PY: print("15.2 companion", max_abs_eig(C))
-
-# 15.12
-# PY: rho=0.8
-# PY: Sig=np.array([[1.,rho],[rho,1.]])
-# PY: L=cholesky(Sig, lower=True)
-# PY: print("15.12 L\n", L)
-# PY: Theta=np.array([[1.,0.],[1.,1.]])
-# PY: print("OIRF\n", Theta@L)
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
+#| label: companion
+# helpers: see setup chunk (source _common.R)
+## Ch.15 VAR(1) by equation-wise OLS
+set.seed(15)
+n <- 300L
+Y <- matrix(0, n, 2)
+A <- matrix(c(0.5, 0.1, 0.2, 0.4), 2, 2, byrow=TRUE)
+for (t in 2:n) Y[t,] <- as.numeric(A %*% Y[t-1,]) + rnorm(2)
+Y0 <- Y[-1,]; Y1 <- Y[-n,]
+fit1 <- ols_hc1(Y0[,1], cbind(1, Y1))
+fit2 <- ols_hc1(Y0[,2], cbind(1, Y1))
+cat("eq1", fit1$beta, "\neq2", fit2$beta, "\n")
 ```
 
-```{r}
-#| label: nb-cell-02
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
 
-
-# PY: def make_lags(Y, p):
-# PY:     T, m = Y.shape
-# PY:     y = Y[p:]
-# PY:     parts = [np.ones((T-p,1))]
-# PY:     for j in range(1,p+1):
-# PY:         parts.append(Y[p-j:T-j])
-# PY:     return y, np.hstack(parts)
-
-# PY: def estimate_var(Y, p):
-# PY:     y, X = make_lags(Y, p)
-# PY:     B = inv(X.T@X)@(X.T@y)
-# PY:     E = y - X@B
-# PY:     return B, E, E.T@E/len(y), len(y)
-
-# PY: def companion_irf(B, p, m, hmax, shock):
-# PY:     As = [B[1+(j-1)*m:1+j*m,:].T for j in range(1,p+1)]
-# PY:     k=m*p
-# PY:     C=np.zeros((k,k))
-# PY:     C[0:m,0:m]=As[0]
-# PY:     for j in range(1,p):
-# PY:         C[0:m, j*m:(j+1)*m]=As[j]
-# PY:     if p>1: C[m:,0:m*(p-1)]=np.eye(m*(p-1))
-# PY:     irfs=[]; state=np.zeros(k); state[:m]=shock
-# PY:     for h in range(hmax+1):
-# PY:         irfs.append(state[:m].copy()); state=C@state
-# PY:     return np.array(irfs)
-
-# PY: def aic_var(Y,p):
-# PY:     y,X=make_lags(Y,p)
-# PY:     B=inv(X.T@X)@(X.T@y)
-# PY:     E=y-X@B
-# PY:     n,m=y.shape
-# PY:     Sig=E.T@E/n
-# PY:     return np.log(np.linalg.det(Sig))+2*(m*m*p+m)/n
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
+## Notebook 导读
 
 ### 15.14–15.16, 15.19–15.20 实证摘要
-
-```{r}
-#| label: nb-cell-03
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-
-# PY: qd=pd.read_excel(ROOT/"FRED-QD/FRED-QD.xlsx")
-# PY: md=pd.read_excel(ROOT/"FRED-MD/FRED-MD.xlsx")
-# 15.14
-# PY: g=100*np.log(pd.to_numeric(qd["gdpc1"],errors="coerce")).diff()
-# PY: pi=100*np.log(pd.to_numeric(qd["gdpctpi"],errors="coerce")).diff()
-# PY: ff=pd.to_numeric(qd["fedfunds"],errors="coerce")
-# PY: Y=pd.DataFrame({"g":g,"pi":pi,"ff":ff}).dropna().values
-# PY: B,E,Sig,n=estimate_var(Y,6)
-# PY: L=cholesky(Sig,lower=True)
-# PY: irf=companion_irf(B,6,3,12,L[:,0])
-# PY: print("15.14 n",n,"cum GDP supply",np.cumsum(irf[:,0])[[0,4,8,12]])
-
-# Kilian
-# PY: kil=pd.read_excel(ROOT/"Kilian2009/Kilian2009.xlsx")
-# PY: Yk=kil[["oil","output","price"]].astype(float).values
-# PY: Yk[:,0]*=-1
-# PY: B,E,Sig,n=estimate_var(Yk,4)
-# PY: L=cholesky(Sig,lower=True)
-# PY: print("15.15 Kilian n",n)
-# PY: for s in range(3):
-# PY:     irf=companion_irf(B,4,3,12,L[:,s])
-# PY:     print(" output IRF shock",s, np.round(irf[[0,6,12],1],3))
-
-# housing
-# PY: for c in ["permit","houst","realln"]:
-# PY:     md[c]=pd.to_numeric(md[c],errors="coerce")
-# PY: df=pd.DataFrame({"permit":md.permit,"houst":md.houst,"gloan":100*np.log(md.realln).diff()}).dropna()
-# PY: aics=[(p,aic_var(df.values,p)) for p in range(1,9)]
-# PY: print("15.16 AIC best", min(aics,key=lambda x:x[1]))
-
-# 15.19 Granger
-# PY: gdp=100*np.log(pd.to_numeric(qd["gdpc1"],errors="coerce")).diff()
-# PY: m1n=pd.to_numeric(qd["m1realx"],errors="coerce")*pd.to_numeric(qd["cpiaucsl"],errors="coerce")
-# PY: mg=100*np.log(m1n).diff()
-# PY: d=pd.DataFrame({"g":gdp,"m":mg}).dropna()
-# PY: g,m=d.g.values,d.m.values
-# PY: p=4
-# PY: Y=g[p:]
-# PY: X=np.column_stack([g[p-j:len(g)-j] for j in range(1,5)]+[m[p-j:len(m)-j] for j in range(1,5)]+[np.ones(len(Y))])
-# PY: b=inv(X.T@X)@(X.T@Y)
-# PY: e=Y-X@b
-# PY: V=inv(X.T@X)@((X*e[:,None]).T@(X*e[:,None]))@inv(X.T@X)
-# PY: R=np.zeros((4,9))
-# PY: for i in range(4): R[i,4+i]=1
-# PY: W=float((R@b)@inv(R@V@R.T)@(R@b))
-# PY: print("15.19 Granger money W",W,"p",1-stats.chi2.cdf(W,4))
-# PY: print("sum money", b[4:8].sum())
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
 
 ### 理论结论的蒙特卡洛验证（无需外部数据）
 
 以下单元格核对 ch15 的核心结论：(1) VAR(1) MA 表示 $\Theta_h=A^h$（用自协方差反推核对）；(2) VAR(2) 伴随矩阵平稳性；(3) Cholesky 正交 IRF 的**排序敏感性**（不等方差下两种排序 OIRF 明显不同）；(4) Granger 因果的 Wald 检验。可独立运行。
-
-```{r}
-#| label: nb-cell-04
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-# import numpy as np
-# from scipy.linalg import cholesky
-# from scipy import stats
-# PY: rng = np.random.default_rng(15)
-
-# ===== 15.5: VAR(1) MA 表示 Θ_h = A^h（用自协方差反推核对）=====
-# PY: A = np.array([[0.5, 0.2], [0.1, 0.6]])
-# PY: m = 2
-# PY: T = 500000
-# PY: Y = np.zeros((T, m))
-# PY: e = rng.standard_normal((T, m))
-# PY: for t in range(1, T):
-# PY:     Y[t] = A @ Y[t-1] + e[t]                                        # 模拟 VAR(1)
-# PY: def acvf(Y, h):
-# PY:     n = Y.shape[0]; return Y[h:].T @ Y[:n-h] / n
-# PY: g0, g1 = acvf(Y, 0), acvf(Y, 1)
-# PY: Theta1_mc = g1 @ np.linalg.inv(g0)                                  # Θ_1 ≈ γ(1)γ(0)^{-1}
-# PY: print(f"[15.5 VAR(1) MA] Θ_1 = A =\n{np.round(A, 4)}")
-# PY: print(f"  MC 反推 Θ_1 =\n{np.round(Theta1_mc, 4)}  (≈A ✓)")
-
-# ===== 15.2: VAR(2) 伴随矩阵平稳性 =====
-# PY: A1 = np.array([[0.3, 0.2], [0.2, 0.3]]); A2 = np.array([[0.4, -0.1], [-0.1, 0.4]])
-# PY: C = np.block([[A1, A2], [np.eye(2), np.zeros((2, 2))]])            # 伴随矩阵 4×4
-# PY: ev = np.abs(np.linalg.eigvals(C))
-# PY: print(f"\n[15.2 VAR(2)] 伴随矩阵 |特征值|={np.round(ev, 4)}, max={ev.max():.4f} < 1 ⇒ 平稳 ✓")
-
-# ===== 15.12: Cholesky 正交 IRF 的排序敏感性 =====
-# PY: rho = 0.8; s1, s2 = 2.0, 1.0                                        # 不等方差!
-# PY: Sig = np.array([[s1**2, rho*s1*s2], [rho*s1*s2, s2**2]])
-# PY: L1 = cholesky(Sig, lower=True)                                      # 排序 (Y1,Y2): 下三角
-# PY: P = np.array([[0, 1], [1, 0]])                                      # 置换矩阵
-# PY: Sig_perm = P @ Sig @ P.T
-# PY: L2 = cholesky(Sig_perm, lower=True)                                 # 排序 (Y2,Y1)
-# PY: Theta = np.array([[1.0, 0], [1.0, 1.0]])                            # 简化 IRF
-# PY: oirf_12 = Theta @ L1                                                # OIRF(Y1先)
-# PY: oirf_21 = P.T @ (Theta @ L2)                                        # OIRF(Y2先, 换回原序)
-# PY: print(f"\n[15.12 Cholesky 排序] σ1={s1}, σ2={s2}, ρ={rho}")
-# PY: print(f"  OIRF(Y1先) =\n{np.round(oirf_12, 4)}")
-# PY: print(f"  OIRF(Y2先) =\n{np.round(oirf_21, 4)}")
-# PY: print(f"  不同? {not np.allclose(oirf_12, oirf_21)}  ⇒ 正交 IRF 依赖排序")
-
-# ===== 15.8/15.19: Granger 因果 Wald 检验 =====
-# 模拟: Y1 Granger-causes Y2 (Y2 方程含 Y1 滞后), 反向不含
-# PY: T = 1000; Y = np.zeros((T, 2)); phi_cross = 0.3
-# PY: for t in range(1, T):
-# PY:     Y[t, 0] = 0.5 * Y[t-1, 0] + rng.standard_normal()              # Y1: 不含 Y2 滞后
-# PY:     Y[t, 1] = 0.4 * Y[t-1, 1] + phi_cross * Y[t-1, 0] + rng.standard_normal()  # Y2: 含 Y1 滞后
-# 检验 Y1→Y2: Y2 方程中 Y1 滞后系数=0?
-# PY: y2 = Y[1:, 1]; X = np.c_[Y[:-1, 0], Y[:-1, 1], np.ones(T-1)]
-# PY: b = np.linalg.lstsq(X, y2, rcond=None)[0]; e = y2 - X @ b
-# PY: V = np.linalg.inv(X.T@X) @ ((X*e[:,None]).T @ (X*e[:,None])) @ np.linalg.inv(X.T@X)
-# PY: W_fwd = float(b[0]**2 / V[0, 0])
-# 反向 Y2→Y1?
-# PY: y1 = Y[1:, 0]; X2 = np.c_[Y[:-1, 1], Y[:-1, 0], np.ones(T-1)]
-# PY: b2 = np.linalg.lstsq(X2, y1, rcond=None)[0]; e2 = y1 - X2 @ b2
-# PY: V2 = np.linalg.inv(X2.T@X2) @ ((X2*e2[:,None]).T @ (X2*e2[:,None])) @ np.linalg.inv(X2.T@X2)
-# PY: W_bwd = float(b2[0]**2 / V2[0, 0])
-# PY: print(f"\n[Granger 因果]")
-# PY: print(f"  Y1→Y2: Wald={W_fwd:.2f}, p={1-stats.chi2.cdf(W_fwd,1):.4f} (应拒绝: Y1 Granger-causes Y2)")
-# PY: print(f"  Y2→Y1: Wald={W_bwd:.2f}, p={1-stats.chi2.cdf(W_bwd,1):.4f} (应不拒绝: Y2 不 Granger-cause Y1)")
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
-
 
 # 依赖包
 
@@ -686,10 +490,14 @@ pkgs <- c(
   "haven", "readxl", "data.table", "sandwich", "lmtest", "AER",
   "quantreg", "boot", "MASS", "Matrix", "nnet", "ggplot2", "knitr"
 )
-# 章节扩展：Ch14–16 vars/urca；Ch17 plm；Ch19 np；Ch26 mlogit
+# 扩展：vars/urca (Ch14–16), plm (Ch17), np (Ch19), mlogit (Ch26)
 miss <- setdiff(pkgs, rownames(installed.packages()))
-if (length(miss)) install.packages(miss, repos = "https://cloud.r-project.org")
+if (length(miss)) {
+  install.packages(miss, repos = "https://cloud.r-project.org")
+}
 ```
 
 ---
-*第 15 章 · R/Quarto · md + ipynb 融合*
+
+*第 15 章 · R/Quarto · 理论 Markdown + R companion 融合*  
+*重新生成：`python3 scripts/convert_chapters_to_qmd.py`*

@@ -30,22 +30,30 @@ execute:
 ::: {.callout-note}
 ## 说明
 
-- **理论：** 来自同目录 Markdown 逐步解答。
-- **代码：** Python notebook 已融合为 **R**（`scripts/r_companions/ch17.R` 优先；否则为带注释的翻译草稿）。
-- **数据：** `hansen/econometrics/data/`（gitignore）；渲染前请确保数据已下载。
-- 默认 `execute: eval: false`。有数据时改为 `true` 或交互运行代码块。
-- 缺包时：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot"))` 等。
+- **理论：** 同目录 Markdown 逐步解答全文嵌入。
+- **代码：** R 实现（`scripts/r_companions/ch17.R`）**内联**于下文；数据在 `hansen/econometrics/data/`。
+- 默认 `execute: eval: false`。有数据/包时改为 `true`，或在 R 中 `source()` companion。
+- 装包示例：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot","knitr"))`
 :::
 
 ```{r}
 #| label: setup
-root <- if (dir.exists("../../hansen")) "../.." else if (dir.exists("hansen")) "." else "../.."
+#| include: true
+root <- if (dir.exists("../../hansen")) {
+  "../.."
+} else if (dir.exists("hansen")) {
+  "."
+} else {
+  "../.."
+}
 data_root <- file.path(root, "hansen", "econometrics", "data")
 companion_dir <- file.path(root, "scripts", "r_companions")
 if (file.exists(file.path(companion_dir, "_common.R"))) {
   source(file.path(companion_dir, "_common.R"), local = FALSE)
 }
-knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+if (requireNamespace("knitr", quietly = TRUE)) {
+  knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+}
 options(stringsAsFactors = FALSE)
 ```
 
@@ -499,28 +507,44 @@ $$
 **实现说明：** notebook 中为 **collapsed** Arellano–Bond / Blundell–Bond GMM（与 `xtabond2, collapse` 同类），含年固定效应与 cluster 稳健协方差；与 Stata 默认全矩矩阵在有限样本上可有数值差别，但定性结论（AB 弱工具下偏低、BB 抬高持续系数、cluster 必要）与 Hansen / Blundell–Bond 叙述一致。
 
 
-# 实证与数值代码（R companion）
+# 实证与数值代码（R）
 
-手写/精译 R 脚本：`scripts/r_companions/ch17.R`。
+以下代码来自 `scripts/r_companions/ch17.R`（与 Python notebook 对应）。
 
 ```{r}
-#| label: companion-main
-source(file.path(root, "scripts", "r_companions", "ch17.R"))
+#| label: companion
+# helpers: see setup chunk (source _common.R)
+## Ch.17 Panel — within estimator; AB/BB require custom GMM (see notebook)
+## bootstrap common helpers
+local({
+  for (cand in c("../..", "..", ".", "../../..")) {
+    f <- file.path(cand, "scripts/r_companions/_common.R")
+    if (file.exists(f)) { source(f, local = FALSE); break }
+  }
+})
+within_fe <- function(y, X, id) {
+  ## demean by id then OLS
+  y <- as.numeric(y); X <- as.matrix(X)
+  id <- as.factor(id)
+  yd <- y - ave(y, id)
+  Xd <- apply(X, 2, function(col) col - ave(col, id))
+  ols_hc1(yd, Xd)
+}
+cat("Ch.17 within_fe() loaded; full AB/BB GMM: port from Python notebook as needed.\n")
 ```
 
 
-## Notebook 结构说明
+## Notebook 导读
 
-#### 17.15 Capital AR(1)
+### 17.15 Capital AR(1)
 
-#### 17.16 Labor demand
+### 17.16 Labor demand
 
-#### 17.17–17.18 Invest1993 debt
+### 17.17–17.18 Invest1993 debt
 
-#### 理论结论的蒙特卡洛验证（无需外部数据）
+### 理论结论的蒙特卡洛验证（无需外部数据）
 
 以下单元格核对 ch17 的核心结论：(1) **FE 一致而混合 OLS 偏**（$u_i$ 与 $X$ 相关时）；(2) **within 变换损失组间变异**（var($\dot X$) ≪ var($X$)）；(3) **$T=2$ 时差分 = FE**（逐样本相同）；(4) **面板必须聚类 SE**（不聚类偏小约 2 倍）。可独立运行。
-
 
 # 依赖包
 
@@ -531,10 +555,14 @@ pkgs <- c(
   "haven", "readxl", "data.table", "sandwich", "lmtest", "AER",
   "quantreg", "boot", "MASS", "Matrix", "nnet", "ggplot2", "knitr"
 )
-# 章节扩展：Ch14–16 vars/urca；Ch17 plm；Ch19 np；Ch26 mlogit
+# 扩展：vars/urca (Ch14–16), plm (Ch17), np (Ch19), mlogit (Ch26)
 miss <- setdiff(pkgs, rownames(installed.packages()))
-if (length(miss)) install.packages(miss, repos = "https://cloud.r-project.org")
+if (length(miss)) {
+  install.packages(miss, repos = "https://cloud.r-project.org")
+}
 ```
 
 ---
-*第 17 章 · R/Quarto · md + ipynb 融合*
+
+*第 17 章 · R/Quarto · 理论 Markdown + R companion 融合*  
+*重新生成：`python3 scripts/convert_chapters_to_qmd.py`*

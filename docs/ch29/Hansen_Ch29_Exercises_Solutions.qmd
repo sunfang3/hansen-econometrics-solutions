@@ -30,22 +30,30 @@ execute:
 ::: {.callout-note}
 ## 说明
 
-- **理论：** 来自同目录 Markdown 逐步解答。
-- **代码：** Python notebook 已融合为 **R**（`scripts/r_companions/ch29.R` 优先；否则为带注释的翻译草稿）。
-- **数据：** `hansen/econometrics/data/`（gitignore）；渲染前请确保数据已下载。
-- 默认 `execute: eval: false`。有数据时改为 `true` 或交互运行代码块。
-- 缺包时：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot"))` 等。
+- **理论：** 同目录 Markdown 逐步解答全文嵌入。
+- **代码：** R 实现（`scripts/r_companions/ch29.R`）**内联**于下文；数据在 `hansen/econometrics/data/`。
+- 默认 `execute: eval: false`。有数据/包时改为 `true`，或在 R 中 `source()` companion。
+- 装包示例：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot","knitr"))`
 :::
 
 ```{r}
 #| label: setup
-root <- if (dir.exists("../../hansen")) "../.." else if (dir.exists("hansen")) "." else "../.."
+#| include: true
+root <- if (dir.exists("../../hansen")) {
+  "../.."
+} else if (dir.exists("hansen")) {
+  "."
+} else {
+  "../.."
+}
 data_root <- file.path(root, "hansen", "econometrics", "data")
 companion_dir <- file.path(root, "scripts", "r_companions")
 if (file.exists(file.path(companion_dir, "_common.R"))) {
   source(file.path(companion_dir, "_common.R"), local = FALSE)
 }
-knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+if (requireNamespace("knitr", quietly = TRUE)) {
+  knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+}
 options(stringsAsFactors = FALSE)
 ```
 
@@ -516,9 +524,29 @@ df["exp40"] = (df.age - df.education - 6) / 40.0
 **软件说明：** 系数对 CV 折划分与 \(\lambda\) 网格略敏感；上表为 `scikit-learn` `LassoCV`（目标 \(\frac{1}{2n}\|Y-X\beta\|_2^2+\alpha\|\beta\|_1\)，与 `glmnet` 的 \(\lambda\) 参数化一致）在 10 折 CV 下的代表结果。用 R `glmnet`/`cv.glmnet` 或 Stata `lasso` 应得到同阶、符号一致的稀疏模型。
 
 
-::: {.callout-tip}
-本章以理论为主；无独立 notebook 或 companion。
-:::
+# 实证与数值代码（R）
+
+以下代码来自 `scripts/r_companions/ch29.R`（与 Python notebook 对应）。
+
+```{r}
+#| label: companion
+# helpers: see setup chunk (source _common.R)
+## Ch.29 Machine learning — ridge path (base R SVD)
+set.seed(29)
+n <- 100L; p <- 20L
+X <- matrix(rnorm(n*p), n, p); X <- scale(X, scale=FALSE)
+b_true <- c(runif(5), rep(0, p-5))
+y <- as.numeric(X %*% b_true + rnorm(n))
+## ridge for lambda grid
+svdX <- svd(X)
+lam <- 10^seq(-2, 2, length.out=20)
+betas <- sapply(lam, function(l) {
+  d <- svdX$d / (svdX$d^2 + l)
+  svdX$v %*% (d * as.numeric(crossprod(svdX$u, y)))
+})
+cat("ridge path dim:", dim(betas), " (p x nlambda)\n")
+cat("Use glmnet when installed for lasso/elastic net.\n")
+```
 
 # 依赖包
 
@@ -529,10 +557,14 @@ pkgs <- c(
   "haven", "readxl", "data.table", "sandwich", "lmtest", "AER",
   "quantreg", "boot", "MASS", "Matrix", "nnet", "ggplot2", "knitr"
 )
-# 章节扩展：Ch14–16 vars/urca；Ch17 plm；Ch19 np；Ch26 mlogit
+# 扩展：vars/urca (Ch14–16), plm (Ch17), np (Ch19), mlogit (Ch26)
 miss <- setdiff(pkgs, rownames(installed.packages()))
-if (length(miss)) install.packages(miss, repos = "https://cloud.r-project.org")
+if (length(miss)) {
+  install.packages(miss, repos = "https://cloud.r-project.org")
+}
 ```
 
 ---
-*第 29 章 · R/Quarto · md + ipynb 融合*
+
+*第 29 章 · R/Quarto · 理论 Markdown + R companion 融合*  
+*重新生成：`python3 scripts/convert_chapters_to_qmd.py`*

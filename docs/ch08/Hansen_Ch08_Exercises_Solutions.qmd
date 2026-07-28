@@ -30,22 +30,30 @@ execute:
 ::: {.callout-note}
 ## 说明
 
-- **理论：** 来自同目录 Markdown 逐步解答。
-- **代码：** Python notebook 已融合为 **R**（`scripts/r_companions/ch08.R` 优先；否则为带注释的翻译草稿）。
-- **数据：** `hansen/econometrics/data/`（gitignore）；渲染前请确保数据已下载。
-- 默认 `execute: eval: false`。有数据时改为 `true` 或交互运行代码块。
-- 缺包时：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot"))` 等。
+- **理论：** 同目录 Markdown 逐步解答全文嵌入。
+- **代码：** R 实现（`scripts/r_companions/ch08.R`）**内联**于下文；数据在 `hansen/econometrics/data/`。
+- 默认 `execute: eval: false`。有数据/包时改为 `true`，或在 R 中 `source()` companion。
+- 装包示例：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot","knitr"))`
 :::
 
 ```{r}
 #| label: setup
-root <- if (dir.exists("../../hansen")) "../.." else if (dir.exists("hansen")) "." else "../.."
+#| include: true
+root <- if (dir.exists("../../hansen")) {
+  "../.."
+} else if (dir.exists("hansen")) {
+  "."
+} else {
+  "../.."
+}
 data_root <- file.path(root, "hansen", "econometrics", "data")
 companion_dir <- file.path(root, "scripts", "r_companions")
 if (file.exists(file.path(companion_dir, "_common.R"))) {
   source(file.path(companion_dir, "_common.R"), local = FALSE)
 }
-knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+if (requireNamespace("knitr", quietly = TRUE)) {
+  knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+}
 options(stringsAsFactors = FALSE)
 ```
 
@@ -357,138 +365,36 @@ $$\tilde\beta_2=\frac{\sum Z_iY_i}{\sum Z_i^2},\qquad \tilde\beta_1=2\tilde\beta
 | 8.19(d) | 经验边际效应端点检查 |
 
 
-# 实证与数值代码（来自 notebook，R 版）
+# 实证与数值代码（R）
 
-## Hansen Ch.8 Restricted Estimation — 计算
-
-**Chapter 8 Restricted Estimation**
-
-完整推导与**面向初学者的详细注释**见同目录 `Hansen_Ch08_Exercises_Solutions.md`（强烈建议先读 §0、§1）。
-
-本 notebook：**Exercise 8.19**（CLS 与有效 MD 实操）。
-
-> **写给只学过李子奈/陈强的同学：** 本章讲**当经济理论给出约束 $R'\beta=c$ 时如何利用它**。两套等价工具：
-> - **CLS（约束最小二乘）**：约束下最小化 SSE，Stata `cnsreg`。
-> - **MD（最小距离）**：把无约束 $\hat\beta$ 投影到约束集合，权重 $W$。CLS 是 MD 的特例（$W=\hat Q_{XX}$）。
->
-> 核心直觉——**施加正确约束让方差下降**（"减去一个半正定项"）：
-> $$V_{\tilde\beta,\text{有效}}=V_\beta-V_\beta R(R'V_\beta R)^{-1}R'V_\beta\le V_\beta.$$
-> 但约束**为真**才有此好处；约束**错**了会引入偏差（且让 SSE 上升，见 Ex 8.21）。
-> 有效 MD 用 $W=V_\beta^{-1}$（方差倒数作权重），同方差下退化为 CLS，异方差下优于 CLS。
+以下代码来自 `scripts/r_companions/ch08.R`（与 Python notebook 对应）。
 
 ```{r}
-#| label: nb-cell-01
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-
-# import numpy as np
-# import pandas as pd
-# from pathlib import Path
-
-# PY: def ols_hc3(y, X):
-# PY:     n, k = X.shape
-# PY:     beta = np.linalg.lstsq(X, y, rcond=None)[0]
-# PY:     e = y - X @ beta
-# PY:     XXinv = np.linalg.inv(X.T @ X)
-# PY:     h = np.sum(X * (X @ XXinv), axis=1)
-# PY:     u = X * (e / np.clip(1 - h, 1e-12, None))[:, None]
-# PY:     V = XXinv @ (u.T @ u) @ XXinv
-# PY:     return beta, e, V, n, k
-
-# PY: CPS = Path("/home/fang/Project/zhihu-paper/p1/hansen/econometrics/data/cps09mar/cps09mar.xlsx")
-# PY: df = pd.read_excel(CPS)
-# PY: df["experience"] = df["age"] - df["education"] - 6
-# PY: df["lwage"] = np.log(df["earnings"] / (df["hours"] * df["week"]))
-# PY: df["exp2"] = (df["experience"] ** 2) / 100
-# PY: s = df[(df.race == 1) & (df.female == 0) & (df.hisp == 1)].copy().reset_index(drop=True)
-# PY: for code, name in [(1, "m1"), (2, "m2"), (3, "m3"), (4, "wid"), (5, "div"), (6, "sep")]:
-# PY:     s[name] = (s.marital == code).astype(float)
-# PY: y = s.lwage.to_numpy()
-# PY: X = np.column_stack([
-# PY:     s.education, s.experience, s.exp2, s.m1, s.m2, s.m3, s.wid, s.div, s.sep, np.ones(len(s))
-# PY: ])
-# PY: names = ["edu", "exp", "exp2", "m1", "m2", "m3", "wid", "div", "sep", "int"]
-# PY: beta, e, V, n, k = ols_hc3(y, X)
-# PY: print("n =", n)
-# PY: print(pd.DataFrame({"beta": beta, "HC3_SE": np.sqrt(np.diag(V))}, index=names))
-
-# CLS: m1=wid, div=sep
-# PY: Xcls = np.column_stack([
-# PY:     s.education, s.experience, s.exp2, s.m1 + s.wid, s.m2, s.m3, s.div + s.sep, np.ones(len(s))
-# PY: ])
-# PY: bcls, _, Vcls, _, _ = ols_hc3(y, Xcls)
-# PY: print("\nCLS (reparameterized):", bcls)
-
-# EMD
-# PY: R = np.array([[0, 0, 0, 1, 0, 0, -1, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 1, -1, 0]], float)
-# PY: bmd = beta - V @ R.T @ np.linalg.inv(R @ V @ R.T) @ (R @ beta)
-# PY: print("\nEMD:")
-# PY: print(pd.Series(bmd, index=names))
-# PY: print("d(exp)/d at 0 and 50:", beta[1], beta[1] + beta[2])
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
+#| label: companion
+# helpers: see setup chunk (source _common.R)
+## Ch.8 Restricted OLS — R beta = r via Lagrange / residual projection
+set.seed(8)
+n <- 400L
+X <- cbind(1, matrix(rnorm(n*2), n, 2))
+b0 <- c(1, 1, 1)
+y <- as.numeric(X %*% b0 + rnorm(n))
+## restrict b1 = b2 (R = c(0,1,-1), r=0)
+R <- matrix(c(0,1,-1), 1)
+r <- 0
+XtX <- crossprod(X); Xty <- crossprod(X, y)
+bun <- as.numeric(solve(XtX, Xty))
+# restricted: b_r = bun - XtX^{-1} R' (R XtX^{-1} R')^{-1} (R bun - r)
+A <- solve(XtX)
+br <- bun - as.numeric(A %*% t(R) %*% solve(R %*% A %*% t(R), R %*% bun - r))
+cat("unrestricted", bun, "\nrestricted", br, "\n")
 ```
+
+
+## Notebook 导读
 
 ### 理论结论的蒙特卡洛验证（无需外部数据）
 
 以下单元格核对 ch08：CLS 公式=重参数化、$s^2_{\mathrm{cls}}$ 在 df=$n-k+q$ 下无偏（约束为真）、有效 MD 方差"减去半正定项"、两样本逆方差加权。可独立运行。
-
-```{r}
-#| label: nb-cell-02
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-# import numpy as np
-# PY: rng = np.random.default_rng(8)
-
-# Ex 8.5 / 8.9: CLS 公式 (8.8) 与重参数化一致；约束为真时 s²_cls(df=n-k+q) 无偏
-# PY: n, k, q = 80, 2, 1
-# PY: R = np.array([[1.0], [0.0]]); c = np.array([3.0]); sigma2 = 4.0
-# PY: X = np.c_[rng.standard_normal(n), np.ones(n)]
-# PY: beta = np.array([3.0, 1.0])                                     # 约束为真: β₁=3
-# PY: s2_nkq = []
-# PY: for r in range(40000):
-# PY:     e = rng.standard_normal(n) * np.sqrt(sigma2); Y = X @ beta + e
-# PY:     bhat = np.linalg.solve(X.T @ X, X.T @ Y); Qinv = np.linalg.inv(X.T @ X)
-# PY:     bcls = bhat - Qinv @ R @ np.linalg.inv(R.T @ Qinv @ R) @ (R.T @ bhat - c)   # CLS 公式 (8.8)
-# PY:     bcls2 = np.array([3.0, np.mean(Y - 3.0 * X[:, 0])])        # 重参数化: 固定 β₁=3 后对 X₂ 回归
-# PY:     assert np.allclose(bcls, bcls2)
-# PY:     te = Y - X @ bcls
-# PY:     s2_nkq.append((te @ te) / (n - k + q))                     # df = n - k + q
-# PY: print(f"[8.5/8.9] CLS公式=重参数化(逐样本一致); E[s²_cls(df=n-k+q)]={np.mean(s2_nkq):.4f} = σ²={sigma2}")
-
-# Ex 8.26: 有效 MD 方差 = V - V·R·(R'VR)^-1·R'·V（减去半正定项 ⇒ 施加正确约束降方差）
-# PY: Q = np.array([[2.0, 0.3], [0.3, 1.0]])
-# PY: Om = np.array([[3.0, 0.5], [0.5, 2.0]])
-# PY: Vb = np.linalg.solve(Q, Om @ np.linalg.inv(Q))                 # Q^-1 Ω Q^-1
-# PY: R2 = np.array([[1.0], [-1.0]])                                  # 约束 β₁-β₂=0
-# PY: Vemd = Vb - Vb @ R2 @ np.linalg.inv(R2.T @ Vb @ R2) @ R2.T @ Vb
-# PY: print(f"[8.26] V - V_emd 特征值={np.round(np.linalg.eigvalsh(Vb - Vemd), 4)} (≥0 ⇒ 方差下降)")
-
-# Ex 8.18: 两独立样本的逆方差加权（信息量加权汇总）
-# PY: b, N, reps = 1.0, 100, 30000
-# PY: est = []
-# PY: for r in range(reps):
-# PY:     X1 = rng.standard_normal(N); X2 = rng.standard_normal(N)
-# PY:     e1 = rng.standard_normal(N) * np.sqrt(2.0); e2 = rng.standard_normal(N)
-# PY:     b1 = np.sum(X1*(X1*b + e1)) / np.sum(X1**2)
-# PY:     b2 = np.sum(X2*(X2*b + e2)) / np.sum(X2**2)
-# PY:     v1, v2 = 2.0/np.sum(X1**2), 1.0/np.sum(X2**2)
-# PY:     est.append((b1/v1 + b2/v2) / (1/v1 + 1/v2))
-# PY: print(f"[8.18] 两样本加权 var={np.var(est):.6f} ≈ (信息量倒数和)⁻¹={1/(N/2 + N/1):.6f}")
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
-
 
 # 依赖包
 
@@ -499,10 +405,14 @@ pkgs <- c(
   "haven", "readxl", "data.table", "sandwich", "lmtest", "AER",
   "quantreg", "boot", "MASS", "Matrix", "nnet", "ggplot2", "knitr"
 )
-# 章节扩展：Ch14–16 vars/urca；Ch17 plm；Ch19 np；Ch26 mlogit
+# 扩展：vars/urca (Ch14–16), plm (Ch17), np (Ch19), mlogit (Ch26)
 miss <- setdiff(pkgs, rownames(installed.packages()))
-if (length(miss)) install.packages(miss, repos = "https://cloud.r-project.org")
+if (length(miss)) {
+  install.packages(miss, repos = "https://cloud.r-project.org")
+}
 ```
 
 ---
-*第 8 章 · R/Quarto · md + ipynb 融合*
+
+*第 8 章 · R/Quarto · 理论 Markdown + R companion 融合*  
+*重新生成：`python3 scripts/convert_chapters_to_qmd.py`*

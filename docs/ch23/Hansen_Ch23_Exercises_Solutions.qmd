@@ -30,22 +30,30 @@ execute:
 ::: {.callout-note}
 ## 说明
 
-- **理论：** 来自同目录 Markdown 逐步解答。
-- **代码：** Python notebook 已融合为 **R**（`scripts/r_companions/ch23.R` 优先；否则为带注释的翻译草稿）。
-- **数据：** `hansen/econometrics/data/`（gitignore）；渲染前请确保数据已下载。
-- 默认 `execute: eval: false`。有数据时改为 `true` 或交互运行代码块。
-- 缺包时：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot"))` 等。
+- **理论：** 同目录 Markdown 逐步解答全文嵌入。
+- **代码：** R 实现（`scripts/r_companions/ch23.R`）**内联**于下文；数据在 `hansen/econometrics/data/`。
+- 默认 `execute: eval: false`。有数据/包时改为 `true`，或在 R 中 `source()` companion。
+- 装包示例：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot","knitr"))`
 :::
 
 ```{r}
 #| label: setup
-root <- if (dir.exists("../../hansen")) "../.." else if (dir.exists("hansen")) "." else "../.."
+#| include: true
+root <- if (dir.exists("../../hansen")) {
+  "../.."
+} else if (dir.exists("hansen")) {
+  "."
+} else {
+  "../.."
+}
 data_root <- file.path(root, "hansen", "econometrics", "data")
 companion_dir <- file.path(root, "scripts", "r_companions")
 if (file.exists(file.path(companion_dir, "_common.R"))) {
   source(file.path(companion_dir, "_common.R"), local = FALSE)
 }
-knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+if (requireNamespace("knitr", quietly = TRUE)) {
+  knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+}
 options(stringsAsFactors = FALSE)
 ```
 
@@ -363,24 +371,39 @@ $$
 代码：`docs/ch23/Hansen_Ch23_Exercises_Solutions.ipynb`。
 
 
-# 实证与数值代码（R companion）
+# 实证与数值代码（R）
 
-手写/精译 R 脚本：`scripts/r_companions/ch23.R`。
+以下代码来自 `scripts/r_companions/ch23.R`（与 Python notebook 对应）。
 
 ```{r}
-#| label: companion-main
-source(file.path(root, "scripts", "r_companions", "ch23.R"))
+#| label: companion
+# helpers: see setup chunk (source _common.R)
+## Ch.23 Nonlinear LS — skeleton (Nerlove / RR / PSS paths)
+## bootstrap common helpers
+local({
+  for (cand in c("../..", "..", ".", "../../..")) {
+    f <- file.path(cand, "scripts/r_companions/_common.R")
+    if (file.exists(f)) { source(f, local = FALSE); break }
+  }
+})
+cat("Ch.23: use nls() / optim() for CES, kink, smooth threshold.\n")
+cat("Data root:", hansen_data_root(), "\n")
+if (file.exists(file.path(hansen_data_root(), "Nerlove1963", "Nerlove1963.xlsx"))) {
+  if (requireNamespace("readxl", quietly = TRUE)) {
+    ner <- read_hansen_xlsx("Nerlove1963", "Nerlove1963.xlsx")
+    cat("Nerlove rows:", nrow(ner), "cols:", paste(names(ner), collapse=", "), "\n")
+  }
+}
 ```
 
 
-## Notebook 结构说明
+## Notebook 导读
 
-#### 23.8 CES with alternative capital stocks
+### 23.8 CES with alternative capital stocks
 
-#### 23.9 RR2010: inflation ~ kink in lagged debt
+### 23.9 RR2010: inflation ~ kink in lagged debt
 
-#### 23.10 Nerlove smooth threshold cost function
-
+### 23.10 Nerlove smooth threshold cost function
 
 # 依赖包
 
@@ -391,10 +414,14 @@ pkgs <- c(
   "haven", "readxl", "data.table", "sandwich", "lmtest", "AER",
   "quantreg", "boot", "MASS", "Matrix", "nnet", "ggplot2", "knitr"
 )
-# 章节扩展：Ch14–16 vars/urca；Ch17 plm；Ch19 np；Ch26 mlogit
+# 扩展：vars/urca (Ch14–16), plm (Ch17), np (Ch19), mlogit (Ch26)
 miss <- setdiff(pkgs, rownames(installed.packages()))
-if (length(miss)) install.packages(miss, repos = "https://cloud.r-project.org")
+if (length(miss)) {
+  install.packages(miss, repos = "https://cloud.r-project.org")
+}
 ```
 
 ---
-*第 23 章 · R/Quarto · md + ipynb 融合*
+
+*第 23 章 · R/Quarto · 理论 Markdown + R companion 融合*  
+*重新生成：`python3 scripts/convert_chapters_to_qmd.py`*

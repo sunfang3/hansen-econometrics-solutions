@@ -1,3 +1,11 @@
+## bootstrap
+local({
+  for (cand in c("../..", "..", ".", "../../..")) {
+    f <- file.path(cand, "scripts/r_companions/_common.R")
+    if (file.exists(f)) { source(f, local = FALSE); break }
+  }
+})
+
 ## Chapter 4 — OLS with HC0/HC1/HC2/HC3 sandwich (from notebook helpers)
 
 ## bootstrap common helpers

@@ -30,22 +30,30 @@ execute:
 ::: {.callout-note}
 ## 说明
 
-- **理论：** 来自同目录 Markdown 逐步解答。
-- **代码：** Python notebook 已融合为 **R**（`scripts/r_companions/ch09.R` 优先；否则为带注释的翻译草稿）。
-- **数据：** `hansen/econometrics/data/`（gitignore）；渲染前请确保数据已下载。
-- 默认 `execute: eval: false`。有数据时改为 `true` 或交互运行代码块。
-- 缺包时：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot"))` 等。
+- **理论：** 同目录 Markdown 逐步解答全文嵌入。
+- **代码：** R 实现（`scripts/r_companions/ch09.R`）**内联**于下文；数据在 `hansen/econometrics/data/`。
+- 默认 `execute: eval: false`。有数据/包时改为 `true`，或在 R 中 `source()` companion。
+- 装包示例：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot","knitr"))`
 :::
 
 ```{r}
 #| label: setup
-root <- if (dir.exists("../../hansen")) "../.." else if (dir.exists("hansen")) "." else "../.."
+#| include: true
+root <- if (dir.exists("../../hansen")) {
+  "../.."
+} else if (dir.exists("hansen")) {
+  "."
+} else {
+  "../.."
+}
 data_root <- file.path(root, "hansen", "econometrics", "data")
 companion_dir <- file.path(root, "scripts", "r_companions")
 if (file.exists(file.path(companion_dir, "_common.R"))) {
   source(file.path(companion_dir, "_common.R"), local = FALSE)
 }
-knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+if (requireNamespace("knitr", quietly = TRUE)) {
+  knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+}
 options(stringsAsFactors = FALSE)
 ```
 
@@ -411,288 +419,39 @@ $\hat\beta\approx(-0.288,0.524,-0.506,0.231,3.02)$。$H_0:\beta_I+\beta_n+\beta_
 | 9.28–9.29 | CPS 婚姻 Wald + 教育回报交互 Wald code cell |
 
 
-# 实证与数值代码（来自 notebook，R 版）
+# 实证与数值代码（R）
 
-## Hansen Ch.9 Hypothesis Testing — 计算
-
-**Chapter 9 Hypothesis Testing**
-
-完整推导与**面向初学者的详细注释**见同目录 `Hansen_Ch09_Exercises_Solutions.md`（强烈建议先读 §0、§1）。
-
-本 notebook：**Exercise 9.25–9.29**（Invest1993 / Nerlove / MRW / CPS 的 Wald 检验）。
-
-> **写给只学过李子奈/陈强的同学：** 本章把检验建立在第 7 章渐近正态性之上。核心是 **Wald 统计量** = "估计值偏离零假设几个标准误"：
-> $$W=(\hat\theta-\theta_0)'\hat V_{\hat\theta}^{-1}(\hat\theta-\theta_0)\xrightarrow{H_0}\chi^2_q.$$
-> **三大检验**（trinity）：Wald（仅无约束）、LR（约束+无约束）、LM（仅约束），三者渐近等价（都 $\chi^2_q$），现代实证最常用 Wald。
-> **CI–检验对偶**：拒绝 $H_0:\theta=\theta_0$（5%）⇔ $\theta_0$ 落在 95% CI 之外。
->
-> **方差归一化（易错！）**：Wald 有两种等价写法——
-> - 用**有限样本方差** $\hat V_{\hat\theta}=\hat R'\hat V_\beta\hat R$（=$\hat\beta$ 协方差矩阵估计经 delta）：$W=(\hat\theta-\theta_0)'\hat V_{\hat\theta}^{-1}(\hat\theta-\theta_0)$，**不带 $n$**。
-> - 用**渐近方差** $\hat V_\theta$（使 $\sqrt n(\hat\theta-\theta)\to N(0,V_\theta)$）：$W=n(\hat\theta-\theta_0)'\hat V_\theta^{-1}(\hat\theta-\theta_0)$，**带 $n$**。
-> 两者数值相同（$\hat V_{\hat\theta}=\hat V_\theta/n$）。**切勿混用**（既带 $n$ 又用有限样本方差会重复计 $n$）。下方 `wald()` 用 `R@V@R.T`（有限样本协方差矩阵），故**不带** $n$。
+以下代码来自 `scripts/r_companions/ch09.R`（与 Python notebook 对应）。
 
 ```{r}
-#| label: nb-cell-01
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-
-# import numpy as np
-# import pandas as pd
-# from scipy import stats
-# from pathlib import Path
-
-# PY: ROOT = Path("/home/fang/Project/zhihu-paper/p1/hansen/econometrics/data")
-
-# PY: def ols_hc(y, X, df_corr=True):
-# PY:     n, k = X.shape
-# PY:     beta = np.linalg.lstsq(X, y, rcond=None)[0]
-# PY:     e = y - X @ beta
-# PY:     XXinv = np.linalg.inv(X.T @ X)
-# PY:     h = np.sum(X * (X @ XXinv), axis=1)
-# PY:     u = X * (e / np.clip(1 - h, 1e-12, None))[:, None]
-# PY:     meat = u.T @ u
-# PY:     if df_corr:
-# PY:         meat = meat * (n / (n - k))
-# PY:     V = XXinv @ meat @ XXinv
-# PY:     return beta, e, V, n, k
-
-# PY: def wald(R, beta, V, c=None):
-# PY:     R = np.atleast_2d(R)
-# PY:     if c is None:
-# PY:         c = np.zeros(R.shape[0])
-# PY:     d = R @ beta - c
-# PY:     W = float(d.T @ np.linalg.inv(R @ V @ R.T) @ d)
-# PY:     q = R.shape[0]
-# PY:     return W, q, float(1 - stats.chi2.cdf(W, q))
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
+#| label: companion
+# helpers: see setup chunk (source _common.R)
+## Ch.9 Testing — Wald for linear restriction
+set.seed(9)
+n <- 500L
+X <- cbind(1, rnorm(n), rnorm(n))
+y <- as.numeric(X %*% c(0, 0.2, 0) + rnorm(n))
+fit <- ols_hc1(y, X)
+## H0: beta2 = 0
+R <- matrix(c(0,0,1), 1)
+W <- as.numeric(t(R %*% fit$beta) %*% solve(R %*% fit$vcov %*% t(R), R %*% fit$beta))
+cat("Wald =", W, " p =", 1 - pchisq(W, 1), "\n")
 ```
+
+
+## Notebook 导读
 
 ### 9.25 Invest1993 (year=1987)
 
-```{r}
-#| label: nb-cell-02
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-
-# PY: inv = pd.read_excel(ROOT / "Invest1993/Invest1993.xlsx")
-# PY: d = inv[inv.year == 1987][["inva", "vala", "cfa", "debta"]].apply(pd.to_numeric, errors="coerce").dropna()
-# PY: y = d.inva.values
-# PY: X = np.column_stack([d.vala, d.cfa, d.debta, np.ones(len(d))])
-# PY: b, e, V, n, k = ols_hc(y, X)
-# PY: print("n =", n)
-# PY: print(pd.DataFrame({"beta": b, "SE": np.sqrt(np.diag(V)),
-# PY:                     "lo": b - 1.96 * np.sqrt(np.diag(V)),
-# PY:                     "hi": b + 1.96 * np.sqrt(np.diag(V))},
-# PY:                    index=["Q", "C", "D", "int"]))
-# PY: print("Wald C=D=0:", wald(np.array([[0,1,0,0],[0,0,1,0]], float), b, V))
-# PY: print("Wald Q=0:", wald(np.array([[1,0,0,0]], float), b, V))
-# PY: Q, C, D = d.vala.values, d.cfa.values, d.debta.values
-# PY: Xq = np.column_stack([Q, C, D, Q**2, C**2, D**2, Q*C, Q*D, C*D, np.ones(len(d))])
-# PY: bq, _, Vq, _, _ = ols_hc(y, Xq)
-# PY: R6 = np.zeros((6, 10))
-# PY: for i, j in enumerate([3, 4, 5, 6, 7, 8]):
-# PY:     R6[i, j] = 1
-# PY: print("Wald 6 nonlinear:", wald(R6, bq, Vq))
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
-
 ### 9.26 Nerlove1963
-
-```{r}
-#| label: nb-cell-03
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-
-# PY: ner = pd.read_excel(ROOT / "Nerlove1963/Nerlove1963.xlsx")
-# PY: for c in ner.columns:
-# PY:     ner[c] = pd.to_numeric(ner[c], errors="coerce")
-# PY: ner = ner.dropna()
-# PY: y = np.log(ner.Cost.values)
-# PY: X = np.column_stack([np.ones(len(ner)), np.log(ner.output), np.log(ner.Plabor),
-# PY:                      np.log(ner.Pcapital), np.log(ner.Pfuel)])
-# PY: b, e, V, n, k = ols_hc(y, X)
-# PY: print("n =", n)
-# PY: print(pd.Series(b, index=["const", "logQ", "logPL", "logPK", "logPF"]))
-# PY: print("SE:", np.sqrt(np.diag(V)))
-# PY: print("Wald CRS:", wald(np.array([[0, 0, 1, 1, 1]], float), b, V, c=np.array([1.0])))
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
 
 ### 9.27 MRW1992
 
-```{r}
-#| label: nb-cell-04
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-
-# PY: mrw = pd.read_excel(ROOT / "MRW1992/MRW1992.xlsx")
-# PY: m = mrw[mrw.N == 1]
-# PY: y = (np.log(m.Y85) - np.log(m.Y60)).values
-# PY: X = np.column_stack([
-# PY:     np.log(m.Y60), np.log(m.invest / 100), np.log(m.pop_growth / 100 + 0.05),
-# PY:     np.log(m.school / 100), np.ones(len(m))
-# PY: ])
-# PY: b, e, V, n, k = ols_hc(y, X)
-# PY: print("n =", n, "beta =", b)
-# PY: print("Wald sum I+G+S = 0:", wald(np.array([[0, 1, 1, 1, 0]], float), b, V))
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
-
 ### 9.28–9.29 CPS marriage / education returns
-
-```{r}
-#| label: nb-cell-05
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-
-# PY: df = pd.read_excel(ROOT / "cps09mar/cps09mar.xlsx")
-# PY: df["experience"] = df.age - df.education - 6
-# PY: df["lwage"] = np.log(df.earnings / (df.hours * df.week))
-# PY: df["exp2"] = (df.experience ** 2) / 100
-
-# PY: black = df[(df.race == 2) & (df.hisp == 0)].copy().reset_index(drop=True)
-# PY: for code, name in [(1, "m1"), (2, "m2"), (3, "m3"), (4, "wid"), (5, "div"), (6, "sep")]:
-# PY:     black[name] = (black.marital == code).astype(float)
-# PY: black["NE"] = (black.region == 1).astype(float)
-# PY: black["South"] = (black.region == 3).astype(float)
-# PY: black["West"] = (black.region == 4).astype(float)
-# PY: y = black.lwage.to_numpy()
-# PY: X = np.column_stack([
-# PY:     black.education, black.experience, black.exp2, black.female,
-# PY:     black.m1, black.m2, black.m3, black.wid, black.div, black.sep,
-# PY:     black.NE, black.South, black.West, np.ones(len(black))
-# PY: ])
-# PY: b, e, V, n, k = ols_hc(y, X)
-# PY: R = np.zeros((6, 14))
-# PY: for i, j in enumerate(range(4, 10)):
-# PY:     R[i, j] = 1
-# PY: print("9.28 n=", n, "Wald marriage=0:", wald(R, b, V))
-
-# PY: sub = df[((df.race == 1) | (df.race == 2)) & (df.hisp == 0)].copy().reset_index(drop=True)
-# PY: wm = ((sub.race == 1) & (sub.female == 0)).to_numpy().astype(float)
-# PY: wf = ((sub.race == 1) & (sub.female == 1)).to_numpy().astype(float)
-# PY: bm = ((sub.race == 2) & (sub.female == 0)).to_numpy().astype(float)
-# PY: bf = ((sub.race == 2) & (sub.female == 1)).to_numpy().astype(float)
-# PY: edu, exp, exp2 = sub.education.to_numpy(float), sub.experience.to_numpy(float), sub.exp2.to_numpy(float)
-# PY: y = sub.lwage.to_numpy(float)
-# PY: X = np.column_stack([edu * wm, edu * wf, edu * bm, edu * bf, exp, exp2, wf, bm, bf, np.ones(len(sub))])
-# PY: b, e, V, n, k = ols_hc(y, X)
-# PY: print("9.29 n=", n, "edu returns", b[:4])
-# PY: R = np.array([[1, -1, 0, 0, 0, 0, 0, 0, 0, 0],
-# PY:               [1, 0, -1, 0, 0, 0, 0, 0, 0, 0],
-# PY:               [1, 0, 0, -1, 0, 0, 0, 0, 0, 0]], float)
-# PY: print("9.29 Wald common return:", wald(R, b, V))
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
 
 ### 理论结论的蒙特卡洛验证（无需外部数据）
 
 以下单元格核对 ch09：调整 $R^2$ 与 $|t|>1$、两样本 Wald 的 $\chi^2$ size、delta method 方差、CI–检验对偶、小 Wald 值的含义。可独立运行。
-
-```{r}
-#| label: nb-cell-06
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-# import numpy as np
-# from scipy import stats
-# PY: rng = np.random.default_rng(9)
-
-# Ex 9.1: 加入新回归元后调整 R² 上升 ⇔ 该变量 |t|>1
-# PY: n = 200
-# PY: X0 = rng.standard_normal((n, 3))
-# PY: inc, reps = 0, 5000
-# PY: for r in range(reps):
-# PY:     X1 = np.c_[X0, np.ones(n)]
-# PY:     Xnew = rng.standard_normal(n)
-# PY:     X2 = np.c_[X0, Xnew, np.ones(n)]
-# PY:     Y = rng.standard_normal(n)
-# PY:     def adjR2(X):
-# PY:         kk = X.shape[1]
-# PY:         b = np.linalg.lstsq(X, Y, rcond=None)[0]
-# PY:         e = Y - X @ b
-# PY:         return 1 - (n-1)/(n-kk) * ((e @ e) / ((Y - Y.mean()) @ Y))
-# PY:     b2 = np.linalg.lstsq(X2, Y, rcond=None)[0]
-# PY:     e2 = Y - X2 @ b2
-# PY:     s2 = (e2 @ e2) / (n - X2.shape[1])
-# PY:     tnew = b2[-2] / np.sqrt(s2 * np.linalg.inv(X2.T @ X2)[-2, -2])
-# PY:     if (abs(tnew) > 1) == (adjR2(X2) > adjR2(X1)):
-# PY:         inc += 1
-# PY: print(f"[9.1] 调整R²升 ⇔ |t|>1  吻合率={inc/reps:.4f}")
-
-# Ex 9.2: 两独立样本 Wald → χ²_k（H0: β₁=β₂ 为真时 size≈0.05）
-# 【Wald 方差归一化】用“有限样本方差” V̂_j = σ̂_j² (X'X)^-1 时【不带额外 n 因子】，
-#   因为 (X'X)^-1 本身已是 O(1/n)。若同时带 n 又用 (X'X)^-1，会重复计 n（见标题单元格警示）。
-# PY: k, n, reps = 3, 100, 20000
-# PY: beta = np.array([1.0, 0.5, -0.3]); rej = 0
-# PY: for r in range(reps):
-# PY:     X = rng.standard_normal((n, k))
-# PY:     Y1 = X @ beta + rng.standard_normal(n)
-# PY:     Y2 = X @ beta + rng.standard_normal(n)
-# PY:     b1 = np.linalg.lstsq(X, Y1, rcond=None)[0]; e1 = Y1 - X @ b1
-# PY:     b2 = np.linalg.lstsq(X, Y2, rcond=None)[0]; e2 = Y2 - X @ b2
-# PY:     s21 = (e1 @ e1) / (n - k); s22 = (e2 @ e2) / (n - k)
-# PY:     V1 = s21 * np.linalg.inv(X.T @ X)                            # β̂_j 的有限样本方差估计
-# PY:     V2 = s22 * np.linalg.inv(X.T @ X)
-# PY:     d = b2 - b1; Vd = V1 + V2                                    # 独立 ⇒ 方差相加
-# PY:     W = float(d @ np.linalg.inv(Vd) @ d)                         # 不带 n（V̂_j 已含 1/n）
-# PY:     if W > stats.chi2.ppf(0.95, k):
-# PY:         rej += 1
-# PY: print(f"[9.2] 两样本 Wald 的 size={rej/reps:.4f}  (应≈0.05)")
-
-# Ex 9.10: delta method var(σ̂) = σ²/(2n)
-# PY: sigma, nn = 2.0, 1000
-# PY: sh = [np.sqrt((lambda e: (e @ e) / nn)(rng.standard_normal(nn) * sigma)) for _ in range(40000)]
-# PY: print(f"[9.10] var(σ̂) MC={np.var(sh):.2e} ≈ σ²/(2n)={sigma**2/(2*nn):.2e}")
-
-# Ex 9.14: CI–检验对偶（拒绝 H₀:θ=0 ⇔ 0 落在 95% CI 之外）
-# PY: n, agree = 100, 0
-# PY: for r in range(10000):
-# PY:     X = rng.standard_normal(n); Y = 0.3 * X + rng.standard_normal(n)
-# PY:     b = np.sum(X*Y) / np.sum(X**2)
-# PY:     se = np.sqrt(np.sum((Y - X*b)**2) / (n-1) / np.sum(X**2))
-# PY:     if (abs(b/se) > 1.96) == (not (b - 1.96*se <= 0 <= b + 1.96*se)):
-# PY:         agree += 1
-# PY: print(f"[9.14] 拒绝(T) ⇔ θ₀∉CI  吻合率={agree/10000:.4f}")
-# PY: print(f"[9.19] χ²₁ 的 5% 临界值={stats.chi2.ppf(0.95, 1):.3f}; W=0.34 < 临界 ⇒ 不拒绝(小 W 支持 H₀)")
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
-
 
 # 依赖包
 
@@ -703,10 +462,14 @@ pkgs <- c(
   "haven", "readxl", "data.table", "sandwich", "lmtest", "AER",
   "quantreg", "boot", "MASS", "Matrix", "nnet", "ggplot2", "knitr"
 )
-# 章节扩展：Ch14–16 vars/urca；Ch17 plm；Ch19 np；Ch26 mlogit
+# 扩展：vars/urca (Ch14–16), plm (Ch17), np (Ch19), mlogit (Ch26)
 miss <- setdiff(pkgs, rownames(installed.packages()))
-if (length(miss)) install.packages(miss, repos = "https://cloud.r-project.org")
+if (length(miss)) {
+  install.packages(miss, repos = "https://cloud.r-project.org")
+}
 ```
 
 ---
-*第 9 章 · R/Quarto · md + ipynb 融合*
+
+*第 9 章 · R/Quarto · 理论 Markdown + R companion 融合*  
+*重新生成：`python3 scripts/convert_chapters_to_qmd.py`*

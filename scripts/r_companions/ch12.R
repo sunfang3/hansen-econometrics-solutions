@@ -1,3 +1,11 @@
+## bootstrap
+local({
+  for (cand in c("../..", "..", ".", "../../..")) {
+    f <- file.path(cand, "scripts/r_companions/_common.R")
+    if (file.exists(f)) { source(f, local = FALSE); break }
+  }
+})
+
 ## Chapter 12 IV / 2SLS helpers and typical CPS-style IV skeleton
 ## Notebooks vary by exercise; this companion provides reusable R IV tools.
 

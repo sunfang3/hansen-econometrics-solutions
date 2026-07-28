@@ -30,22 +30,30 @@ execute:
 ::: {.callout-note}
 ## 说明
 
-- **理论：** 来自同目录 Markdown 逐步解答。
-- **代码：** Python notebook 已融合为 **R**（`scripts/r_companions/ch04.R` 优先；否则为带注释的翻译草稿）。
-- **数据：** `hansen/econometrics/data/`（gitignore）；渲染前请确保数据已下载。
-- 默认 `execute: eval: false`。有数据时改为 `true` 或交互运行代码块。
-- 缺包时：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot"))` 等。
+- **理论：** 同目录 Markdown 逐步解答全文嵌入。
+- **代码：** R 实现（`scripts/r_companions/ch04.R`）**内联**于下文；数据在 `hansen/econometrics/data/`。
+- 默认 `execute: eval: false`。有数据/包时改为 `true`，或在 R 中 `source()` companion。
+- 装包示例：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot","knitr"))`
 :::
 
 ```{r}
 #| label: setup
-root <- if (dir.exists("../../hansen")) "../.." else if (dir.exists("hansen")) "." else "../.."
+#| include: true
+root <- if (dir.exists("../../hansen")) {
+  "../.."
+} else if (dir.exists("hansen")) {
+  "."
+} else {
+  "../.."
+}
 data_root <- file.path(root, "hansen", "econometrics", "data")
 companion_dir <- file.path(root, "scripts", "r_companions")
 if (file.exists(file.path(companion_dir, "_common.R"))) {
   source(file.path(companion_dir, "_common.R"), local = FALSE)
 }
-knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+if (requireNamespace("knitr", quietly = TRUE)) {
+  knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+}
 options(stringsAsFactors = FALSE)
 ```
 
@@ -566,19 +574,63 @@ $$\mathrm{var}(\hat\beta|X)=(X'X)^{-1}\Big(\sum_{g=1}^G X_g'e_ge_g'X_g\Big)(X'X)
 | 4.26 | DDK2011 tracking 回归 + robust/cluster SE code cell |
 
 
-# 实证与数值代码（R companion）
+# 实证与数值代码（R）
 
-手写/精译 R 脚本：`scripts/r_companions/ch04.R`。
+以下代码来自 `scripts/r_companions/ch04.R`（与 Python notebook 对应）。
 
 ```{r}
-#| label: companion-main
-source(file.path(root, "scripts", "r_companions", "ch04.R"))
+#| label: companion
+# helpers: see setup chunk (source _common.R)
+## Chapter 4 — OLS with HC0/HC1/HC2/HC3 sandwich (from notebook helpers)
+
+## bootstrap common helpers
+local({
+  for (cand in c("../..", "..", ".", "../../..")) {
+    f <- file.path(cand, "scripts/r_companions/_common.R")
+    if (file.exists(f)) { source(f, local = FALSE); break }
+  }
+})
+
+ols_hc <- function(y, X) {
+  y <- as.numeric(y); X <- as.matrix(X)
+  n <- NROW(X); k <- NCOL(X)
+  XXinv <- solve(crossprod(X))
+  beta <- as.numeric(XXinv %*% crossprod(X, y))
+  e <- y - as.numeric(X %*% beta)
+  h <- rowSums((X %*% XXinv) * X)
+  sand <- function(scale) {
+    u <- X * as.numeric(scale * e)
+    XXinv %*% crossprod(u) %*% XXinv
+  }
+  Vhom <- XXinv * (sum(e^2) / (n - k))
+  V0 <- sand(1)
+  V1 <- sand(sqrt(n / (n - k)))
+  V2 <- sand(1 / sqrt(pmax(1 - h, 1e-12)))
+  V3 <- sand(1 / pmax(1 - h, 1e-12))
+  list(beta = beta, se_hom = sqrt(diag(Vhom)), se_hc0 = sqrt(diag(V0)),
+       se_hc1 = sqrt(diag(V1)), se_hc2 = sqrt(diag(V2)), se_hc3 = sqrt(diag(V3)))
+}
+
+cat("Ch.4 R tools: ols_hc()\n")
+## Demo on cps if available
+if (file.exists(file.path(hansen_data_root(), "cps09mar", "cps09mar.dta"))) {
+  cps <- read_hansen_dta("cps09mar", "cps09mar.dta")
+  d <- cps[cps$female == 0 & cps$education >= 12, ]
+  y <- log(as.numeric(d$earnings) / (as.numeric(d$hours) * as.numeric(d$week)))
+  ok <- is.finite(y)
+  y <- y[ok]
+  ed <- as.numeric(d$education)[ok]
+  exp <- as.numeric(d$age)[ok] - ed - 6
+  X <- cbind(1, ed, exp, exp^2)
+  fit <- ols_hc(y, X)
+  print(data.frame(term = c("const", "educ", "exp", "exp2"), b = fit$beta, HC1 = fit$se_hc1))
+}
 ```
 
 
-## Notebook 结构说明
+## Notebook 导读
 
-#### 公共函数：OLS + HC0–HC3（夹心方差）
+### 公共函数：OLS + HC0–HC3（夹心方差）
 
 下面函数对同一组 $(\hat\beta,\hat e,h_{ii})$ 计算**五种**方差估计，差别只在"肉"$\sum X_iX_i'\hat e_i^2\,c_i$ 的权重 $c_i$：
 
@@ -590,16 +642,15 @@ source(file.path(root, "scripts", "r_companions", "ch04.R"))
 
 由 Ex 4.10，应有 $\mathrm{SE}_{HC0}\le\mathrm{SE}_{HC1}\le\mathrm{SE}_{HC2}\le\mathrm{SE}_{HC3}$。
 
-#### Exercise 4.24：方程 (3.49) 多种 SE
+### Exercise 4.24：方程 (3.49) 多种 SE
 
-#### Exercise 4.25：白人男性西班牙裔，HC3
+### Exercise 4.25：白人男性西班牙裔，HC3
 
-#### Exercise 4.26：DDK2011 tracking + 聚类 SE
+### Exercise 4.26：DDK2011 tracking + 聚类 SE
 
-#### 理论结论的蒙特卡洛验证（无需外部数据）
+### 理论结论的蒙特卡洛验证（无需外部数据）
 
 以下单元格核对 ch04 的夹心方差、HC0–HC3 排序、GLS 有效性、OLS/GLS 协方差、短回归 $s^2$ 偏差。可独立运行。
-
 
 # 依赖包
 
@@ -610,10 +661,14 @@ pkgs <- c(
   "haven", "readxl", "data.table", "sandwich", "lmtest", "AER",
   "quantreg", "boot", "MASS", "Matrix", "nnet", "ggplot2", "knitr"
 )
-# 章节扩展：Ch14–16 vars/urca；Ch17 plm；Ch19 np；Ch26 mlogit
+# 扩展：vars/urca (Ch14–16), plm (Ch17), np (Ch19), mlogit (Ch26)
 miss <- setdiff(pkgs, rownames(installed.packages()))
-if (length(miss)) install.packages(miss, repos = "https://cloud.r-project.org")
+if (length(miss)) {
+  install.packages(miss, repos = "https://cloud.r-project.org")
+}
 ```
 
 ---
-*第 4 章 · R/Quarto · md + ipynb 融合*
+
+*第 4 章 · R/Quarto · 理论 Markdown + R companion 融合*  
+*重新生成：`python3 scripts/convert_chapters_to_qmd.py`*

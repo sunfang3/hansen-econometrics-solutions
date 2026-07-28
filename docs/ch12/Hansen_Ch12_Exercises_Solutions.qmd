@@ -30,22 +30,30 @@ execute:
 ::: {.callout-note}
 ## 说明
 
-- **理论：** 来自同目录 Markdown 逐步解答。
-- **代码：** Python notebook 已融合为 **R**（`scripts/r_companions/ch12.R` 优先；否则为带注释的翻译草稿）。
-- **数据：** `hansen/econometrics/data/`（gitignore）；渲染前请确保数据已下载。
-- 默认 `execute: eval: false`。有数据时改为 `true` 或交互运行代码块。
-- 缺包时：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot"))` 等。
+- **理论：** 同目录 Markdown 逐步解答全文嵌入。
+- **代码：** R 实现（`scripts/r_companions/ch12.R`）**内联**于下文；数据在 `hansen/econometrics/data/`。
+- 默认 `execute: eval: false`。有数据/包时改为 `true`，或在 R 中 `source()` companion。
+- 装包示例：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot","knitr"))`
 :::
 
 ```{r}
 #| label: setup
-root <- if (dir.exists("../../hansen")) "../.." else if (dir.exists("hansen")) "." else "../.."
+#| include: true
+root <- if (dir.exists("../../hansen")) {
+  "../.."
+} else if (dir.exists("hansen")) {
+  "."
+} else {
+  "../.."
+}
 data_root <- file.path(root, "hansen", "econometrics", "data")
 companion_dir <- file.path(root, "scripts", "r_companions")
 if (file.exists(file.path(companion_dir, "_common.R"))) {
   source(file.path(companion_dir, "_common.R"), local = FALSE)
 }
-knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+if (requireNamespace("knitr", quietly = TRUE)) {
+  knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+}
 options(stringsAsFactors = FALSE)
 ```
 
@@ -447,28 +455,62 @@ IV 基线：BC percentile 区间适合有偏估计量。IV bootstrap SE 往往**
 | 理论验证 | 蒙特卡洛：2SLS 一致性 vs OLS 偏差、IV=2SLS=ILS、控制函数、弱工具偏差 code cell |
 
 
-# 实证与数值代码（R companion）
+# 实证与数值代码（R）
 
-手写/精译 R 脚本：`scripts/r_companions/ch12.R`。
+以下代码来自 `scripts/r_companions/ch12.R`（与 Python notebook 对应）。
 
 ```{r}
-#| label: companion-main
-source(file.path(root, "scripts", "r_companions", "ch12.R"))
+#| label: companion
+# helpers: see setup chunk (source _common.R)
+## Chapter 12 IV / 2SLS helpers and typical CPS-style IV skeleton
+## Notebooks vary by exercise; this companion provides reusable R IV tools.
+
+## bootstrap common helpers
+local({
+  for (cand in c("../..", "..", ".", "../../..")) {
+    f <- file.path(cand, "scripts/r_companions/_common.R")
+    if (file.exists(f)) { source(f, local = FALSE); break }
+  }
+})
+
+ols <- function(y, X) {
+  X <- as.matrix(X); y <- as.numeric(y)
+  b <- as.numeric(solve(crossprod(X), crossprod(X, y)))
+  list(beta = b, resid = y - as.numeric(X %*% b))
+}
+
+## 2SLS: y on X, instruments Z (Z must include exogenous parts of X)
+tsls <- function(y, X, Z) {
+  X <- as.matrix(X); Z <- as.matrix(Z); y <- as.numeric(y)
+  PZ_X <- Z %*% solve(crossprod(Z), crossprod(Z, X))  # X-hat
+  b <- as.numeric(solve(crossprod(PZ_X, X), crossprod(PZ_X, y)))
+  e <- y - as.numeric(X %*% b)
+  ## heteroskedastic robust (White) SE for 2SLS
+  Q <- crossprod(PZ_X, X) / NROW(X)
+  ## score X_hat * e
+  meat <- crossprod(PZ_X * e) / NROW(X)
+  V <- solve(Q) %*% meat %*% solve(Q) / NROW(X)
+  list(beta = b, se = sqrt(pmax(diag(V), 0)), resid = e, vcov = V)
+}
+
+## Example: if AJR / Card / etc. data present, load and estimate
+## Adjust variable names to match the chapter notebook for a given exercise.
+cat("Ch.12 R tools loaded: ols(), tsls(), read_hansen_dta()\n")
+cat("Data root:", hansen_data_root(), "\n")
 ```
 
 
-## Notebook 结构说明
+## Notebook 导读
 
-#### Exercise 12.23 AJR2001
+### Exercise 12.23 AJR2001
 
-#### Exercise 12.25 Card1995 (2SLS with nearc4a, nearc4b)
+### Exercise 12.25 Card1995 (2SLS with nearc4a, nearc4b)
 
-#### Exercise 12.27 AK1991 Black men, 3 QOB instruments
+### Exercise 12.27 AK1991 Black men, 3 QOB instruments
 
-#### 理论结论的蒙特卡洛验证（无需外部数据）
+### 理论结论的蒙特卡洛验证（无需外部数据）
 
 以下单元格用模拟核对 ch12 的核心结论：(1) 2SLS 一致而 OLS 在内生性下偏差；(2) 恰好识别时 IV=2SLS=ILS=控制函数（数值相同）；(3) 弱工具使 2SLS 偏向 OLS。可独立运行。
-
 
 # 依赖包
 
@@ -479,10 +521,14 @@ pkgs <- c(
   "haven", "readxl", "data.table", "sandwich", "lmtest", "AER",
   "quantreg", "boot", "MASS", "Matrix", "nnet", "ggplot2", "knitr"
 )
-# 章节扩展：Ch14–16 vars/urca；Ch17 plm；Ch19 np；Ch26 mlogit
+# 扩展：vars/urca (Ch14–16), plm (Ch17), np (Ch19), mlogit (Ch26)
 miss <- setdiff(pkgs, rownames(installed.packages()))
-if (length(miss)) install.packages(miss, repos = "https://cloud.r-project.org")
+if (length(miss)) {
+  install.packages(miss, repos = "https://cloud.r-project.org")
+}
 ```
 
 ---
-*第 12 章 · R/Quarto · md + ipynb 融合*
+
+*第 12 章 · R/Quarto · 理论 Markdown + R companion 融合*  
+*重新生成：`python3 scripts/convert_chapters_to_qmd.py`*

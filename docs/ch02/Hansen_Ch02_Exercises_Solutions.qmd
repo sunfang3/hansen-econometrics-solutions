@@ -30,22 +30,30 @@ execute:
 ::: {.callout-note}
 ## 说明
 
-- **理论：** 来自同目录 Markdown 逐步解答。
-- **代码：** Python notebook 已融合为 **R**（`scripts/r_companions/ch02.R` 优先；否则为带注释的翻译草稿）。
-- **数据：** `hansen/econometrics/data/`（gitignore）；渲染前请确保数据已下载。
-- 默认 `execute: eval: false`。有数据时改为 `true` 或交互运行代码块。
-- 缺包时：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot"))` 等。
+- **理论：** 同目录 Markdown 逐步解答全文嵌入。
+- **代码：** R 实现（`scripts/r_companions/ch02.R`）**内联**于下文；数据在 `hansen/econometrics/data/`。
+- 默认 `execute: eval: false`。有数据/包时改为 `true`，或在 R 中 `source()` companion。
+- 装包示例：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot","knitr"))`
 :::
 
 ```{r}
 #| label: setup
-root <- if (dir.exists("../../hansen")) "../.." else if (dir.exists("hansen")) "." else "../.."
+#| include: true
+root <- if (dir.exists("../../hansen")) {
+  "../.."
+} else if (dir.exists("hansen")) {
+  "."
+} else {
+  "../.."
+}
 data_root <- file.path(root, "hansen", "econometrics", "data")
 companion_dir <- file.path(root, "scripts", "r_companions")
 if (file.exists(file.path(companion_dir, "_common.R"))) {
   source(file.path(companion_dir, "_common.R"), local = FALSE)
 }
-knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+if (requireNamespace("knitr", quietly = TRUE)) {
+  knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+}
 options(stringsAsFactors = FALSE)
 ```
 
@@ -612,17 +620,26 @@ Exercise 2.4（离散条件矩）与 Exercise 2.16（连续密度 BLP/CEF）的�
 - **与李子奈/陈强的对照要点：** 国内教材把"线性 + 零均值 + 同方差 + 无自相关"打包；Hansen 把它们**逐条拆开、分清强弱**。这种拆分正是后续"稳健推断"、"工具变量"、"GMM"的基石——因为很多结论只需其中较弱的条件即可成立。
 
 
-# 实证与数值代码（来自 notebook，R 版）
+# 实证与数值代码（R）
 
-## Hansen《Econometrics》第 2 章习题解答
+以下代码来自 `scripts/r_companions/ch02.R`（与 Python notebook 对应）。
 
-**Chapter 2 Conditional Expectation and Projection**
+```{r}
+#| label: companion
+# helpers: see setup chunk (source _common.R)
+## Ch.2 CEF / projection numerics (simulation)
+set.seed(1)
+n <- 5000L
+X <- rnorm(n); U <- rnorm(n)
+Y <- 1 + 2*X + U
+## CEF is linear: E[Y|X]=1+2X; projection same
+fit <- ols_hc1(Y, cbind(1, X))
+print(pretty_coef(fit, c("const","X")))
+cat("true beta = (1,2)\n")
+```
 
-对应书稿 PDF 第 80–81 页（印刷页 60–61），§2.34 Exercises。
 
-完整推导与**面向初学者的详细注释**见同目录 `Hansen_Ch02_Exercises_Solutions.md`（强烈建议先读它的 §0、§1 概念铺垫）。本 notebook 只做 **Exercise 2.4、2.16** 的数值验证，并汇总其余题目答案。
-
-> **写给只学过李子奈/陈强的同学：** 本章几乎不谈 OLS 估计量，而是在**总体**层面把"要估计的东西"讲清楚。记住两个计算技巧——**迭代期望**（"信息集小的赢"）与**条件期望定理**（"条件里的 $X$ 能提出来"），绝大多数证明题都用得上。
+## Notebook 导读
 
 ### Exercise 2.1–2.3（迭代期望与条件期望定理）
 
@@ -655,40 +672,6 @@ $$E[h(X)e]=E[E[h(X)e\mid X]]=E[h(X)\underbrace{E[e\mid X]}_{=0}]=0.$$
 - $E[Y\mid X=1]=0.3/0.5=0.6$，$\mathrm{var}=0.6\times0.4=0.24$。
 
 两条件方差不同 → **异方差**雏形（呼应 2.8、2.22）。下方代码数值复核。
-
-```{r}
-#| label: nb-cell-01
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-# import numpy as np
-# import pandas as pd
-
-# joint P(Y,X): rows Y=0,1; cols X=0,1
-# PY: P = np.array([[0.1, 0.2],
-# PY:               [0.4, 0.3]])
-# PY: assert np.isclose(P.sum(), 1.0)
-
-# PY: px = P.sum(axis=0)
-# PY: print("P(X) =", px)
-
-# PY: rows = []
-# PY: for x in [0, 1]:
-# PY:     py_x = P[:, x] / px[x]
-# PY:     ey = float(py_x[1])           # E[Y|X] since Y in {0,1}
-# PY:     ey2 = ey                      # Y^2 = Y
-# PY:     var = ey2 - ey**2
-# PY:     rows.append({"X": x, "E[Y|X]": ey, "E[Y^2|X]": ey2, "Var[Y|X]": var})
-# PY:     print(f"X={x}: E[Y|X]={ey:.4f}, E[Y^2|X]={ey2:.4f}, Var={var:.4f}")
-
-# PY: pd.DataFrame(rows)
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
 
 ### Exercise 2.5–2.9 要点
 
@@ -725,49 +708,6 @@ $$E[h(X)e]=E[E[h(X)e\mid X]]=E[h(X)\underbrace{E[e\mid X]}_{=0}]=0.$$
 $$m(x)=E[Y\mid X=x]=\frac{\tfrac12 x^2+\tfrac14}{x^2+\tfrac13}.$$
 $m(0)=0.75$、$m(1)=0.5625$，是有理函数（非线性）→ **BLP ≠ CEF**（BLP 只是对 CEF 的最佳线性近似）。下方代码数值复核。
 
-```{r}
-#| label: nb-cell-02
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-# from scipy import integrate
-
-# PY: def f(y, x):
-# PY:     return 1.5 * (x**2 + y**2)
-
-# PY: I, _ = integrate.dblquad(lambda y, x: f(y, x), 0, 1, 0, 1)
-# PY: print("integral of density =", I)
-
-# PY: EX, _ = integrate.dblquad(lambda y, x: x * f(y, x), 0, 1, 0, 1)
-# PY: EY, _ = integrate.dblquad(lambda y, x: y * f(y, x), 0, 1, 0, 1)
-# PY: EX2, _ = integrate.dblquad(lambda y, x: (x**2) * f(y, x), 0, 1, 0, 1)
-# PY: EXY, _ = integrate.dblquad(lambda y, x: x * y * f(y, x), 0, 1, 0, 1)
-# PY: print(f"E[X]={EX:.6f}, E[Y]={EY:.6f}, E[X^2]={EX2:.6f}, E[XY]={EXY:.6f}")
-
-# PY: varX = EX2 - EX**2
-# PY: cov = EXY - EX * EY
-# PY: beta = cov / varX
-# PY: alpha = EY - beta * EX
-# PY: print(f"BLP: alpha={alpha:.6f}, beta={beta:.6f}")
-# PY: print(f"exact: beta=-15/73={-15/73:.6f}, alpha=55/73={55/73:.6f}")
-
-# PY: def m(x):
-# PY:     fx = 1.5 * (x**2 + 1.0/3.0)
-# PY:     num = 1.5 * (0.5 * x**2 + 0.25)
-# PY:     return num / fx
-
-# PY: for x in [0.0, 0.5, 1.0]:
-# PY:     print(f"x={x}: m(x)={m(x):.6f}, BLP={alpha + beta*x:.6f}")
-
-# PY: print("CEF is not affine in x => different from BLP")
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
-
 ### Exercise 2.17–2.22 要点
 
 - **2.17** 两个矩方程解两个未知数（矩方法雏形）：第一分量 $\Rightarrow m=\mu$；第二分量 $\Rightarrow s=\sigma^2$。换成样本均值即样本均值/样本方差。
@@ -781,60 +721,6 @@ $m(0)=0.75$、$m(1)=0.5625$，是有理函数（非线性）→ **BLP ≠ CEF**�
 
 以下单元格用数值积分 / 大样本模拟核对 ch02 的关键理论结论，可独立运行（不依赖教材数据集）。
 
-```{r}
-#| label: nb-cell-03
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-# import numpy as np
-# from scipy import integrate
-
-# ---- Ex 2.16: 联合密度 f(x,y)=1.5(x^2+y^2) 的 BLP 与 CEF ----
-# PY: def f(y, x):
-# PY:     return 1.5 * (x**2 + y**2)
-
-# PY: I, _ = integrate.dblquad(f, 0, 1, 0, 1)                                 # 密度积分应为 1
-# PY: EX, _ = integrate.dblquad(lambda y, x: x * f(y, x), 0, 1, 0, 1)
-# PY: EY, _ = integrate.dblquad(lambda y, x: y * f(y, x), 0, 1, 0, 1)
-# PY: EX2, _ = integrate.dblquad(lambda y, x: x**2 * f(y, x), 0, 1, 0, 1)
-# PY: EXY, _ = integrate.dblquad(lambda y, x: x * y * f(y, x), 0, 1, 0, 1)
-# PY: varX, cov = EX2 - EX**2, EXY - EX * EY
-# PY: beta = cov / varX                                                # BLP 斜率（先算 beta）
-# PY: alpha = EY - beta * EX                                           # BLP 截距（再用 beta 算 alpha）
-# PY: print(f"[2.16] 积分={I:.4f}(应1)  E[X]={EX:.4f}(5/8={5/8})  E[X^2]={EX2:.4f}(7/15={7/15})")
-# PY: print(f"       beta={beta:.6f}(-15/73={-15/73:.6f})  alpha={alpha:.6f}(55/73={55/73:.6f})")
-
-# PY: def m(x):                                                               # CEF m(x)=E[Y|X=x]
-# PY:     return 1.5 * (0.5 * x**2 + 0.25) / (1.5 * (x**2 + 1/3))
-
-# PY: print(f"       m(0)={m(0):.4f}(0.75)  m(1)={m(1):.4f}(0.5625)  BLP(1)={alpha+beta*1:.4f} ≠ m(1) => BLP≠CEF")
-
-# ---- Ex 2.4: 0/1 联合分布的条件矩（伯努利 p(1-p)）----
-# PY: P = np.array([[0.1, 0.2], [0.4, 0.3]])
-# PY: px = P.sum(axis=0)
-# PY: for x in [0, 1]:
-# PY:     p1 = P[1, x] / px[x]
-# PY:     print(f"[2.4] X={x}: E[Y|X]={p1}, Var={p1*(1-p1):.2f}")
-
-# ---- Ex 2.11 / 2.13 反例: X~N(0,1), e=X^2-1（投影正交推不出零条件均值）----
-# PY: rng = np.random.default_rng(1)
-# PY: X = rng.standard_normal(10_000_000)
-# PY: e = X**2 - 1
-# PY: print(f"[2.11/2.13] E[Xe]={np.mean(X*e):.4f}(~0)  但 E[X^2 e]={np.mean(X**2*e):.4f}(应=2)")
-
-# ---- Ex 2.12 反例: e=Xu，X,u iid N(0,1)（均值独立 ≠ 独立）----
-# PY: u = rng.standard_normal(10_000_000)
-# PY: ee = X * u
-# PY: print(f"[2.12] E[e]={np.mean(ee):.4f}(~0)  方差随|X|增大: |X|<.5 var={np.var(ee[np.abs(X)<0.5]):.3f}, |X|>2 var={np.var(ee[np.abs(X)>2]):.3f}")
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
-
-
 # 依赖包
 
 ```{r}
@@ -844,10 +730,14 @@ pkgs <- c(
   "haven", "readxl", "data.table", "sandwich", "lmtest", "AER",
   "quantreg", "boot", "MASS", "Matrix", "nnet", "ggplot2", "knitr"
 )
-# 章节扩展：Ch14–16 vars/urca；Ch17 plm；Ch19 np；Ch26 mlogit
+# 扩展：vars/urca (Ch14–16), plm (Ch17), np (Ch19), mlogit (Ch26)
 miss <- setdiff(pkgs, rownames(installed.packages()))
-if (length(miss)) install.packages(miss, repos = "https://cloud.r-project.org")
+if (length(miss)) {
+  install.packages(miss, repos = "https://cloud.r-project.org")
+}
 ```
 
 ---
-*第 2 章 · R/Quarto · md + ipynb 融合*
+
+*第 2 章 · R/Quarto · 理论 Markdown + R companion 融合*  
+*重新生成：`python3 scripts/convert_chapters_to_qmd.py`*

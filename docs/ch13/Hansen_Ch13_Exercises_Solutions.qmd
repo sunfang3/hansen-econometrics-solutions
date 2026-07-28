@@ -30,22 +30,30 @@ execute:
 ::: {.callout-note}
 ## 说明
 
-- **理论：** 来自同目录 Markdown 逐步解答。
-- **代码：** Python notebook 已融合为 **R**（`scripts/r_companions/ch13.R` 优先；否则为带注释的翻译草稿）。
-- **数据：** `hansen/econometrics/data/`（gitignore）；渲染前请确保数据已下载。
-- 默认 `execute: eval: false`。有数据时改为 `true` 或交互运行代码块。
-- 缺包时：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot"))` 等。
+- **理论：** 同目录 Markdown 逐步解答全文嵌入。
+- **代码：** R 实现（`scripts/r_companions/ch13.R`）**内联**于下文；数据在 `hansen/econometrics/data/`。
+- 默认 `execute: eval: false`。有数据/包时改为 `true`，或在 R 中 `source()` companion。
+- 装包示例：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot","knitr"))`
 :::
 
 ```{r}
 #| label: setup
-root <- if (dir.exists("../../hansen")) "../.." else if (dir.exists("hansen")) "." else "../.."
+#| include: true
+root <- if (dir.exists("../../hansen")) {
+  "../.."
+} else if (dir.exists("hansen")) {
+  "."
+} else {
+  "../.."
+}
 data_root <- file.path(root, "hansen", "econometrics", "data")
 companion_dir <- file.path(root, "scripts", "r_companions")
 if (file.exists(file.path(companion_dir, "_common.R"))) {
   source(file.path(companion_dir, "_common.R"), local = FALSE)
 }
-knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+if (requireNamespace("knitr", quietly = TRUE)) {
+  knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+}
 options(stringsAsFactors = FALSE)
 ```
 
@@ -561,184 +569,37 @@ $$\boxed{\ N\big((Q'WQ)^{-1}Q'W\delta,\;V_\beta\big)\ }$$
 | 理论验证 | 蒙特卡洛：有效 GMM≤2SLS、$J$ 的 size 与功效、同方差等价 code cell |
 
 
-# 实证与数值代码（来自 notebook，R 版）
+# 实证与数值代码（R）
+
+以下代码来自 `scripts/r_companions/ch13.R`（与 Python notebook 对应）。
 
 ```{r}
-#| label: nb-cell-01
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-
-# import numpy as np
-# import pandas as pd
-# from pathlib import Path
-# from numpy.linalg import inv
-# from scipy import stats
-
-# PY: ROOT = Path("/home/fang/Project/zhihu-paper/p1/hansen/econometrics/data")
-
-# PY: def tsls(y, X, Z):
-# PY:     PZ = Z @ inv(Z.T @ Z) @ Z.T
-# PY:     b = inv(X.T @ PZ @ X) @ (X.T @ PZ @ y)
-# PY:     return b, y - X @ b
-
-# PY: def egmm_twostep(y, X, Z):
-# PY:     """Linear IV efficient two-step GMM; returns beta, V_beta_hat, J, df."""
-# PY:     n = len(y)
-# PY:     b1, e1 = tsls(y, X, Z)
-# PY:     Om = (Z * e1[:, None]).T @ (Z * e1[:, None]) / n
-# PY:     W = inv(Om)
-# PY:     ZX, ZY = Z.T @ X, Z.T @ y
-# PY:     b = inv(ZX.T @ W @ ZX) @ (ZX.T @ W @ ZY)
-# PY:     e = y - X @ b
-# PY:     Om2 = (Z * e[:, None]).T @ (Z * e[:, None]) / n
-    # Avar of sqrt(n)(b-beta) = (Q'Om^{-1}Q)^{-1}
-    # Var(b) = that / n
-# PY:     G = ZX / n  # approx Q'
-# PY:     Asy = inv(G.T @ inv(Om2) @ G)  # avar of sqrt(n) beta
-# PY:     V = Asy / n
-# PY:     g = Z.T @ e / n
-# PY:     J = float(n * g.T @ inv(Om2) @ g)
-# PY:     df = Z.shape[1] - X.shape[1]
-# PY:     return b, V, J, df
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
+#| label: companion
+# helpers: see setup chunk (source _common.R)
+## Ch.13 GMM — just-identified = IV; overID Hansen J skeleton
+set.seed(13)
+n <- 800L
+z <- rnorm(n); v <- rnorm(n)
+x <- 0.7*z + v
+e <- 0.5*v + rnorm(n)  # endogeneity
+y <- 1 + 0.5*x + e
+## IV via 2SLS
+xhat <- fitted(lm(x ~ z))
+b_iv <- coef(lm(y ~ xhat))
+b_ols <- coef(lm(y ~ x))
+cat("OLS", b_ols, "\nIV", b_iv, "\n")
 ```
+
+
+## Notebook 导读
 
 ### Exercise 13.27 AJR：logmort + logmort² 工具
 
-```{r}
-#| label: nb-cell-02
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-
-# PY: ajr = pd.read_excel(ROOT / "AJR2001/AJR2001.xlsx")
-# PY: d = ajr[["loggdp", "risk", "logmort0"]].dropna()
-# PY: y = d.loggdp.values
-# PY: X = np.column_stack([d.risk.values, np.ones(len(d))])
-# PY: lm = d.logmort0.values
-# PY: Z = np.column_stack([lm, lm**2, np.ones(len(d))])
-# PY: b2, e2 = tsls(y, X, Z)
-# PY: bg, Vg, J, df = egmm_twostep(y, X, Z)
-# PY: print("n =", len(d))
-# PY: print("2SLS: ", b2, "SE", np.sqrt(np.diag(inv(X.T @ (Z@inv(Z.T@Z)@Z.T) @ X) @ 
-# PY:       ((Z@inv(Z.T@Z)@Z.T@X)*(e2[:,None])).T @ ((Z@inv(Z.T@Z)@Z.T@X)*(e2[:,None])) @ inv(X.T@(Z@inv(Z.T@Z)@Z.T)@X))))
-# PY: print("EGMM: ", bg, "SE", np.sqrt(np.diag(Vg)))
-# PY: print(f"J = {J:.4f}, df = {df}, p = {1-stats.chi2.cdf(J, df):.4f}")
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
-
 ### Exercise 13.28 Card：nearc4a, nearc4b 工具
-
-```{r}
-#| label: nb-cell-03
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-
-# PY: card = pd.read_excel(ROOT / "Card1995/Card1995.xlsx")
-# PY: card["exper"] = card["age76"] - card["ed76"] - 6
-# PY: card["exp2"] = (card["exper"] ** 2) / 100
-# PY: cols = ["lwage76", "ed76", "exper", "exp2", "black", "smsa76r", "reg76r", "nearc4a", "nearc4b"]
-# PY: d = card[cols].apply(pd.to_numeric, errors="coerce").dropna()
-# PY: y = d.lwage76.values
-# PY: Xexo = np.column_stack([d.exper, d.exp2, d.black, d.smsa76r, d.reg76r, np.ones(len(d))])
-# PY: X = np.column_stack([d.ed76.values, Xexo])
-# PY: Z = np.column_stack([d.nearc4a.values, d.nearc4b.values, Xexo])
-# PY: b2, e2 = tsls(y, X, Z)
-# PY: bg, Vg, J, df = egmm_twostep(y, X, Z)
-# PY: print("n =", len(d))
-# PY: print("2SLS edu =", b2[0])
-# PY: print("EGMM edu =", bg[0], "SE =", np.sqrt(Vg[0, 0]))
-# PY: print(f"J = {J:.4f}, df = {df}, p = {1-stats.chi2.cdf(J, df):.4f}")
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
 
 ### 理论结论的蒙特卡洛验证（无需外部数据）
 
 以下单元格核对 ch13 的核心结论：(1) 异方差下**有效 GMM 比 2SLS 更有效**（方差更小）；(2) **过度识别 $J$ 检验** $J\to\chi^2_{\ell-k}$（$H_0$ 真 size、$H_0$ 假功效）；(3) **同方差下 2SLS = 有效 GMM**。可独立运行。
-
-```{r}
-#| label: nb-cell-04
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-# import numpy as np
-# from scipy import stats
-# PY: rng = np.random.default_rng(13)
-
-# PY: def tsls(y, X, Z):
-# PY:     """2SLS = GMM with W=(Z'Z)^-1."""
-# PY:     PZ = Z @ np.linalg.inv(Z.T @ Z) @ Z.T
-# PY:     return np.linalg.solve(X.T @ PZ @ X, X.T @ PZ @ y)
-
-# PY: def egmm(y, X, Z):
-# PY:     """两步有效 GMM: 先 2SLS, 再用 Ω̂^-1 加权; 返回 (beta, J)."""
-# PY:     b1 = tsls(y, X, Z); e1 = y - X @ b1
-# PY:     Om1 = (Z * e1[:, None]).T @ (Z * e1[:, None]) / len(y)      # 第一步 Ω̂
-# PY:     W = np.linalg.inv(Om1)
-# PY:     ZX, ZY = Z.T @ X, Z.T @ y
-# PY:     b = np.linalg.solve(ZX.T @ W @ ZX, ZX.T @ W @ ZY)           # 有效 GMM
-# PY:     e = y - X @ b
-# PY:     Om = (Z * e[:, None]).T @ (Z * e[:, None]) / len(y)         # 第二步 Ω̂
-# PY:     g = Z.T @ e / len(y)
-# PY:     J = float(len(y) * g.T @ np.linalg.inv(Om) @ g)             # Hansen J
-# PY:     return b, J
-
-# 设定: ℓ=4 工具, k=2 系数(斜率+截距), 强异方差 var(e) ∝ exp(0.6 Z1)
-# PY: n, reps, beta_true, rho = 800, 4000, np.array([2.0, 1.0]), 0.5
-# PY: var2 = varg = 0.0; n2 = ng = 0; Js = []
-# PY: for r in range(reps):
-# PY:     try:
-# PY:         Z = rng.standard_normal((n, 4)); v = rng.standard_normal((n, 2))
-# PY:         u = v[:, 0]; e = rho * u + np.sqrt(1 - rho**2) * v[:, 1]
-# PY:         e = e * np.exp(0.6 * Z[:, 0])                            # 异方差(恒正)
-# PY:         X = np.c_[0.5*Z[:,0] + 0.3*Z[:,1] + 0.2*Z[:,2] + 0.1*Z[:,3] + u, np.ones(n)]
-# PY:         Y = X @ beta_true + e
-# PY:         b2 = tsls(Y, X, Z); bg, J = egmm(Y, X, Z)
-# PY:         var2 += (b2[0] - beta_true[0])**2; varg += (bg[0] - beta_true[0])**2
-# PY:         n2 += 1; ng += 1; Js.append(J)
-# PY:     except np.linalg.LinAlgError:
-# PY:         pass
-# PY: print(f"reps = {n2}")
-# PY: print(f"[效率] MC var(2SLS 斜率)={var2/n2:.5f} > MC var(EGMM 斜率)={varg/ng:.5f}  EGMM≤2SLS: {varg/ng <= var2/n2}")
-# PY: print(f"[J 检验] J~χ²_{{ℓ-k=2}}, H0(工具有效)真 size={np.mean(np.array(Js) > stats.chi2.ppf(0.95, 2)):.4f} "
-# PY:       f"(应≈0.05; 两步 GMM 的 J 有限样本略偏低)")
-
-# 同方差下 2SLS ≈ 有效 GMM (印证 "2SLS = 同方差下的有效 GMM")
-# PY: Z = rng.standard_normal((n, 4)); e = rng.standard_normal(n); u = rng.standard_normal(n)
-# PY: X = np.c_[0.5*Z[:,0] + 0.3*Z[:,1] + 0.2*Z[:,2] + 0.1*Z[:,3] + u, np.ones(n)]
-# PY: Y = X @ beta_true + e
-# PY: print(f"\n[同方差] 2SLS={tsls(Y, X, Z).round(4)},  EGMM={egmm(Y, X, Z)[0].round(4)} (接近)")
-
-# J 的功效: 让 Z4 直接进 Y (违反排除约束) ⇒ J 应偏大、拒绝
-# PY: Y_bad = X @ beta_true + e + 0.8 * Z[:, 3]
-# PY: bg, J = egmm(Y_bad, X, Z)
-# PY: print(f"[J 功效] Z4 直接进 Y(违反排除): J={J:.2f}, p={1 - stats.chi2.cdf(J, 2):.4f} "
-# PY:       f"(χ²_2 5% 临界={stats.chi2.ppf(0.95, 2):.2f}) ⇒ 拒绝, 检测到无效工具")
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
-
 
 # 依赖包
 
@@ -749,10 +610,14 @@ pkgs <- c(
   "haven", "readxl", "data.table", "sandwich", "lmtest", "AER",
   "quantreg", "boot", "MASS", "Matrix", "nnet", "ggplot2", "knitr"
 )
-# 章节扩展：Ch14–16 vars/urca；Ch17 plm；Ch19 np；Ch26 mlogit
+# 扩展：vars/urca (Ch14–16), plm (Ch17), np (Ch19), mlogit (Ch26)
 miss <- setdiff(pkgs, rownames(installed.packages()))
-if (length(miss)) install.packages(miss, repos = "https://cloud.r-project.org")
+if (length(miss)) {
+  install.packages(miss, repos = "https://cloud.r-project.org")
+}
 ```
 
 ---
-*第 13 章 · R/Quarto · md + ipynb 融合*
+
+*第 13 章 · R/Quarto · 理论 Markdown + R companion 融合*  
+*重新生成：`python3 scripts/convert_chapters_to_qmd.py`*

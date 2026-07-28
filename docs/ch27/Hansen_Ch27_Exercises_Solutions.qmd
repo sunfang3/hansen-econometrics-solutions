@@ -30,22 +30,30 @@ execute:
 ::: {.callout-note}
 ## 说明
 
-- **理论：** 来自同目录 Markdown 逐步解答。
-- **代码：** Python notebook 已融合为 **R**（`scripts/r_companions/ch27.R` 优先；否则为带注释的翻译草稿）。
-- **数据：** `hansen/econometrics/data/`（gitignore）；渲染前请确保数据已下载。
-- 默认 `execute: eval: false`。有数据时改为 `true` 或交互运行代码块。
-- 缺包时：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot"))` 等。
+- **理论：** 同目录 Markdown 逐步解答全文嵌入。
+- **代码：** R 实现（`scripts/r_companions/ch27.R`）**内联**于下文；数据在 `hansen/econometrics/data/`。
+- 默认 `execute: eval: false`。有数据/包时改为 `true`，或在 R 中 `source()` companion。
+- 装包示例：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot","knitr"))`
 :::
 
 ```{r}
 #| label: setup
-root <- if (dir.exists("../../hansen")) "../.." else if (dir.exists("hansen")) "." else "../.."
+#| include: true
+root <- if (dir.exists("../../hansen")) {
+  "../.."
+} else if (dir.exists("hansen")) {
+  "."
+} else {
+  "../.."
+}
 data_root <- file.path(root, "hansen", "econometrics", "data")
 companion_dir <- file.path(root, "scripts", "r_companions")
 if (file.exists(file.path(companion_dir, "_common.R"))) {
   source(file.path(companion_dir, "_common.R"), local = FALSE)
 }
-knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+if (requireNamespace("knitr", quietly = TRUE)) {
+  knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+}
 options(stringsAsFactors = FALSE)
 ```
 
@@ -339,32 +347,146 @@ $$
 代码：`docs/ch27/Hansen_Ch27_Exercises_Solutions.ipynb`。
 
 
-# 实证与数值代码（R companion）
+# 实证与数值代码（R）
 
-手写/精译 R 脚本：`scripts/r_companions/ch27.R`。
+以下代码来自 `scripts/r_companions/ch27.R`（与 Python notebook 对应）。
 
 ```{r}
-#| label: companion-main
-source(file.path(root, "scripts", "r_companions", "ch27.R"))
+#| label: companion
+# helpers: see setup chunk (source _common.R)
+## Chapter 27 Censoring — Tobit / CLAD / OLS on CHJ, CPS, DDK
+## Translated from docs/ch27 notebook
+
+## bootstrap common helpers
+local({
+  for (cand in c("../..", "..", ".", "../../..")) {
+    f <- file.path(cand, "scripts/r_companions/_common.R")
+    if (file.exists(f)) { source(f, local = FALSE); break }
+  }
+})
+
+## Lower Tobit via Olsen reparameterization (gamma = b/sig, nu = 1/sig)
+tobit_lower <- function(y, X) {
+  y <- as.numeric(y); X <- as.matrix(X)
+  k <- NCOL(X)
+  b0 <- as.numeric(qr.solve(X, y))
+  s0 <- sd(y - X %*% b0) + 1
+  nll <- function(th) {
+    g <- th[1:k]; nu <- th[k + 1]
+    if (nu <= 1e-8) return(1e12)
+    left <- y <= 1e-12
+    val <- -sum(pnorm(-(X[left, , drop = FALSE] %*% g), log.p = TRUE))
+    yu <- y[!left]
+    Xu <- X[!left, , drop = FALSE]
+    val <- val - sum(log(nu) - 0.5 * log(2 * pi) - 0.5 * (yu * nu - as.numeric(Xu %*% g))^2)
+    as.numeric(val)
+  }
+  th0 <- c(b0 / s0, 1 / s0)
+  opt <- optim(th0, nll, method = "L-BFGS-B",
+               lower = c(rep(-Inf, k), 1e-4), upper = rep(Inf, k + 1),
+               control = list(maxit = 500))
+  nu <- opt$par[k + 1]
+  list(beta = opt$par[1:k] / nu, sigma = 1 / nu, loglik = -opt$value, conv = opt$convergence == 0)
+}
+
+tobit_upper <- function(y, X, tau) {
+  y <- as.numeric(y); X <- as.matrix(X)
+  k <- NCOL(X)
+  b0 <- as.numeric(qr.solve(X, y))
+  s0 <- sd(y - X %*% b0) + 1e-3
+  nll <- function(th) {
+    g <- th[1:k]; nu <- th[k + 1]
+    if (nu <= 1e-8) return(1e12)
+    right <- y >= tau - 1e-12
+    z <- tau * nu - as.numeric(X[right, , drop = FALSE] %*% g)
+    val <- -sum(pnorm(z, lower.tail = FALSE, log.p = TRUE))
+    yu <- y[!right]; Xu <- X[!right, , drop = FALSE]
+    val <- val - sum(log(nu) - 0.5 * log(2 * pi) - 0.5 * (yu * nu - as.numeric(Xu %*% g))^2)
+    as.numeric(val)
+  }
+  opt <- optim(c(b0 / s0, 1 / s0), nll, method = "L-BFGS-B",
+               lower = c(rep(-Inf, k), 1e-4), control = list(maxit = 500))
+  nu <- opt$par[k + 1]
+  list(beta = opt$par[1:k] / nu, sigma = 1 / nu, loglik = -opt$value)
+}
+
+clad <- function(y, X, left = NULL, right = NULL, n_starts = 15) {
+  y <- as.numeric(y); X <- as.matrix(X)
+  crit <- function(b) {
+    xb <- as.numeric(X %*% b)
+    if (!is.null(left)) xb <- pmax(xb, left)
+    if (!is.null(right)) xb <- pmin(xb, right)
+    mean(abs(y - xb))
+  }
+  x0 <- as.numeric(qr.solve(X, y))
+  best <- list(value = Inf, par = x0)
+  set.seed(0)
+  starts <- cbind(x0, 0.5 * x0, 0, x0 + matrix(rnorm(length(x0) * n_starts, 0, 0.15), length(x0)))
+  for (j in seq_len(NCOL(starts))) {
+    opt <- optim(starts[, j], crit, method = "BFGS", control = list(maxit = 400))
+    if (opt$value < best$value) best <- opt
+  }
+  list(beta = best$par, mad = best$value)
+}
+
+## ---- 27.9 CHJ ----
+chj <- read_hansen_dta("CHJ2004", "CHJ2004.dta")
+tink <- as.numeric(chj$tinkind) / 1000
+inc <- as.numeric(chj$income) / 1000
+Dinc <- (inc - 1) * (inc > 1)
+X <- cbind(1, inc, Dinc)
+cat("27.9 censor rate", mean(tink == 0), "\n")
+print(ols_hc1(tink, X)$beta)
+print(tobit_lower(tink, X)$beta)
+print(clad(tink, X, left = 0)$beta)
+
+## ---- 27.10 CPS ----
+cps <- read_hansen_dta("cps09mar", "cps09mar.dta")
+sub <- cps[cps$education >= 12, ]
+wage <- as.numeric(sub$earnings) / (as.numeric(sub$hours) * as.numeric(sub$week))
+ok <- is.finite(wage) & wage > 0
+lw <- log(wage[ok]); ed <- as.numeric(sub$education)[ok]
+X <- cbind(1, ed, ed^2)
+cw <- pmin(lw, 3.4)
+cat("27.10 n", length(lw), "cap rate", mean(lw >= 3.4), "\n")
+cat("true OLS", ols_hc1(lw, X)$beta, "\n")
+cat("capped OLS", ols_hc1(cw, X)$beta, "\n")
+cat("Tobit", tobit_upper(cw, X, 3.4)$beta, "\n")
+cat("CLAD@3.3", clad(pmin(lw, 3.3), X, right = 3.3)$beta, "\n")
+
+## ---- 27.11 DDK ----
+ddk <- read_hansen_dta("DDK2011", "DDK2011.dta")
+ts <- as.numeric(ddk$totalscore)
+ts <- (ts - mean(ts, na.rm = TRUE)) / sd(ts, na.rm = TRUE)
+tr <- as.numeric(ddk$tracking)
+perc <- as.numeric(ddk$percentile)
+school <- ddk$schoolid
+m <- is.finite(ts) & is.finite(tr) & is.finite(perc)
+ts <- ts[m]; tr <- tr[m]; perc <- perc[m]; school <- school[m]
+X <- cbind(1, tr, perc, perc^2)
+ct <- pmax(ts, 0)
+cat("27.11 n", length(ts), "P(<0)", mean(ts < 0), "\n")
+## cluster SE omitted for brevity; point estimates:
+cat("true", qr.solve(X, ts), "\n")
+cat("censored", qr.solve(X, ct), "\n")
 ```
 
 
-## Notebook 结构说明
+## Notebook 导读
 
-#### 0. 工具函数
+### 0. 工具函数
 
-#### Exercise 27.9　CHJ2004：`tinkind` 对收入样条
+### Exercise 27.9　CHJ2004：`tinkind` 对收入样条
 
 `tinkind`、`income` ÷1000；`Dincome=(income-1)1{income>1}`。
 
-#### Exercise 27.10　CPS：log 工资上顶于 3.4（≈\$30/h）
+### Exercise 27.10　CPS：log 工资上顶于 3.4（≈\$30/h）
 
 子样本 education≥12；$cwage=\min(lwage,3.4)$。
 
-#### Exercise 27.11　DDK2011：标准化测验分下删失于 0
+### Exercise 27.11　DDK2011：标准化测验分下删失于 0
 
 回归 tracking + percentile + percentile²；SE **按 school 聚类**。
-
 
 # 依赖包
 
@@ -375,10 +497,14 @@ pkgs <- c(
   "haven", "readxl", "data.table", "sandwich", "lmtest", "AER",
   "quantreg", "boot", "MASS", "Matrix", "nnet", "ggplot2", "knitr"
 )
-# 章节扩展：Ch14–16 vars/urca；Ch17 plm；Ch19 np；Ch26 mlogit
+# 扩展：vars/urca (Ch14–16), plm (Ch17), np (Ch19), mlogit (Ch26)
 miss <- setdiff(pkgs, rownames(installed.packages()))
-if (length(miss)) install.packages(miss, repos = "https://cloud.r-project.org")
+if (length(miss)) {
+  install.packages(miss, repos = "https://cloud.r-project.org")
+}
 ```
 
 ---
-*第 27 章 · R/Quarto · md + ipynb 融合*
+
+*第 27 章 · R/Quarto · 理论 Markdown + R companion 融合*  
+*重新生成：`python3 scripts/convert_chapters_to_qmd.py`*

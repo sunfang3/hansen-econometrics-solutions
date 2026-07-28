@@ -30,22 +30,30 @@ execute:
 ::: {.callout-note}
 ## 说明
 
-- **理论：** 来自同目录 Markdown 逐步解答。
-- **代码：** Python notebook 已融合为 **R**（`scripts/r_companions/ch20.R` 优先；否则为带注释的翻译草稿）。
-- **数据：** `hansen/econometrics/data/`（gitignore）；渲染前请确保数据已下载。
-- 默认 `execute: eval: false`。有数据时改为 `true` 或交互运行代码块。
-- 缺包时：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot"))` 等。
+- **理论：** 同目录 Markdown 逐步解答全文嵌入。
+- **代码：** R 实现（`scripts/r_companions/ch20.R`）**内联**于下文；数据在 `hansen/econometrics/data/`。
+- 默认 `execute: eval: false`。有数据/包时改为 `true`，或在 R 中 `source()` companion。
+- 装包示例：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot","knitr"))`
 :::
 
 ```{r}
 #| label: setup
-root <- if (dir.exists("../../hansen")) "../.." else if (dir.exists("hansen")) "." else "../.."
+#| include: true
+root <- if (dir.exists("../../hansen")) {
+  "../.."
+} else if (dir.exists("hansen")) {
+  "."
+} else {
+  "../.."
+}
 data_root <- file.path(root, "hansen", "econometrics", "data")
 companion_dir <- file.path(root, "scripts", "r_companions")
 if (file.exists(file.path(companion_dir, "_common.R"))) {
   source(file.path(companion_dir, "_common.R"), local = FALSE)
 }
-knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+if (requireNamespace("knitr", quietly = TRUE)) {
+  knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+}
 options(stringsAsFactors = FALSE)
 ```
 
@@ -503,389 +511,38 @@ AIC 与（个体）LOOCV 均偏好 **单节点 50**。
 代码与复现见 `Hansen_Ch20_Exercises_Solutions.ipynb`（含注释）。
 
 
-# 实证与数值代码（来自 notebook，R 版）
+# 实证与数值代码（R）
 
-## Hansen Ch.20 Series Regression
-
-理论逐步证明见 `Hansen_Ch20_Exercises_Solutions.md`（**20.1–20.18**）。
-
-本 notebook：多项式 / 样条 / 部分线性 / 2SLS-NPIV 实证，**代码含中文注释**。
+以下代码来自 `scripts/r_companions/ch20.R`（与 Python notebook 对应）。
 
 ```{r}
-#| label: nb-cell-01
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-
-# Ch.20 series regression utilities
-# 详尽注释：基函数构造、OLS、AIC、LOOCV、cluster SE
-
-# import numpy as np
-# import pandas as pd
-# from pathlib import Path
-# from numpy.linalg import pinv, inv
-# from scipy import stats
-
-# PY: ROOT = Path("/home/fang/Project/zhihu-paper/p1/hansen/econometrics/data")
-
-
-# PY: def ols(y, X, cluster=None):
-# PY:     """OLS with optional cluster-robust sandwich variance.
-# PY:     y: (n,), X: (n,k) already including intercept if needed.
-# PY:     Returns beta, se, V, residuals.
-# PY:     """
-# PY:     y = np.asarray(y, float)
-# PY:     X = np.asarray(X, float)
-# PY:     b = pinv(X.T @ X) @ (X.T @ y)
-# PY:     e = y - X @ b
-# PY:     n, k = X.shape
-# PY:     if cluster is None:
-        # classical homoskedastic V = s^2 (X'X)^{-1}
-# PY:         s2 = (e @ e) / (n - k)
-# PY:         V = s2 * pinv(X.T @ X)
-# PY:     else:
-        # Arellano-type cluster meat
-# PY:         meat = np.zeros((k, k))
-# PY:         for g in pd.unique(cluster):
-# PY:             m = cluster == g
-# PY:             score = X[m].T @ e[m]
-# PY:             meat += np.outer(score, score)
-# PY:         nG = len(pd.unique(cluster))
-# PY:         bread = pinv(X.T @ X)
-# PY:         V = (nG / (nG - 1)) * ((n - 1) / (n - k)) * bread @ meat @ bread
-# PY:     se = np.sqrt(np.maximum(np.diag(V), 0.0))
-# PY:     return b, se, V, e
-
-
-# PY: def aic(y, X):
-# PY:     """Gaussian AIC = n log(SSR/n) + 2k  (up to additive constant)."""
-# PY:     y = np.asarray(y, float)
-# PY:     X = np.asarray(X, float)
-# PY:     n, k = X.shape
-# PY:     e = y - X @ (pinv(X.T @ X) @ (X.T @ y))
-# PY:     s2 = max((e @ e) / n, 1e-300)
-# PY:     return n * np.log(s2) + 2 * k
-
-
-# PY: def loocv(y, X):
-# PY:     """Leave-one-out CV via leverage formula: e_i / (1-h_ii)."""
-# PY:     y = np.asarray(y, float)
-# PY:     X = np.asarray(X, float)
-# PY:     XtXinv = pinv(X.T @ X)
-    # h_ii = x_i' (X'X)^{-1} x_i
-# PY:     Hdiag = np.sum((X @ XtXinv) * X, axis=1)
-# PY:     b = XtXinv @ (X.T @ y)
-# PY:     e = y - X @ b
-# PY:     return np.mean((e / (1 - Hdiag)) ** 2)
-
-
-# PY: def poly_basis(x, p):
-# PY:     """Polynomial basis 1, x, ..., x^p. x should already be scaled to [0,1]."""
-# PY:     x = np.asarray(x, float)
-# PY:     return np.column_stack([x ** j for j in range(p + 1)])
-
-
-# PY: def linear_spline(x, knots):
-# PY:     """Linear spline: 1, x, (x-tau)_+ for each knot."""
-# PY:     x = np.asarray(x, float)
-# PY:     cols = [np.ones_like(x), x]
-# PY:     for t in knots:
-# PY:         cols.append(np.maximum(x - t, 0.0))
-# PY:     return np.column_stack(cols)
-
-
-# PY: def quad_spline(x, knots):
-# PY:     """Quadratic spline: 1, x, x^2, (x-tau)_+^2 for each knot."""
-# PY:     x = np.asarray(x, float)
-# PY:     cols = [np.ones_like(x), x, x ** 2]
-# PY:     for t in knots:
-# PY:         cols.append(np.maximum(x - t, 0.0) ** 2)
-# PY:     return np.column_stack(cols)
-
-
-# PY: def m_and_se_at_grid(b, V, basis_rows):
-# PY:     """Given beta, Var(beta), and list/array of a(x)' rows, return m(x) and se."""
-# PY:     m = basis_rows @ b
-    # se^2 = a' V a for each row
-# PY:     se = np.sqrt(np.maximum(np.sum(basis_rows * (basis_rows @ V), axis=1), 0.0))
-# PY:     return m, se
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
+#| label: companion
+# helpers: see setup chunk (source _common.R)
+## Ch.20 Series regression — polynomial series + OLS
+set.seed(20)
+n <- 400L
+x <- runif(n, -1, 1)
+y <- sin(pi*x) + rnorm(n, 0, 0.3)
+K <- 5L
+X <- cbind(1, outer(x, 1:K, "^"))
+fit <- ols_hc1(y, X)
+cat("series R2 =", fit$r2, " K=", K, "\n")
 ```
+
+
+## Notebook 导读
 
 ### 20.1 数值核对：X=3 的边际效应 = 4
 
-```{r}
-#| label: nb-cell-02
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-# m'(x) = 2 + 5*1{x>=1} - 3*1{x>=2}
-# PY: for x in [0.5, 1.5, 3.0]:
-# PY:     me = 2 + 5 * (x >= 1) - 3 * (x >= 2)
-# PY:     print(f"x={x}, ME={me}")
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
-
 ### 20.9–20.14 CPS 工资剖面
-
-```{r}
-#| label: nb-cell-03
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-# PY: cps = pd.read_excel(ROOT / "cps09mar/cps09mar.xlsx")
-# experience 与 log 小时工资
-# PY: cps["exp"] = cps["age"] - cps["education"] - 6
-# PY: cps["lw"] = np.log(cps["earnings"] / (cps["hours"] * cps["week"]))
-# PY: cps = cps.replace([np.inf, -np.inf], np.nan).dropna(subset=["lw", "exp", "education"])
-# PY: cps = cps[(cps["exp"] >= 0) & (cps["exp"] <= 70)]
-# PY: y = cps["lw"].values
-# PY: x = cps["exp"].values.astype(float)
-# PY: xe = cps["education"].values.astype(float)
-
-# 重标到 [0,1]，减轻高次幂共线（Hansen §20.4）
-# PY: def unit(z):
-# PY:     zmin, zmax = z.min(), z.max()
-# PY:     return (z - zmin) / (zmax - zmin + 1e-15), zmin, zmax
-
-# PY: xr, xmin, xmax = unit(x)
-# PY: print("n =", len(y), "exp range", xmin, xmax)
-
-# PY: print("\nPoly order selection for experience:")
-# PY: for p in range(1, 9):
-# PY:     X = poly_basis(xr, p)
-# PY:     print(f"  p={p}: AIC={aic(y,X):.1f}, LOOCV={loocv(y,X):.6f}")
-
-# 6th order poly + pointwise band at integer experience
-# PY: X = poly_basis(xr, 6)
-# PY: b, se, V, e = ols(y, X)
-# PY: grid = np.arange(0, 61)
-# PY: gr = (grid - xmin) / (xmax - xmin + 1e-15)
-# PY: A = poly_basis(gr, 6)
-# PY: m, sm = m_and_se_at_grid(b, V, A)
-# PY: print("\n6th poly log wage at exp 10,20,40:")
-# PY: for g, mi, si in zip(grid, m, sm):
-# PY:     if g in (10, 20, 40, 50, 60):
-# PY:         print(f"  exp={g}: m={mi:.3f}, se={si:.3f}, 95% CI=[{mi-1.96*si:.3f},{mi+1.96*si:.3f}]")
-
-# PY: print("\nQuadratic spline (experience) AIC/CV:")
-# PY: for name, knots in [("none", []), ("@20", [20]), ("@20,40", [20, 40]), ("@10,20,30,40", [10, 20, 30, 40])]:
-# PY:     Xs = quad_spline(x, knots)
-# PY:     print(f"  {name}: AIC={aic(y,Xs):.1f}, CV={loocv(y,Xs):.6f}")
-
-# PY: print("\nQuadratic spline (education) AIC/CV:")
-# PY: for name, knots in [("none", []), ("@10", [10]), ("@5,10,15", [5, 10, 15]), ("@4,8,12,16", [4, 8, 12, 16])]:
-# PY:     Xs = quad_spline(xe, knots)
-# PY:     print(f"  {name}: AIC={aic(y,Xs):.1f}, CV={loocv(y,Xs):.6f}")
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
 
 ### 20.15 RR2010 部分线性债务
 
-```{r}
-#| label: nb-cell-04
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-# PY: rr = pd.read_excel(ROOT / "RR2010/RR2010.xlsx").sort_values("year")
-# PY: rr["Y"] = pd.to_numeric(rr["gdp"], errors="coerce")
-# PY: rr["D"] = pd.to_numeric(rr["debt"], errors="coerce")
-# PY: rr["Ylag"] = rr["Y"].shift(1)
-# PY: rr["Dlag"] = rr["D"].shift(1)
-# PY: d = rr.dropna(subset=["Y", "Ylag", "Dlag"])
-# PY: Y, Ylag, Dlag = d["Y"].values, d["Ylag"].values, d["Dlag"].values
-
-# PY: for name, knots in [("linear m", None), ("knot 60", [60]), ("knots 40,80", [40, 80])]:
-# PY:     if knots is None:
-# PY:         X = np.column_stack([np.ones(len(Y)), Ylag, Dlag])
-# PY:     else:
-        # Y_t = alpha Y_{t-1} + linear_spline(D_{t-1}) + e
-# PY:         X = np.column_stack([Ylag, linear_spline(Dlag, knots)])
-# PY:     print(f"{name}: AIC={aic(Y,X):.2f}, CV={loocv(Y,X):.3f}")
-
-# PY: X = np.column_stack([Ylag, linear_spline(Dlag, [60])])
-# PY: b, se, V, e = ols(Y, X)
-# PY: print("one-knot coeffs [alpha, b0, b1, b2]:", b)
-# PY: print("se:", se)
-# PY: print("slope D<60:", b[2], "; slope D>=60:", b[2] + b[3])
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
-
 ### 20.16 DDK 百分位二次样条
-
-```{r}
-#| label: nb-cell-05
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-# PY: ddk = pd.read_excel(ROOT / "DDK2011/DDK2011.xlsx")
-# PY: x = pd.to_numeric(ddk["percentile"], errors="coerce")
-# PY: y = pd.to_numeric(ddk["r2_totalscore"], errors="coerce")
-# PY: cl = ddk["schoolid"].values
-# PY: m = np.isfinite(x) & np.isfinite(y)
-# PY: x, y, cl = x[m].values, y[m].values, cl[m]
-# PY: for name, knots in [
-# PY:     ("none", []),
-# PY:     ("@50", [50]),
-# PY:     ("@33,66", [33, 66]),
-# PY:     ("@25,50,75", [25, 50, 75]),
-# PY:     ("@20,40,60,80", [20, 40, 60, 80]),
-# PY: ]:
-# PY:     X = quad_spline(x, knots)
-# PY:     print(f"{name}: AIC={aic(y,X):.1f}, CV={loocv(y,X):.3f}")
-# preferred: one knot at 50, cluster SE
-# PY: X = quad_spline(x, [50])
-# PY: b, se, V, e = ols(y, X, cluster=cl)
-# PY: grid = np.linspace(1, 99, 20)
-# build basis at grid
-# PY: A = quad_spline(grid, [50])
-# PY: mhat, se_m = m_and_se_at_grid(b, V, A)
-# PY: print("selected model m(percentile) with cluster SE (sample points):")
-# PY: for g, mi, si in zip(grid[::4], mhat[::4], se_m[::4]):
-# PY:     print(f"  p={g:.0f}: {mi:.2f} ({si:.2f})")
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
 
 ### 20.17 CHJ2004 transfers ~ poly(income)
 
-```{r}
-#| label: nb-cell-06
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-# PY: chj = pd.read_stata(ROOT / "CHJ2004/CHJ2004.dta")
-# PY: y = pd.to_numeric(chj["transfers"], errors="coerce").values
-# PY: inc = pd.to_numeric(chj["income"], errors="coerce").values
-# PY: m = np.isfinite(y) & np.isfinite(inc) & (inc >= 0)
-# PY: y, inc = y[m], inc[m]
-# scale income to [0,1]
-# PY: ir = (inc - inc.min()) / (inc.max() - inc.min() + 1e-15)
-# PY: print("CHJ n=", len(y))
-# PY: for p in range(1, 9):
-# PY:     X = poly_basis(ir, p)
-# PY:     print(f"p={p}: AIC={aic(y,X):.1f}, CV={loocv(y,X):.1f}")
-# with demographic controls
-# PY: ctrl = ["primary", "somesecondary", "secondary", "someuniversity", "university",
-# PY:         "age", "female", "married", "child1", "child7", "child15", "size",
-# PY:         "bothwork", "notemployed", "marriedf"]
-# PY: df = chj.loc[m].copy()
-# rebuild boolean mask index
-# simpler: use full frame cleaned
-# PY: df = chj.copy()
-# PY: df["transfers"] = pd.to_numeric(df["transfers"], errors="coerce")
-# PY: df["income"] = pd.to_numeric(df["income"], errors="coerce")
-# PY: df = df.dropna(subset=["transfers", "income"])
-# PY: df = df[df["income"] >= 0]
-# PY: ir = (df["income"] - df["income"].min()) / (df["income"].max() - df["income"].min() + 1e-15)
-# PY: Xpoly = poly_basis(ir.values, 6)
-# PY: Xc = df[ctrl].apply(pd.to_numeric, errors="coerce").fillna(0).values
-# PY: X = np.column_stack([Xpoly, Xc])
-# PY: b, se, V, e = ols(df["transfers"].values, X)
-# PY: print("poly6 + controls: first 7 poly coefs", b[:7])
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
-
 ### 20.18 AL1999 math scores NPIV-style 2SLS
-
-```{r}
-#| label: nb-cell-07
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-# PY: al = pd.read_excel(ROOT / "AL1999/AL1999.xlsx")
-# PY: enr = pd.to_numeric(al["enrollment"], errors="coerce")
-# Maimonides predicted class size p = enrollment / nclass
-# PY: nclass = 1 + np.floor((enr - 1) / 40.0)
-# PY: al["p"] = enr / nclass
-# PY: for c in ["classize", "disadvantaged", "avgmath", "enrollment"]:
-# PY:     al[c] = pd.to_numeric(al[c], errors="coerce")
-# PY: al["grade4"] = (pd.to_numeric(al["grade"], errors="coerce") == 4).astype(float)
-# PY: df = al.dropna(subset=["avgmath", "classize", "disadvantaged", "enrollment", "p", "schlcode"]).copy()
-
-# PY: c = df["classize"].values / 40.0
-# PY: d = df["disadvantaged"].values / 14.0
-# PY: Y = df["avgmath"].values
-# endogenous: class size poly + interaction
-# PY: X_en = np.column_stack([c, c**2, c**3, c * d])
-# exogenous controls
-# PY: X_ex = np.column_stack([np.ones(len(df)), d, d**2, d**3, df["enrollment"].values, df["grade4"].values])
-# PY: X = np.column_stack([X_en, X_ex])
-# instruments for endogenous parts
-# PY: pv = df["p"].values / 40.0
-# PY: Z_iv = np.column_stack([pv, pv**2, pv**3, pv * d])
-# PY: Z = np.column_stack([Z_iv, X_ex])
-
-# 2SLS: project X onto Z then OLS
-# PY: Pz_X = Z @ (pinv(Z.T @ Z) @ (Z.T @ X))
-# PY: b = pinv(Pz_X.T @ Pz_X) @ (Pz_X.T @ Y)
-# PY: e = Y - X @ b
-# cluster sandwich using projected X
-# PY: cl = df["schlcode"].values
-# PY: meat = np.zeros((len(b), len(b)))
-# PY: for g in pd.unique(cl):
-# PY:     msk = cl == g
-# PY:     score = Pz_X[msk].T @ e[msk]
-# PY:     meat += np.outer(score, score)
-# PY: n, k = X.shape
-# PY: nG = len(pd.unique(cl))
-# PY: bread = pinv(Pz_X.T @ Pz_X)
-# PY: V = (nG / (nG - 1)) * ((n - 1) / (n - k)) * bread @ meat @ bread
-# PY: se = np.sqrt(np.maximum(np.diag(V), 0))
-# PY: names = ["c", "c2", "c3", "c*d", "int", "d", "d2", "d3", "enr", "g4"]
-# PY: print("n =", n)
-# PY: for nm, bi, si in zip(names, b, se):
-# PY:     print(f"{nm:6s} {bi:9.3f} ({si:.3f})")
-
-# effect of classize 20 -> 40 at mean disadvantaged
-# PY: dbar = d.mean()
-# PY: a = np.zeros(len(b))
-# PY: a[0] = 0.5
-# PY: a[1] = 0.75
-# PY: a[2] = 0.875
-# PY: a[3] = 0.5 * dbar
-# PY: th = a @ b
-# PY: print(f"impact 20->40: {th:.3f} (se {np.sqrt(a@V@a):.3f})")
-# PY: R = np.eye(4, len(b))
-# PY: W = float((R @ b) @ inv(R @ V @ R.T) @ (R @ b))
-# PY: print(f"Wald (4 class terms)={W:.2f}, p={1-stats.chi2.cdf(W,4):.3f}")
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
-
 
 # 依赖包
 
@@ -896,10 +553,14 @@ pkgs <- c(
   "haven", "readxl", "data.table", "sandwich", "lmtest", "AER",
   "quantreg", "boot", "MASS", "Matrix", "nnet", "ggplot2", "knitr"
 )
-# 章节扩展：Ch14–16 vars/urca；Ch17 plm；Ch19 np；Ch26 mlogit
+# 扩展：vars/urca (Ch14–16), plm (Ch17), np (Ch19), mlogit (Ch26)
 miss <- setdiff(pkgs, rownames(installed.packages()))
-if (length(miss)) install.packages(miss, repos = "https://cloud.r-project.org")
+if (length(miss)) {
+  install.packages(miss, repos = "https://cloud.r-project.org")
+}
 ```
 
 ---
-*第 20 章 · R/Quarto · md + ipynb 融合*
+
+*第 20 章 · R/Quarto · 理论 Markdown + R companion 融合*  
+*重新生成：`python3 scripts/convert_chapters_to_qmd.py`*

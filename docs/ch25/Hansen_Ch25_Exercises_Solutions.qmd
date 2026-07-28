@@ -30,22 +30,30 @@ execute:
 ::: {.callout-note}
 ## 说明
 
-- **理论：** 来自同目录 Markdown 逐步解答。
-- **代码：** Python notebook 已融合为 **R**（`scripts/r_companions/ch25.R` 优先；否则为带注释的翻译草稿）。
-- **数据：** `hansen/econometrics/data/`（gitignore）；渲染前请确保数据已下载。
-- 默认 `execute: eval: false`。有数据时改为 `true` 或交互运行代码块。
-- 缺包时：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot"))` 等。
+- **理论：** 同目录 Markdown 逐步解答全文嵌入。
+- **代码：** R 实现（`scripts/r_companions/ch25.R`）**内联**于下文；数据在 `hansen/econometrics/data/`。
+- 默认 `execute: eval: false`。有数据/包时改为 `true`，或在 R 中 `source()` companion。
+- 装包示例：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot","knitr"))`
 :::
 
 ```{r}
 #| label: setup
-root <- if (dir.exists("../../hansen")) "../.." else if (dir.exists("hansen")) "." else "../.."
+#| include: true
+root <- if (dir.exists("../../hansen")) {
+  "../.."
+} else if (dir.exists("hansen")) {
+  "."
+} else {
+  "../.."
+}
 data_root <- file.path(root, "hansen", "econometrics", "data")
 companion_dir <- file.path(root, "scripts", "r_companions")
 if (file.exists(file.path(companion_dir, "_common.R"))) {
   source(file.path(companion_dir, "_common.R"), local = FALSE)
 }
-knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+if (requireNamespace("knitr", quietly = TRUE)) {
+  knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+}
 options(stringsAsFactors = FALSE)
 ```
 
@@ -495,19 +503,105 @@ $n=21602$，婚姻率 0.59。
 代码：`docs/ch25/Hansen_Ch25_Exercises_Solutions.ipynb`。
 
 
-# 实证与数值代码（R companion）
+# 实证与数值代码（R）
 
-手写/精译 R 脚本：`scripts/r_companions/ch25.R`。
+以下代码来自 `scripts/r_companions/ch25.R`（与 Python notebook 对应）。
 
 ```{r}
-#| label: companion-main
-source(file.path(root, "scripts", "r_companions", "ch25.R"))
+#| label: companion
+# helpers: see setup chunk (source _common.R)
+## Chapter 25 Binary Choice — probit MLE (Fisher scoring) + CPS empirics
+## Translated from docs/ch25/Hansen_Ch25_Exercises_Solutions.ipynb
+
+## bootstrap common helpers
+local({
+  for (cand in c("../..", "..", ".", "../../..")) {
+    f <- file.path(cand, "scripts/r_companions/_common.R")
+    if (file.exists(f)) { source(f, local = FALSE); break }
+  }
+})
+
+probit_mle <- function(y, X, maxiter = 50L, tol = 1e-10, start_scale = 0.1) {
+  y <- as.numeric(y); X <- as.matrix(X)
+  n <- NROW(X); k <- NCOL(X)
+  ## LPM start, scaled into probit range
+  b <- as.numeric(qr.solve(X, y)) * start_scale
+  for (it in seq_len(maxiter)) {
+    eta <- pmin(pmax(as.numeric(X %*% b), -8), 8)
+    Phi <- pmin(pmax(pnorm(eta), 1e-12), 1 - 1e-12)
+    phi <- dnorm(eta)
+    denom <- Phi * (1 - Phi)
+    score_w <- (y - Phi) * phi / denom
+    fish_w <- (phi^2) / denom
+    g <- crossprod(X, score_w)
+    H <- crossprod(X * sqrt(fish_w))
+    ## H = X' diag(w) X
+    H <- crossprod(X, X * fish_w)
+    step <- as.numeric(solve(H, g))
+    b <- b + step
+    if (max(abs(step)) < tol) break
+  }
+  eta <- pmin(pmax(as.numeric(X %*% b), -8), 8)
+  Phi <- pmin(pmax(pnorm(eta), 1e-12), 1 - 1e-12)
+  phi <- dnorm(eta)
+  denom <- Phi * (1 - Phi)
+  score_w <- (y - Phi) * phi / denom
+  fish_w <- (phi^2) / denom
+  bread <- crossprod(X, X * fish_w)
+  meat <- crossprod(X, X * (score_w^2))
+  V <- solve(bread) %*% meat %*% solve(bread)
+  se <- sqrt(pmax(diag(V), 0))
+  ame <- mean(phi) * b
+  ll <- sum(y * log(Phi) + (1 - y) * log(1 - Phi))
+  list(beta = b, se = se, ame = ame, loglik = ll, iters = it, vcov = V)
+}
+
+cps <- read_hansen_dta("cps09mar", "cps09mar.dta")
+make_X_demo <- function(d) {
+  black <- as.numeric(d$race == 2)
+  cbind(1, as.numeric(d$age), as.numeric(d$education), black, as.numeric(d$hisp))
+}
+married_ind <- function(d) as.numeric(d$marital %in% c(1, 2, 3))
+nm <- c("const", "age", "education", "Black", "Hispanic")
+
+print_table <- function(title, names, fit, y) {
+  cat(sprintf("\n=== %s ===\nn=%d mean(Y)=%.4f logL=%.1f iters=%d\n",
+              title, length(y), mean(y), fit$loglik, fit$iters))
+  print(data.frame(var = names, coef = fit$beta, SE = fit$se, AME = fit$ame), row.names = FALSE)
+}
+
+## 25.15 men union
+men <- cps[cps$female == 0, ]
+fit <- probit_mle(as.numeric(men$union), make_X_demo(men))
+print_table("25.15 Men union", nm, fit, men$union)
+
+## 25.16 women union
+wom <- cps[cps$female == 1, ]
+fit <- probit_mle(as.numeric(wom$union), make_X_demo(wom))
+print_table("25.16 Women union", nm, fit, wom$union)
+
+## 25.17 college women marriage ~ age + age^2/100
+cw <- wom[wom$education >= 16, ]
+age <- as.numeric(cw$age)
+Xq <- cbind(1, age, age^2 / 100)
+fit <- probit_mle(married_ind(cw), Xq)
+print_table("25.17 College women marriage quadratic age", c("const", "age", "age2/100"), fit, married_ind(cw))
+for (a in c(25, 35, 45, 55, 65)) {
+  eta <- fit$beta[1] + fit$beta[2] * a + fit$beta[3] * (a^2) / 100
+  cat(sprintf("  age=%d Phi=%.3f\n", a, pnorm(eta)))
+}
+
+## 25.18–19 marriage linear index
+fit <- probit_mle(married_ind(men), make_X_demo(men))
+print_table("25.18 Men marriage", nm, fit, married_ind(men))
+fit <- probit_mle(married_ind(wom), make_X_demo(wom))
+print_table("25.19 Women marriage", nm, fit, married_ind(wom))
 ```
 
 
-## Notebook 结构说明
+## Notebook 导读
 
-#### 0. 工具函数：probit MLE + sandwich SE + AME
+### 0. 工具函数：probit MLE + sandwich SE + AME
 
 **似然**（观测 $i$）：
 
@@ -534,15 +628,15 @@ $$
 
 **连续回归元 AME**：$\widehat{\mathrm{AME}}_j = \bar\phi\,\hat\beta_j$，其中 $\bar\phi=n^{-1}\sum_i\phi(X_i'\hat\beta)$。
 
-#### Exercise 25.15　男性：工会 membership 的 probit
+### Exercise 25.15　男性：工会 membership 的 probit
 
 - 样本：`female == 0`
 - $Y = 1\{\texttt{union}=1\}$（本数据中均值约 **2.3%**，极不平衡）
 - $X$：常数、age、education、Black、Hispanic
 
-#### Exercise 25.16　女性：同上
+### Exercise 25.16　女性：同上
 
-#### Exercise 25.17　大学学历女性：婚姻对年龄的二次指数
+### Exercise 25.17　大学学历女性：婚姻对年龄的二次指数
 
 对照 Figure 25.1：婚姻概率随年龄 **先升后略降**，线性 probit 不够。
 
@@ -553,10 +647,11 @@ $$
 
 样本：女性且 `education ≥ 16`。并给出大学男性同规格作对比。
 
-#### Exercise 25.18　男性：婚姻 ~ age, education, Black, Hispanic
+### Exercise 25.18　男性：婚姻 ~ age, education, Black, Hispanic
 
 线性指数 probit（全年龄男性）。注意：全样本线性 age 是对全局的粗糙平均；青年子样本斜率通常更大（见正文 Table 25.1）。
 
+### Exercise 25.19　女性：同 25.18
 
 # 依赖包
 
@@ -567,10 +662,14 @@ pkgs <- c(
   "haven", "readxl", "data.table", "sandwich", "lmtest", "AER",
   "quantreg", "boot", "MASS", "Matrix", "nnet", "ggplot2", "knitr"
 )
-# 章节扩展：Ch14–16 vars/urca；Ch17 plm；Ch19 np；Ch26 mlogit
+# 扩展：vars/urca (Ch14–16), plm (Ch17), np (Ch19), mlogit (Ch26)
 miss <- setdiff(pkgs, rownames(installed.packages()))
-if (length(miss)) install.packages(miss, repos = "https://cloud.r-project.org")
+if (length(miss)) {
+  install.packages(miss, repos = "https://cloud.r-project.org")
+}
 ```
 
 ---
-*第 25 章 · R/Quarto · md + ipynb 融合*
+
+*第 25 章 · R/Quarto · 理论 Markdown + R companion 融合*  
+*重新生成：`python3 scripts/convert_chapters_to_qmd.py`*

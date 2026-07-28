@@ -30,22 +30,30 @@ execute:
 ::: {.callout-note}
 ## 说明
 
-- **理论：** 来自同目录 Markdown 逐步解答。
-- **代码：** Python notebook 已融合为 **R**（`scripts/r_companions/ch18.R` 优先；否则为带注释的翻译草稿）。
-- **数据：** `hansen/econometrics/data/`（gitignore）；渲染前请确保数据已下载。
-- 默认 `execute: eval: false`。有数据时改为 `true` 或交互运行代码块。
-- 缺包时：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot"))` 等。
+- **理论：** 同目录 Markdown 逐步解答全文嵌入。
+- **代码：** R 实现（`scripts/r_companions/ch18.R`）**内联**于下文；数据在 `hansen/econometrics/data/`。
+- 默认 `execute: eval: false`。有数据/包时改为 `true`，或在 R 中 `source()` companion。
+- 装包示例：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot","knitr"))`
 :::
 
 ```{r}
 #| label: setup
-root <- if (dir.exists("../../hansen")) "../.." else if (dir.exists("hansen")) "." else "../.."
+#| include: true
+root <- if (dir.exists("../../hansen")) {
+  "../.."
+} else if (dir.exists("hansen")) {
+  "."
+} else {
+  "../.."
+}
 data_root <- file.path(root, "hansen", "econometrics", "data")
 companion_dir <- file.path(root, "scripts", "r_companions")
 if (file.exists(file.path(companion_dir, "_common.R"))) {
   source(file.path(companion_dir, "_common.R"), local = FALSE)
 }
-knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+if (requireNamespace("knitr", quietly = TRUE)) {
+  knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+}
 options(stringsAsFactors = FALSE)
 ```
 
@@ -365,317 +373,40 @@ $$
 数值依赖当前 `CK1994` / `DS2004` / `BMN2016` 样本；cluster 层级为 store / block / state。
 
 
-# 实证与数值代码（来自 notebook，R 版）
+# 实证与数值代码（R）
+
+以下代码来自 `scripts/r_companions/ch18.R`（与 Python notebook 对应）。
 
 ```{r}
-#| label: nb-cell-01
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-
-# import numpy as np
-# import pandas as pd
-# from pathlib import Path
-# from numpy.linalg import inv, pinv
-# from scipy import stats
-
-# PY: ROOT = Path("/home/fang/Project/zhihu-paper/p1/hansen/econometrics/data")
-
-
-# PY: def cluster_ols(y, X, clusters, add_const=False):
-# PY:     y = np.asarray(y, float)
-# PY:     X = np.asarray(X, float)
-# PY:     if add_const:
-# PY:         X = np.column_stack([np.ones(len(y)), X])
-# PY:     b = pinv(X.T @ X) @ (X.T @ y)
-# PY:     e = y - X @ b
-# PY:     meat = np.zeros((X.shape[1], X.shape[1]))
-# PY:     for g in pd.unique(clusters):
-# PY:         m = clusters == g
-# PY:         score = X[m].T @ e[m]
-# PY:         meat += np.outer(score, score)
-# PY:     n, k = X.shape
-# PY:     nG = len(pd.unique(clusters))
-# PY:     bread = pinv(X.T @ X)
-# PY:     V = (nG / (nG - 1)) * ((n - 1) / (n - k)) * bread @ meat @ bread
-# PY:     se = np.sqrt(np.maximum(np.diag(V), 0))
-# PY:     return b, se, V
-
-
-# PY: def fe_reg(df, ycol, xcols, fe_col, cluster_col):
-# PY:     d = df.copy()
-# PY:     cols = [ycol] + list(xcols)
-# PY:     means = d.groupby(fe_col)[cols].transform("mean")
-# PY:     yd = d[ycol] - means[ycol]
-# PY:     Xd = d[xcols].values - means[xcols].values
-# PY:     return cluster_ols(yd.values, Xd, d[cluster_col].values, add_const=False)
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
+#| label: companion
+# helpers: see setup chunk (source _common.R)
+## Ch.18 DiD — two-way FE / 2x2 DiD
+set.seed(18)
+# units i=1..100, t=1,2; treat i>50 from t=2
+i <- rep(1:100, each=2); t <- rep(1:2, 100)
+treat <- as.numeric(i > 50)
+post <- as.numeric(t == 2)
+y <- 1 + 0.5*treat + 0.2*post + 1.0*treat*post + rnorm(length(i))
+X <- cbind(1, treat, post, treat*post)
+fit <- ols_hc1(y, X)
+print(pretty_coef(fit, c("const","treat","post","did")))
+cat("true ATT interaction = 1\n")
 ```
+
+
+## Notebook 导读
 
 ### 18.5 Act10 表计算
 
-```{r}
-#| label: nb-cell-02
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-# PY: wi_pre, wi_post = 15.23, 16.72
-# PY: mn_pre, mn_post = 16.42, 18.10
-# PY: did = (wi_post - wi_pre) - (mn_post - mn_pre)
-# PY: print("DiD / beta =", did)
-# PY: print("gamma (WI-MN pre) =", wi_pre - mn_pre)
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
-
 ### 18.6 CK1994 meal prices
-
-```{r}
-#| label: nb-cell-03
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-# PY: ck = pd.read_excel(ROOT / "CK1994/CK1994.xlsx")
-# PY: for c in ck.columns:
-# PY:     if c != "store":
-# PY:         ck[c] = pd.to_numeric(ck[c], errors="coerce")
-# PY: ck["price"] = ck["priceentree"] + ck["pricefry"] + ck["pricesoda"]
-# PY: ck = ck.dropna(subset=["price"])
-# PY: nper = ck.groupby("store").size()
-# PY: ck = ck[ck.store.isin(nper[nper == 2].index)].copy()
-# PY: ck["D"] = (ck["state"] * ck["time"]).astype(float)
-# PY: ck["time1"] = ck["time"].astype(float)
-
-# PY: print("Means by state x time:")
-# PY: print(ck.groupby(["state", "time"])["price"].mean().unstack())
-# PY: did = (
-# PY:     ck[(ck.state == 1) & (ck.time == 1)]["price"].mean()
-# PY:     - ck[(ck.state == 1) & (ck.time == 0)]["price"].mean()
-# PY:     - (
-# PY:         ck[(ck.state == 0) & (ck.time == 1)]["price"].mean()
-# PY:         - ck[(ck.state == 0) & (ck.time == 0)]["price"].mean()
-# PY:     )
-# PY: )
-# PY: print("DiD", did)
-
-# PY: y = ck["price"].values
-# PY: X = np.column_stack([ck["state"], ck["time"], ck["D"]])
-# PY: b, se, V = cluster_ols(y, X, ck["store"].values, add_const=True)
-# PY: print("\n(18.2) style:")
-# PY: for n, bi, si in zip(["const", "state", "time", "D"], b, se):
-# PY:     print(f"  {n:8s} {bi:8.4f} ({si:.4f})")
-
-# PY: b, se, V = fe_reg(ck, "price", ["D", "time1"], "store", "store")
-# PY: print("\nRestaurant FE:")
-# PY: print(f"  D {b[0]:.4f} ({se[0]:.4f})")
-
-# PY: ck["cent_time"] = ck["centralj"] * ck["time"]
-# PY: ck["north_time"] = ck["northj"] * ck["time"]
-# PY: b, se, V = fe_reg(ck, "price", ["D", "time1", "cent_time", "north_time"], "store", "store")
-# PY: R = np.zeros((2, 4)); R[0, 2] = 1; R[1, 3] = 1
-# PY: w = float((R @ b) @ inv(R @ V @ R.T) @ (R @ b))
-# PY: print(f"\nHomogeneous treatment Wald p={1 - stats.chi2.cdf(w, 2):.3f}")
-
-# PY: ck["pa1_time"] = ck["pa1"] * ck["time"]
-# PY: b, se, V = fe_reg(ck, "price", ["D", "time1", "pa1_time"], "store", "store")
-# PY: print(f"Equal control t={b[2]/se[2]:.3f}")
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
 
 ### 18.7 DS2004 police deterrence spillovers
 
-```{r}
-#| label: nb-cell-04
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-# PY: ds = pd.read_excel(ROOT / "DS2004/DS2004.xlsx")
-# PY: for c in ds.columns:
-# PY:     if c not in ["barrio", "calle", "altura"]:
-# PY:         ds[c] = pd.to_numeric(ds[c], errors="coerce")
-# PY: ds2 = ds[ds.month != 7].copy()
-# PY: ds2["post"] = (ds2.month >= 8).astype(int)
-
-# PY: for label, mask in [
-# PY:     ("oneblock", ds2.oneblock == 1),
-# PY:     ("farther", (ds2.oneblock == 0) & (ds2.sameblock == 0)),
-# PY:     ("sameblock", ds2.sameblock == 1),
-# PY: ]:
-# PY:     sub = ds2[mask]
-# PY:     pre = sub[sub.post == 0]["thefts"].mean()
-# PY:     post = sub[sub.post == 1]["thefts"].mean()
-# PY:     print(f"{label:10s} pre {pre:.4f} post {post:.4f} d {post-pre:.4f}")
-
-# PY: ds2["treat_same"] = ds2["sameblock"] * ds2["post"]
-# PY: ds2["treat_one"] = ds2["oneblock"] * ds2["post"]
-# PY: months = sorted(ds2.month.unique())
-# PY: for m in months[1:]:
-# PY:     ds2[f"m{m}"] = (ds2.month == m).astype(float)
-# PY: xcols = ["treat_same", "treat_one"] + [f"m{m}" for m in months[1:]]
-# PY: means = ds2.groupby("block")[["thefts"] + xcols].transform("mean")
-# PY: yd = ds2["thefts"] - means["thefts"]
-# PY: Xd = ds2[xcols].values - means[xcols].values
-# PY: b, se, V = cluster_ols(yd.values, Xd, ds2["block"].values)
-# PY: print("\nFE estimates:")
-# PY: print(f"  sameblock x post {b[0]:.4f} ({se[0]:.4f})")
-# PY: print(f"  oneblock x post  {b[1]:.4f} ({se[1]:.4f})")
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
-
 ### 18.8 BMN2016 beer / wine blue laws
-
-```{r}
-#| label: nb-cell-05
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-# PY: bmn = pd.read_stata(ROOT / "BMN2016/BMN2016.dta")
-
-
-# PY: def panel_twoway(df, y, xcols, idcol, tcol):
-# PY:     d = df.copy()
-# PY:     times = sorted(d[tcol].unique())
-# PY:     for t in times[1:]:
-# PY:         d[f"t{int(t)}"] = (d[tcol] == t).astype(float)
-# PY:     tdums = [f"t{int(t)}" for t in times[1:]]
-# PY:     allx = xcols + tdums
-# PY:     means = d.groupby(idcol)[[y] + allx].transform("mean")
-# PY:     yd = d[y] - means[y]
-# PY:     Xd = d[allx].values - means[allx].values
-# PY:     b, se, V = cluster_ols(yd.values, Xd, d[idcol].values)
-# PY:     return list(zip(allx, b, se))[: len(xcols)]
-
-
-# PY: def panel_unit_trend(df, y, xcols, idcol, tcol):
-# PY:     d = df.sort_values([idcol, tcol]).copy()
-# PY:     d["_t"] = d[tcol].astype(float)
-# PY:     vars_ = [y] + xcols
-# PY:     out = {c: [] for c in vars_}
-# PY:     ids, ts = [], []
-# PY:     for i, g in d.groupby(idcol):
-# PY:         t = g["_t"].values
-# PY:         Tmat = np.column_stack([np.ones(len(t)), t])
-# PY:         P = pinv(Tmat.T @ Tmat) @ Tmat.T
-# PY:         for c in vars_:
-# PY:             yc = g[c].values.astype(float)
-# PY:             out[c].append(yc - Tmat @ (P @ yc))
-# PY:         ids.append(np.full(len(t), i))
-# PY:         ts.append(t)
-# PY:     dd = pd.DataFrame({c: np.concatenate(out[c]) for c in vars_})
-# PY:     dd[idcol] = np.concatenate(ids)
-# PY:     dd[tcol] = np.concatenate(ts)
-# PY:     return panel_twoway(dd, y, xcols, idcol, tcol)
-
-
-# PY: df = bmn.dropna(subset=["logbeer", "beeronsun", "beeroffsun", "unempw", "beerOnOutflows", "beerOffOutflows"])
-# PY: xcols = ["beeronsun", "beeroffsun", "unempw", "beerOnOutflows", "beerOffOutflows"]
-# PY: print("Beer TWFE:")
-# PY: for n, bi, si in panel_twoway(df, "logbeer", xcols, "id", "year"):
-# PY:     print(f"  {n:16s} {bi:8.4f} ({si:.4f})")
-# PY: print("Beer + unit trends:")
-# PY: for n, bi, si in panel_unit_trend(df, "logbeer", xcols, "id", "year"):
-# PY:     print(f"  {n:16s} {bi:8.4f} ({si:.4f})")
-
-# PY: dfw = bmn.dropna(subset=["logwine", "wineonsun", "wineoffsun", "unempw", "wineOnOutflows", "wineOffOutflows"])
-# PY: xcolsw = ["wineonsun", "wineoffsun", "unempw", "wineOnOutflows", "wineOffOutflows"]
-# PY: print("\nWine TWFE:")
-# PY: for n, bi, si in panel_twoway(dfw, "logwine", xcolsw, "id", "year"):
-# PY:     print(f"  {n:16s} {bi:8.4f} ({si:.4f})")
-# PY: print("Wine + unit trends:")
-# PY: for n, bi, si in panel_unit_trend(dfw, "logwine", xcolsw, "id", "year"):
-# PY:     print(f"  {n:16s} {bi:8.4f} ({si:.4f})")
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
 
 ### 理论结论的蒙特卡洛验证（无需外部数据）
 
 以下单元格核对 ch18 的核心结论：(1) **DiD 正确恢复处理效应** $\theta$（平行趋势成立时）；(2) **省略时间效应（单一差分）有偏**——把共同冲击混入处理效应。可独立运行。
-
-```{r}
-#| label: nb-cell-06
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-# import numpy as np
-# PY: rng = np.random.default_rng(18)
-
-# ===== 2×2 DiD 模拟 =====
-# 设定: N_treat 个处理个体 + N_ctrl 个对照个体, 各 T=2 期(pre, post)
-# 平行趋势: 两组在无处理下都增长 delta_common
-# 处理效应: theta 只作用于处理组 post 期
-# PY: N_treat, N_ctrl = 200, 200
-# PY: theta_true = 2.0          # 真实处理效应
-# PY: delta_common = 1.5        # 共同时间趋势(两组都有)
-
-# PY: did_est, single_diff = [], []
-# PY: for r in range(5000):
-    # 个体效应
-# PY:     u = rng.standard_normal(N_treat + N_ctrl) * 2
-    # 前后两期
-# PY:     eps_pre = rng.standard_normal(N_treat + N_ctrl)
-# PY:     eps_post = rng.standard_normal(N_treat + N_ctrl)
-    # 处理虚拟
-# PY:     D = np.concatenate([np.ones(N_treat), np.zeros(N_ctrl)])
-    # 生成 Y
-# PY:     Y_pre = u + eps_pre
-# PY:     Y_post = u + delta_common + theta_true * D + eps_post
-    # DiD: 处理组变化 - 对照组变化
-# PY:     d_treat = np.mean(Y_post[:N_treat] - Y_pre[:N_treat])
-# PY:     d_ctrl = np.mean(Y_post[N_treat:] - Y_pre[N_treat:])
-# PY:     did_est.append(d_treat - d_ctrl)
-    # 单一差分(只有处理组前后, 无对照——18.2 的错误做法)
-# PY:     single_diff.append(d_treat)
-
-# PY: print(f"[DiD] 真实 θ={theta_true}, 共同趋势 δ={delta_common}")
-# PY: print(f"  DiD 估计均值={np.mean(did_est):.4f} (≈θ={theta_true} ✓)")
-# PY: print(f"  单一差分均值={np.mean(single_diff):.4f} (≈θ+δ={theta_true+delta_common}, 偏!)")
-# PY: print(f"  ⇒ 省略对照组(时间效应)把共同冲击 {delta_common} 混入了处理效应!")
-
-# ===== TWFE 回归也恢复 θ =====
-# 回归: Y = θ*D*Post + u_i + δ_t + ε (与 DiD 等价)
-# PY: N = N_treat + N_ctrl
-# 构造面板
-# PY: Y_panel = np.concatenate([Y_pre, Y_post])
-# PY: D_panel = np.concatenate([np.zeros(N), D])               # D*Post: pre=0, post=D
-# PY: post = np.concatenate([np.zeros(N), np.ones(N)])
-# PY: ids = np.concatenate([np.arange(N), np.arange(N)])
-# 简单回归 (含截距, D*Post, Post) —— TWFE 的等价
-# PY: X = np.column_stack([np.ones(2*N), D_panel, post])
-# PY: b = np.linalg.lstsq(X, Y_panel, rcond=None)[0]
-# PY: print(f"\n[TWFE 回归] θ̂={b[1]:.4f} (≈{theta_true}), δ̂={b[2]:.4f} (≈{delta_common})")
-# PY: print(f"  ⇒ TWFE 系数 = DiD 估计量 ✓")
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
-
 
 # 依赖包
 
@@ -686,10 +417,14 @@ pkgs <- c(
   "haven", "readxl", "data.table", "sandwich", "lmtest", "AER",
   "quantreg", "boot", "MASS", "Matrix", "nnet", "ggplot2", "knitr"
 )
-# 章节扩展：Ch14–16 vars/urca；Ch17 plm；Ch19 np；Ch26 mlogit
+# 扩展：vars/urca (Ch14–16), plm (Ch17), np (Ch19), mlogit (Ch26)
 miss <- setdiff(pkgs, rownames(installed.packages()))
-if (length(miss)) install.packages(miss, repos = "https://cloud.r-project.org")
+if (length(miss)) {
+  install.packages(miss, repos = "https://cloud.r-project.org")
+}
 ```
 
 ---
-*第 18 章 · R/Quarto · md + ipynb 融合*
+
+*第 18 章 · R/Quarto · 理论 Markdown + R companion 融合*  
+*重新生成：`python3 scripts/convert_chapters_to_qmd.py`*

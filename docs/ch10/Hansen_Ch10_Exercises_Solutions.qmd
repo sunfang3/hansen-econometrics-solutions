@@ -30,22 +30,30 @@ execute:
 ::: {.callout-note}
 ## 说明
 
-- **理论：** 来自同目录 Markdown 逐步解答。
-- **代码：** Python notebook 已融合为 **R**（`scripts/r_companions/ch10.R` 优先；否则为带注释的翻译草稿）。
-- **数据：** `hansen/econometrics/data/`（gitignore）；渲染前请确保数据已下载。
-- 默认 `execute: eval: false`。有数据时改为 `true` 或交互运行代码块。
-- 缺包时：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot"))` 等。
+- **理论：** 同目录 Markdown 逐步解答全文嵌入。
+- **代码：** R 实现（`scripts/r_companions/ch10.R`）**内联**于下文；数据在 `hansen/econometrics/data/`。
+- 默认 `execute: eval: false`。有数据/包时改为 `true`，或在 R 中 `source()` companion。
+- 装包示例：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot","knitr"))`
 :::
 
 ```{r}
 #| label: setup
-root <- if (dir.exists("../../hansen")) "../.." else if (dir.exists("hansen")) "." else "../.."
+#| include: true
+root <- if (dir.exists("../../hansen")) {
+  "../.."
+} else if (dir.exists("hansen")) {
+  "."
+} else {
+  "../.."
+}
 data_root <- file.path(root, "hansen", "econometrics", "data")
 companion_dir <- file.path(root, "scripts", "r_companions")
 if (file.exists(file.path(companion_dir, "_common.R"))) {
   source(file.path(companion_dir, "_common.R"), local = FALSE)
 }
-knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+if (requireNamespace("knitr", quietly = TRUE)) {
+  knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+}
 options(stringsAsFactors = FALSE)
 ```
 
@@ -470,421 +478,45 @@ delta：$\nabla=(1/\beta_2,-\beta_1/\beta_2^2)$，$s(\hat\theta)=\sqrt{\nabla'\h
 | 10.31 | DDK cluster bootstrap + BCa code cell |
 
 
-# 实证与数值代码（来自 notebook，R 版）
+# 实证与数值代码（R）
 
-## Hansen Ch.10 习题完整解答（计算）
+以下代码来自 `scripts/r_companions/ch10.R`（与 Python notebook 对应）。
 
-**Chapter 10 Resampling Methods**
+```{r}
+#| label: companion
+# helpers: see setup chunk (source _common.R)
+## Ch.10 Bootstrap — pairs bootstrap of slope SE
+set.seed(10)
+n <- 200L
+x <- rnorm(n); y <- 1 + 2*x + rnorm(n)
+b_hat <- coef(lm(y ~ x))[2]
+B <- 399L
+bs <- numeric(B)
+for (b in seq_len(B)) {
+  i <- sample.int(n, replace = TRUE)
+  bs[b] <- coef(lm(y[i] ~ x[i]))[2]
+}
+cat("beta2 =", b_hat, " boot SE =", sd(bs), "\n")
+```
 
-完整推导与**面向初学者的详细注释**见同目录 `Hansen_Ch10_Exercises_Solutions.md`（强烈建议先读 §0、§1）。
 
-本 notebook：
-- 10.1 jackknife 与公式核对
-- **10.28** Nerlove
-- **10.29** MRW
-- **10.30** CPS 小样本 $\theta$
-- **10.31** DDK cluster bootstrap + BCa
-
-> **写给只学过李子奈/陈强的同学：** 本章是"用计算机模拟抽样分布"——第 7–9 章**解析地**推渐近分布，本章**用重抽样**算 SE/CI/$p$ 值，不必推公式。两类方法：**jackknife**（删一算散布）、**bootstrap**（重抽模拟分布）。
-> **四条原则：** (1) jackknife vs bootstrap 的区别；(2) CI 四层次 percentile→BC→BCa→percentile-$t$（精度递增，默认 BCa）；(3) **bootstrap 检验必须在 $H_0$ 下重抽**（否则临界值被信号撑大、过度保守）；(4) bootstrap 不能修识别错误（$E[Xe]\ne0$ 时覆盖 plim 而非真参数）。
-> **核心警示（已 MC 验证）：** 检验 $H_0:\beta=0$，当 $T=9.06$（极显著）时，无约束 bootstrap 临界值≈11.91 ⇒ 荒谬地"不拒绝"；施加 $H_0$ 的临界值≈1.52 ⇒ 正确拒绝。
+## Notebook 导读
 
 ### 公共函数
 
-```{r}
-#| label: nb-cell-01
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-
-# import numpy as np
-# import pandas as pd
-# from pathlib import Path
-# from scipy import stats
-
-# PY: ROOT = Path("/home/fang/Project/zhihu-paper/p1/hansen/econometrics/data")
-
-# PY: def ols(y, X):
-# PY:     beta = np.linalg.lstsq(X, y, rcond=None)[0]
-# PY:     e = y - X @ beta
-# PY:     return beta, e
-
-# PY: def hc3_var(X, e):
-# PY:     n, k = X.shape
-# PY:     XXinv = np.linalg.inv(X.T @ X)
-# PY:     h = np.sum(X * (X @ XXinv), axis=1)
-# PY:     u = X * (e / np.clip(1.0 - h, 1e-12, None))[:, None]
-# PY:     return (n / (n - k)) * XXinv @ (u.T @ u) @ XXinv
-
-# PY: def jackknife_se_theta(estimator_fn, n):
-# PY:     """estimator_fn(i) -> theta without observation i"""
-# PY:     thetas = np.array([estimator_fn(i) for i in range(n)])
-# PY:     return float(np.sqrt((n - 1) / n * np.sum((thetas - thetas.mean()) ** 2))), thetas
-
-# PY: def pairs_bootstrap_theta(X, y, theta_fn, B=999, seed=0):
-# PY:     rng = np.random.default_rng(seed)
-# PY:     n = len(y)
-# PY:     out = np.empty(B)
-# PY:     for b in range(B):
-# PY:         idx = rng.integers(0, n, n)
-# PY:         out[b] = theta_fn(X[idx], y[idx])
-# PY:     return out
-
-# PY: def bc_interval(theta_hat, theta_star, alpha=0.05):
-# PY:     p0 = np.mean(theta_star <= theta_hat)
-# PY:     z0 = stats.norm.ppf(np.clip(p0, 1e-8, 1 - 1e-8))
-# PY:     za = stats.norm.ppf(alpha / 2)
-# PY:     zb = stats.norm.ppf(1 - alpha / 2)
-# PY:     a1 = stats.norm.cdf(2 * z0 + za)
-# PY:     a2 = stats.norm.cdf(2 * z0 + zb)
-# PY:     return np.quantile(theta_star, [a1, a2]), p0, z0
-
-# PY: def bca_interval(theta_hat, theta_star, theta_jack, alpha=0.05):
-    # Efron acceleration from jackknife
-# PY:     th = np.asarray(theta_jack)
-# PY:     tbar = th.mean()
-# PY:     num = np.sum((tbar - th) ** 3)
-# PY:     den = 6.0 * (np.sum((tbar - th) ** 2) ** 1.5) + 1e-18
-# PY:     a = num / den
-# PY:     p0 = np.mean(theta_star <= theta_hat)
-# PY:     z0 = stats.norm.ppf(np.clip(p0, 1e-8, 1 - 1e-8))
-# PY:     def x(alp):
-# PY:         z = stats.norm.ppf(alp)
-# PY:         return stats.norm.cdf(z0 + (z0 + z) / (1 - a * (z0 + z)))
-# PY:     a1, a2 = x(alpha / 2), x(1 - alpha / 2)
-# PY:     a1, a2 = np.clip([a1, a2], 1e-6, 1 - 1e-6)
-# PY:     return np.quantile(theta_star, [a1, a2]), a, z0, p0
-
-# PY: print("helpers ready")
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
-
 ### Exercise 10.1 核对：jackknife 方差 = 常规 $s^2/n$
-
-```{r}
-#| label: nb-cell-02
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-
-# PY: rng = np.random.default_rng(0)
-# PY: Y = rng.normal(size=50)
-# PY: r = 3
-# PY: mu = np.mean(Y ** r)
-# formula
-# PY: V_jack = np.sum((Y ** r - mu) ** 2) / (len(Y) * (len(Y) - 1))
-# direct leave-one-out
-# PY: n = len(Y)
-# PY: ths = np.array([(np.sum(Y**r) - Y[i]**r) / (n - 1) for i in range(n)])
-# PY: V_direct = (n - 1) / n * np.sum((ths - ths.mean()) ** 2)
-# PY: print(V_jack, V_direct, abs(V_jack - V_direct))
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
 
 ### Exercise 10.28 Nerlove：系数与 $\theta=\beta_3+\beta_4+\beta_5$
 
-```{r}
-#| label: nb-cell-03
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-
-# PY: ner = pd.read_excel(ROOT / "Nerlove1963/Nerlove1963.xlsx")
-# PY: for c in ner.columns:
-# PY:     ner[c] = pd.to_numeric(ner[c], errors="coerce")
-# PY: ner = ner.dropna().reset_index(drop=True)
-# PY: y = np.log(ner.Cost.values)
-# PY: X = np.column_stack([
-# PY:     np.ones(len(ner)),
-# PY:     np.log(ner.output.values),
-# PY:     np.log(ner.Plabor.values),
-# PY:     np.log(ner.Pcapital.values),
-# PY:     np.log(ner.Pfuel.values),
-# PY: ])
-# PY: names = ["const", "logQ", "logPL", "logPK", "logPF"]
-# PY: n, k = X.shape
-# PY: beta, e = ols(y, X)
-# PY: V = hc3_var(X, e)
-# PY: se_as = np.sqrt(np.diag(V))
-# PY: print(pd.DataFrame({"beta": beta, "SE_asym(HC3)": se_as}, index=names))
-
-# jackknife SE for beta
-# PY: def beta_without(i):
-# PY:     return ols(np.delete(y, i), np.delete(X, i, axis=0))[0]
-
-# PY: Bjack = np.array([beta_without(i) for i in range(n)])
-# PY: se_jack = np.sqrt((n - 1) / n * np.sum((Bjack - Bjack.mean(0)) ** 2, axis=0))
-# PY: print("jackknife SE:", se_jack)
-
-# bootstrap SE for beta
-# PY: B = 999
-# PY: rng = np.random.default_rng(1)
-# PY: Bboot = np.zeros((B, k))
-# PY: for b in range(B):
-# PY:     idx = rng.integers(0, n, n)
-# PY:     Bboot[b] = ols(y[idx], X[idx])[0]
-# PY: se_boot = Bboot.std(axis=0, ddof=1)
-# PY: print("bootstrap SE:", se_boot)
-
-# theta
-# PY: R = np.array([0.0, 0.0, 1.0, 1.0, 1.0])
-# PY: theta = R @ beta
-# PY: se_theta_as = float(np.sqrt(R @ V @ R))
-# PY: th_jack = Bjack @ R
-# PY: se_theta_jack = float(np.sqrt((n - 1) / n * np.sum((th_jack - th_jack.mean()) ** 2)))
-# PY: th_boot = Bboot @ R
-# PY: se_theta_boot = float(th_boot.std(ddof=1))
-# PY: print(f"\ntheta={theta:.4f}")
-# PY: print(f"SE asym={se_theta_as:.4f}, jack={se_theta_jack:.4f}, boot={se_theta_boot:.4f}")
-# PY: pc = np.quantile(th_boot, [0.025, 0.975])
-# PY: bca, a_hat, z0, p0 = bca_interval(theta, th_boot, th_jack)
-# PY: print("percentile 95%:", pc)
-# PY: print(f"BCa 95%: {bca}, a={a_hat:.4f}, z0={z0:.4f}, p*={p0:.3f}")
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
-
 ### Exercise 10.29 MRW： unrestricted + $\theta=$ 第2–4 系数和
-
-```{r}
-#| label: nb-cell-04
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-
-# PY: mrw = pd.read_excel(ROOT / "MRW1992/MRW1992.xlsx")
-# PY: m = mrw[mrw.N == 1].reset_index(drop=True)
-# PY: y = (np.log(m.Y85) - np.log(m.Y60)).to_numpy()
-# PY: X = np.column_stack([
-# PY:     np.log(m.Y60),
-# PY:     np.log(m.invest / 100),
-# PY:     np.log(m.pop_growth / 100 + 0.05),
-# PY:     np.log(m.school / 100),
-# PY:     np.ones(len(m)),
-# PY: ])
-# PY: names = ["logY60", "logI", "log(n+g+d)", "logSchool", "const"]
-# PY: n, k = X.shape
-# PY: beta, e = ols(y, X)
-# PY: V = hc3_var(X, e)
-# PY: print(pd.DataFrame({"beta": beta, "SE_asym": np.sqrt(np.diag(V))}, index=names))
-
-# PY: Bjack = np.array([ols(np.delete(y, i), np.delete(X, i, axis=0))[0] for i in range(n)])
-# PY: se_jack = np.sqrt((n - 1) / n * np.sum((Bjack - Bjack.mean(0)) ** 2, axis=0))
-# PY: print("jack SE", se_jack)
-
-# PY: B = 999
-# PY: rng = np.random.default_rng(2)
-# PY: Bboot = np.zeros((B, k))
-# PY: for b in range(B):
-# PY:     idx = rng.integers(0, n, n)
-# PY:     Bboot[b] = ols(y[idx], X[idx])[0]
-# PY: print("boot SE", Bboot.std(0, ddof=1))
-
-# PY: R = np.array([0.0, 1.0, 1.0, 1.0, 0.0])
-# PY: theta = R @ beta
-# PY: th_jack = Bjack @ R
-# PY: th_boot = Bboot @ R
-# PY: print(f"theta={theta:.4f}")
-# PY: print("SE asym", float(np.sqrt(R @ V @ R)),
-# PY:       "jack", float(np.sqrt((n-1)/n*np.sum((th_jack-th_jack.mean())**2))),
-# PY:       "boot", float(th_boot.std(ddof=1)))
-# PY: print("percentile", np.quantile(th_boot, [0.025, 0.975]))
-# PY: bc, p0, z0 = bc_interval(theta, th_boot)
-# PY: print(f"BC 95%: {bc}, p*={p0:.3f}, z0={z0:.3f}")
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
 
 ### Exercise 10.30 CPS：从未结婚 + Midwest 白人男性西班牙裔，$n=99$
 
-```{r}
-#| label: nb-cell-05
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-
-# PY: df = pd.read_excel(ROOT / "cps09mar/cps09mar.xlsx")
-# PY: df["experience"] = df.age - df.education - 6
-# PY: df["lwage"] = np.log(df.earnings / (df.hours * df.week))
-# PY: df["exp2"] = (df.experience ** 2) / 100
-# PY: s = df[
-# PY:     (df.race == 1) & (df.female == 0) & (df.hisp == 1)
-# PY:     & (df.marital == 7) & (df.region == 2)
-# PY: ].copy().reset_index(drop=True)
-# PY: print("n =", len(s))
-# PY: y = s.lwage.to_numpy(float)
-# PY: X = np.column_stack([s.education, s.experience, s.exp2, np.ones(len(s))])
-# theta = b1 / (b2 + 0.2*b3)
-
-# PY: def theta_from_beta(b):
-# PY:     return b[0] / (b[1] + 0.2 * b[2])
-
-# PY: beta, e = ols(y, X)
-# PY: V = hc3_var(X, e)
-# PY: th = theta_from_beta(beta)
-# delta
-# PY: den = beta[1] + 0.2 * beta[2]
-# PY: g = np.array([1 / den, -beta[0] / den**2, -0.2 * beta[0] / den**2, 0.0])
-# PY: se_as = float(np.sqrt(g @ V @ g))
-# PY: print("beta", beta, "theta", th, "SE_asym", se_as)
-
-# PY: n = len(y)
-# PY: th_jack = []
-# PY: for i in range(n):
-# PY:     bi = ols(np.delete(y, i), np.delete(X, i, axis=0))[0]
-# PY:     th_jack.append(theta_from_beta(bi))
-# PY: th_jack = np.array(th_jack)
-# PY: se_jack = float(np.sqrt((n - 1) / n * np.sum((th_jack - th_jack.mean()) ** 2)))
-# PY: print("SE_jack", se_jack)
-
-# PY: B = 1999
-# PY: rng = np.random.default_rng(3)
-# PY: th_boot = np.empty(B)
-# PY: for b in range(B):
-# PY:     idx = rng.integers(0, n, n)
-# PY:     th_boot[b] = theta_from_beta(ols(y[idx], X[idx])[0])
-# PY: se_boot = float(th_boot.std(ddof=1))
-# PY: print("SE_boot", se_boot)
-# PY: print("Note: large gaps among SEs are common with n=99 and a ratio functional.")
-# PY: bc, p0, z0 = bc_interval(th, th_boot)
-# PY: print(f"BC 95% CI: {bc}, p*={p0:.3f}")
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
-
 ### Exercise 10.31 DDK：cluster bootstrap SE + BCa
-
-```{r}
-#| label: nb-cell-06
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-
-# PY: ddk = pd.read_excel(ROOT / "DDK2011/DDK2011.xlsx")
-# PY: for c in ddk.columns:
-# PY:     ddk[c] = pd.to_numeric(ddk[c], errors="coerce")
-# PY: ddk["ystd"] = (ddk.totalscore - ddk.totalscore.mean()) / ddk.totalscore.std()
-# PY: d = ddk[["ystd", "tracking", "agetest", "girl", "etpteacher", "percentile", "schoolid"]].dropna().reset_index(drop=True)
-# PY: y = d.ystd.to_numpy()
-# PY: X = np.column_stack([d.tracking, d.agetest, d.girl, d.etpteacher, d.percentile, np.ones(len(d))])
-# PY: names = ["tracking", "age", "girl", "etpteacher", "percentile", "intercept"]
-# PY: beta, e = ols(y, X)
-# PY: print("point estimates", dict(zip(names, beta.round(4))))
-
-# cluster map
-# from collections import defaultdict
-# PY: rows = defaultdict(list)
-# PY: for i, g in enumerate(d.schoolid.to_numpy()):
-# PY:     rows[g].append(i)
-# PY: schools = np.array(list(rows.keys()))
-# PY: G = len(schools)
-
-# PY: B = 999
-# PY: rng = np.random.default_rng(4)
-# PY: Bboot = np.zeros((B, X.shape[1]))
-# PY: for b in range(B):
-# PY:     draw = rng.choice(schools, size=G, replace=True)
-# PY:     idx = np.concatenate([rows[g] for g in draw])
-# PY:     Bboot[b] = ols(y[idx], X[idx])[0]
-# PY: se_boot = Bboot.std(axis=0, ddof=1)
-# PY: print(pd.DataFrame({"beta": beta, "cluster_boot_SE": se_boot}, index=names))
-
-# BCa per coefficient using delete-cluster jackknife for a
-# PY: def beta_del_cluster(g_del):
-# PY:     idx = np.concatenate([rows[g] for g in schools if g != g_del])
-# PY:     return ols(y[idx], X[idx])[0]
-
-# jackknife delete-cluster (may be slow but G~111)
-# PY: Jack = np.array([beta_del_cluster(g) for g in schools])
-# PY: for j, nm in enumerate(names):
-# PY:     bca, a, z0, p0 = bca_interval(beta[j], Bboot[:, j], Jack[:, j])
-# PY:     print(f"{nm:12s} BCa95% [{bca[0]:.4f}, {bca[1]:.4f}]  a={a:.4f} p*={p0:.3f}")
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
 
 ### 理论结论的蒙特卡洛验证（无需外部数据）
 
 以下单元格核对 ch10：jackknife 对样本均值 $=s/\sqrt n$；以及**核心警示**——bootstrap 假设检验必须在 $H_0$ 下重抽（否则临界值被信号撑大、过度保守）。可独立运行。
-
-```{r}
-#| label: nb-cell-07
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-# import numpy as np
-# PY: rng = np.random.default_rng(10)
-
-# Ex 10.1: jackknife 对样本均值的 SE = 常规 s/√n
-# PY: n = 50
-# PY: Y = rng.standard_normal(n) * 2 + 3
-# PY: loos = np.array([(Y.sum() - Y[i]) / (n - 1) for i in range(n)])
-# PY: se_jack = np.sqrt((n - 1) / n * ((loos - loos.mean())**2).sum())
-# PY: print(f"[10.1] jackknife SE={se_jack:.6f} = s/√n={Y.std(ddof=1)/np.sqrt(n):.6f}")
-
-# Ex 10.14 / 10.22: bootstrap 检验必须施加 H₀
-# 单侧 H₀:β=0 vs H₁:>0。当 β̂ 较大时，无约束 bootstrap 的 T*=β̂*/se* 分布集中在 β̂/se，
-# 其 0.95 分位被信号撑大 ⇒ 巨大的 T 也"不拒绝"（荒谬）。施加 H₀(β=0) 则临界值≈1.645。
-# PY: print("\n[10.14/10.22] bootstrap 检验：无约束 vs 施加 H₀")
-# PY: for beta_true in [0.0, 0.3, 1.0]:
-# PY:     n, B = 100, 999
-# PY:     X = rng.standard_normal(n)
-# PY:     Y = beta_true * X + rng.standard_normal(n)
-# PY:     bhat = np.sum(X*Y) / np.sum(X**2)
-# PY:     eh = Y - X * bhat
-# PY:     T = bhat / np.sqrt(np.sum(eh**2) / (n - 1) / np.sum(X**2))
-# PY:     Tb = np.empty(B); Tb0 = np.empty(B)
-# PY:     for b in range(B):
-# PY:         idx = rng.integers(0, n, n); Xb = X[idx]
-        # 无约束: 重抽 (Y,X), T* = β̂*/se*（未中心化）
-# PY:         Yb = Y[idx]
-# PY:         bb = np.sum(Xb*Yb) / np.sum(Xb**2)
-# PY:         s2b = np.sum((Yb - Xb*bb)**2) / (n - 1)
-# PY:         Tb[b] = bb / np.sqrt(s2b / np.sum(Xb**2))
-        # 施加 H₀: DGP 中 β=0，即 Y⁰ = 重抽的残差
-# PY:         Y0 = eh[idx]
-# PY:         bb0 = np.sum(Xb*Y0) / np.sum(Xb**2)
-# PY:         s2b0 = np.sum((Y0 - Xb*bb0)**2) / (n - 1)
-# PY:         Tb0[b] = bb0 / np.sqrt(s2b0 / np.sum(Xb**2))
-# PY:     cv_u = np.quantile(Tb, 0.95)
-# PY:     cv_0 = np.quantile(Tb0, 0.95)
-# PY:     print(f"  β={beta_true}: T={T:5.2f} | 无约束 cv={cv_u:5.2f} (拒绝? {T > cv_u})"
-# PY:           f" | H₀施加 cv={cv_0:5.2f} (拒绝? {T > cv_0})")
-# PY: print("  ⇒ 无约束 cv 随 T 增大 → 巨大 T 也'不拒绝'(荒谬); H₀施加 cv≈1.645 ⇒ 正确拒绝。")
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
-
 
 # 依赖包
 
@@ -895,10 +527,14 @@ pkgs <- c(
   "haven", "readxl", "data.table", "sandwich", "lmtest", "AER",
   "quantreg", "boot", "MASS", "Matrix", "nnet", "ggplot2", "knitr"
 )
-# 章节扩展：Ch14–16 vars/urca；Ch17 plm；Ch19 np；Ch26 mlogit
+# 扩展：vars/urca (Ch14–16), plm (Ch17), np (Ch19), mlogit (Ch26)
 miss <- setdiff(pkgs, rownames(installed.packages()))
-if (length(miss)) install.packages(miss, repos = "https://cloud.r-project.org")
+if (length(miss)) {
+  install.packages(miss, repos = "https://cloud.r-project.org")
+}
 ```
 
 ---
-*第 10 章 · R/Quarto · md + ipynb 融合*
+
+*第 10 章 · R/Quarto · 理论 Markdown + R companion 融合*  
+*重新生成：`python3 scripts/convert_chapters_to_qmd.py`*

@@ -30,22 +30,30 @@ execute:
 ::: {.callout-note}
 ## 说明
 
-- **理论：** 来自同目录 Markdown 逐步解答。
-- **代码：** Python notebook 已融合为 **R**（`scripts/r_companions/ch07.R` 优先；否则为带注释的翻译草稿）。
-- **数据：** `hansen/econometrics/data/`（gitignore）；渲染前请确保数据已下载。
-- 默认 `execute: eval: false`。有数据时改为 `true` 或交互运行代码块。
-- 缺包时：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot"))` 等。
+- **理论：** 同目录 Markdown 逐步解答全文嵌入。
+- **代码：** R 实现（`scripts/r_companions/ch07.R`）**内联**于下文；数据在 `hansen/econometrics/data/`。
+- 默认 `execute: eval: false`。有数据/包时改为 `true`，或在 R 中 `source()` companion。
+- 装包示例：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot","knitr"))`
 :::
 
 ```{r}
 #| label: setup
-root <- if (dir.exists("../../hansen")) "../.." else if (dir.exists("hansen")) "." else "../.."
+#| include: true
+root <- if (dir.exists("../../hansen")) {
+  "../.."
+} else if (dir.exists("hansen")) {
+  "."
+} else {
+  "../.."
+}
 data_root <- file.path(root, "hansen", "econometrics", "data")
 companion_dir <- file.path(root, "scripts", "r_companions")
 if (file.exists(file.path(companion_dir, "_common.R"))) {
   source(file.path(companion_dir, "_common.R"), local = FALSE)
 }
-knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+if (requireNamespace("knitr", quietly = TRUE)) {
+  knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+}
 options(stringsAsFactors = FALSE)
 ```
 
@@ -481,91 +489,29 @@ $X_1,X_2\in\{-1,+1\}$，$P(\text{同号})=3/4$，$P(\text{异号})=1/4$；$E[e^2
 | 7.28(f) | 预测区间 code cell |
 
 
-# 实证与数值代码（来自 notebook，R 版）
+# 实证与数值代码（R）
 
-## Hansen Ch.7 习题解答（计算部分）
+以下代码来自 `scripts/r_companions/ch07.R`（与 Python notebook 对应）。
 
-**Chapter 7 Asymptotic Theory for Least Squares**
+```{r}
+#| label: companion
+# helpers: see setup chunk (source _common.R)
+## Ch.7 Asymptotics — HC1 vs homoskedastic SE under hetero
+set.seed(7)
+n <- 1000L
+X <- cbind(1, rnorm(n))
+u <- rnorm(n) * (1 + 0.8*X[,2]^2)  # hetero
+y <- as.numeric(X %*% c(1, 0.5) + u)
+fit <- ols_hc1(y, X)
+s2 <- sum(fit$resid^2) / (n - 2)
+se_hom <- sqrt(diag(solve(crossprod(X)) * s2))
+print(data.frame(term=c("const","x"), HC1=fit$se, HOM=se_hom))
+```
 
-完整推导与**面向初学者的详细注释**见同目录 `Hansen_Ch07_Exercises_Solutions.md`（强烈建议先读 §0、§1）。
 
-本 notebook：**Exercise 7.4**（矩核对）+ **Exercise 7.28**（delta method 实证）。
-
-> **写给只学过李子奈/陈强的同学：** 本章是全书枢纽——**去掉第 5 章的正态假定**，只用 WLLN + CLT 在大样本下重建 OLS 的性质。两条定律：**WLLN** 给**一致性**（$\hat\beta\to_p\beta$），**CLT** 给**渐近正态**。
-> 全章的核心是一个分解：
-> $$\sqrt n(\hat\beta-\beta)=\underbrace{\hat Q^{-1}}_{\to_p Q^{-1}}\cdot\underbrace{\tfrac1{\sqrt n}\textstyle\sum X_ie_i}_{\xrightarrow{\text{CLT}}N(0,\Omega)}\to_d N(0,Q^{-1}\Omega Q^{-1}).$$
-> 这正是第 4 章的**夹心方差**，现在以**极限**形式出现（同方差下退化为 $\sigma^2Q^{-1}$）。
-> **delta method** 估计非线性参数 $\theta=g(\beta)$：$\sqrt n(\hat\theta-\theta)\to_d N(0,G'V_\beta G)$，$G=\nabla g$。下面 7.28 的"教育/经验回报比"、回归函数 CI、预测区间都用它。
+## Notebook 导读
 
 ### Exercise 7.4 矩核对（数值）
-
-```{r}
-#| label: nb-cell-01
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-# import numpy as np
-# X1,X2 in {-1,1} with given joint probs
-# outcomes: (1,1),(1,-1),(-1,1),(-1,-1) with probs 3/8,1/8,1/8,3/8
-# PY: vals = np.array([[1,1],[1,-1],[-1,1],[-1,-1]], float)
-# PY: p = np.array([3/8,1/8,1/8,3/8])
-# PY: X1, X2 = vals[:,0], vals[:,1]
-# PY: same = (X1==X2)
-# PY: sig2 = np.where(same, 5/4, 1/4)
-
-# PY: print('E[X1]=', np.sum(p*X1))
-# PY: print('E[X1^2]=', np.sum(p*X1**2))
-# PY: print('E[X1X2]=', np.sum(p*X1*X2))
-# PY: print('E[e^2]=', np.sum(p*sig2))
-# PY: print('E[X1^2 e^2]=', np.sum(p*(X1**2)*sig2))
-# PY: print('E[X1X2 e^2]=', np.sum(p*X1*X2*sig2))
-# PY: print('targets: 0,1,0.5,1,1,0.875')
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
-
-```{r}
-#| label: nb-cell-02
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-# import numpy as np
-# import pandas as pd
-# from pathlib import Path
-# from scipy import stats
-
-# PY: CPS = Path("../../hansen/econometrics/data/cps09mar/cps09mar.xlsx")
-# PY: if not CPS.exists():
-# PY:     CPS = Path("/home/fang/Project/zhihu-paper/p1/hansen/econometrics/data/cps09mar/cps09mar.xlsx")
-# PY: df = pd.read_excel(CPS)
-# PY: df["experience"] = df["age"] - df["education"] - 6
-# PY: df["lwage"] = np.log(df["earnings"]/(df["hours"]*df["week"]))
-# PY: df["exp2"] = (df["experience"]**2)/100
-# PY: s = df[(df.race==1)&(df.female==0)&(df.hisp==1)].copy()
-# PY: y = s.lwage.to_numpy(float)
-# PY: X = np.c_[s.education, s.experience, s.exp2, np.ones(len(s))]
-# PY: names = ["education","experience","exp2/100","intercept"]
-# PY: n,k = X.shape
-# PY: beta = np.linalg.lstsq(X,y,rcond=None)[0]
-# PY: e = y - X@beta
-# PY: XXinv = np.linalg.inv(X.T@X)
-# PY: h = np.sum(X*(X@XXinv), axis=1)
-# PY: u = X * (e/(np.clip(1-h,1e-12,None)))[:,None]  # HC3
-# PY: V = XXinv @ (u.T@u) @ XXinv
-# PY: se = np.sqrt(np.diag(V))
-# PY: print(pd.DataFrame({"beta":beta,"HC3_SE":se}, index=names))
-# PY: print("n=", n)
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
 
 #### (b)–(d) $\theta=\beta_1/(\beta_2+0.2\beta_3)$（experience=10 时教育/经验回报比）
 
@@ -573,136 +519,13 @@ $X_1,X_2\in\{-1,+1\}$，$P(\text{同号})=3/4$，$P(\text{异号})=1/4$；$E[e^2
 本题 $g=\beta_1/d$，$d=\beta_2+0.2\beta_3$（=经验在 exp=10 处的边际效应 $\beta_2+2\beta_3\cdot 10/100$）。
 梯度 $G=(1/d,\;-\beta_1/d^2,\;-0.2\beta_1/d^2,\;0)$，标准误 $\widehat{\mathrm{se}}=\sqrt{\hat G'\hat V\hat G}$。
 
-```{r}
-#| label: nb-cell-03
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-# PY: b1,b2,b3,b0 = beta
-# PY: den = b2 + 0.2*b3
-# PY: theta = b1/den
-# PY: grad = np.array([1/den, -b1/den**2, -0.2*b1/den**2, 0.0])
-# PY: se_theta = float(np.sqrt(grad @ V @ grad))
-# PY: z90 = stats.norm.ppf(0.95)
-# PY: print(f"theta = {theta:.4f}")
-# PY: print(f"se(theta) = {se_theta:.4f}")
-# PY: print(f"90% CI = [{theta - z90*se_theta:.4f}, {theta + z90*se_theta:.4f}]")
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
-
 #### (e) 回归函数在 education=12, experience=20
 
-```{r}
-#| label: nb-cell-04
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-# PY: x = np.array([12.0, 20.0, 4.0, 1.0])  # exp2/100 = 400/100=4
-# PY: m = float(x @ beta)
-# PY: se_m = float(np.sqrt(x @ V @ x))
-# PY: z95 = 1.96
-# PY: print(f"m(12,20) = {m:.4f}")
-# PY: print(f"95% CI = [{m-z95*se_m:.4f}, {m+z95*se_m:.4f}]")
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
-
 #### (f) 样本外预测：edu=16, exp=5，80% 预测区间
-
-```{r}
-#| label: nb-cell-05
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-# PY: s2 = float(np.sum(e**2)/(n-k))
-# PY: x = np.array([16.0, 5.0, 0.25, 1.0])
-# PY: yhat = float(x @ beta)
-# PY: se_f = float(np.sqrt(x @ V @ x + s2))
-# PY: z80 = stats.norm.ppf(0.90)
-# PY: lo, hi = yhat - z80*se_f, yhat + z80*se_f
-# PY: print(f"point forecast log wage = {yhat:.4f}")
-# PY: print(f"80% PI log wage = [{lo:.4f}, {hi:.4f}]")
-# PY: print(f"80% PI wage = [{np.exp(lo):.2f}, {np.exp(hi):.2f}]")
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
 
 ### 理论结论的蒙特卡洛验证（无需外部数据）
 
 以下单元格核对 ch07 的一致性/plim（7.1 短回归 OVB、7.24 衰减偏差）、非标准估计量方差（7.15）、delta method CI 覆盖。可独立运行。
-
-```{r}
-#| label: nb-cell-06
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-# import numpy as np
-# PY: rng = np.random.default_rng(7)
-
-# Ex 7.1: 短回归 plim ≠ β（大样本 OVB）
-# PY: n = 200000
-# PY: X1 = rng.standard_normal(n)
-# PY: X2 = 0.5 * X1 + rng.standard_normal(n)
-# PY: Y = 1.0 * X1 + 2.0 * X2 + rng.standard_normal(n)
-# PY: b1s = np.sum(X1 * Y) / np.sum(X1**2)
-# PY: plim = 1.0 + np.mean(X1 * X2) / np.mean(X1**2) * 2.0
-# PY: print(f"[7.1] 短回归 β̂₁={b1s:.3f}, 公式 plim={plim:.3f}  (≠ 真 β₁=1, OVB)")
-
-# Ex 7.24: 自变量乘性测量误差 → 衰减偏差
-# PY: Xstar = np.abs(rng.standard_normal(n)) + 0.5
-# PY: v = rng.uniform(0.5, 1.5, n)
-# PY: Y = 2.0 * Xstar + rng.standard_normal(n)
-# PY: X = Xstar * v
-# PY: bhat = np.sum(X * Y) / np.sum(X**2)
-# PY: plim = 2.0 * np.mean(v) / np.mean(v**2)
-# PY: print(f"[7.24] β̂={bhat:.3f}, plim=β·E[v]/E[v²]={plim:.3f}  (< β=2, 衰减)")
-
-# Ex 7.15: 非标准估计量 ΣX³Y/ΣX⁴ 的渐近方差 = E[X⁶e²]/(E[X⁴])²
-# PY: N, reps = 80, 4000
-# PY: mhats = []
-# PY: Xall = rng.standard_normal((reps, N)); eall = rng.standard_normal((reps, N))
-# PY: for r in range(reps):
-# PY:     Xs = Xall[r]; Ys = Xs + eall[r]
-# PY:     mhats.append(np.sum(Xs**3 * Ys) / np.sum(Xs**4))
-# PY: X = rng.standard_normal(400000); e = rng.standard_normal(400000)
-# PY: avar = np.mean(X**6 * e**2) / (np.mean(X**4))**2
-# PY: print(f"[7.15] var(β̂)·N={np.var(mhats)*N:.3f} ≈ 公式 avar={avar:.3f}")
-
-# delta method: θ=β₁β₂ 的 95% CI 覆盖应≈0.95
-# PY: n, reps = 200, 20000
-# PY: b1, b2, theta = 1.0, 0.5, 0.5
-# PY: cov = 0
-# PY: for r in range(reps):
-# PY:     X = np.c_[rng.standard_normal(n), rng.standard_normal(n), np.ones(n)]
-# PY:     e = rng.standard_normal(n); Y = X @ [b1, b2, 0.0] + e
-# PY:     bh = np.linalg.solve(X.T @ X, X.T @ Y)
-# PY:     V = np.linalg.inv(X.T @ X)
-# PY:     G = np.array([b2, b1, 0.0])
-# PY:     se = np.sqrt(G @ V @ G)
-# PY:     lo, hi = bh[0]*bh[1] - 1.96*se, bh[0]*bh[1] + 1.96*se
-# PY:     cov += (lo <= theta <= hi)
-# PY: print(f"[delta] θ=β₁β₂ 的 95% CI 覆盖={cov/reps:.4f}  (应≈0.95)")
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
-
 
 # 依赖包
 
@@ -713,10 +536,14 @@ pkgs <- c(
   "haven", "readxl", "data.table", "sandwich", "lmtest", "AER",
   "quantreg", "boot", "MASS", "Matrix", "nnet", "ggplot2", "knitr"
 )
-# 章节扩展：Ch14–16 vars/urca；Ch17 plm；Ch19 np；Ch26 mlogit
+# 扩展：vars/urca (Ch14–16), plm (Ch17), np (Ch19), mlogit (Ch26)
 miss <- setdiff(pkgs, rownames(installed.packages()))
-if (length(miss)) install.packages(miss, repos = "https://cloud.r-project.org")
+if (length(miss)) {
+  install.packages(miss, repos = "https://cloud.r-project.org")
+}
 ```
 
 ---
-*第 7 章 · R/Quarto · md + ipynb 融合*
+
+*第 7 章 · R/Quarto · 理论 Markdown + R companion 融合*  
+*重新生成：`python3 scripts/convert_chapters_to_qmd.py`*

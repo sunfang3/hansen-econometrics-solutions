@@ -30,22 +30,30 @@ execute:
 ::: {.callout-note}
 ## 说明
 
-- **理论：** 来自同目录 Markdown 逐步解答。
-- **代码：** Python notebook 已融合为 **R**（`scripts/r_companions/ch21.R` 优先；否则为带注释的翻译草稿）。
-- **数据：** `hansen/econometrics/data/`（gitignore）；渲染前请确保数据已下载。
-- 默认 `execute: eval: false`。有数据时改为 `true` 或交互运行代码块。
-- 缺包时：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot"))` 等。
+- **理论：** 同目录 Markdown 逐步解答全文嵌入。
+- **代码：** R 实现（`scripts/r_companions/ch21.R`）**内联**于下文；数据在 `hansen/econometrics/data/`。
+- 默认 `execute: eval: false`。有数据/包时改为 `true`，或在 R 中 `source()` companion。
+- 装包示例：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot","knitr"))`
 :::
 
 ```{r}
 #| label: setup
-root <- if (dir.exists("../../hansen")) "../.." else if (dir.exists("hansen")) "." else "../.."
+#| include: true
+root <- if (dir.exists("../../hansen")) {
+  "../.."
+} else if (dir.exists("hansen")) {
+  "."
+} else {
+  "../.."
+}
 data_root <- file.path(root, "hansen", "econometrics", "data")
 companion_dir <- file.path(root, "scripts", "r_companions")
 if (file.exists(file.path(companion_dir, "_common.R"))) {
   source(file.path(companion_dir, "_common.R"), local = FALSE)
 }
-knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+if (requireNamespace("knitr", quietly = TRUE)) {
+  knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+}
 options(stringsAsFactors = FALSE)
 ```
 
@@ -339,28 +347,47 @@ Head Start 目标不是降低意外伤害死亡；若 RDD 只抓住 **目标死�
 代码与复现：`docs/ch21/Hansen_Ch21_Exercises_Solutions.ipynb`。
 
 
-# 实证与数值代码（R companion）
+# 实证与数值代码（R）
 
-手写/精译 R 脚本：`scripts/r_companions/ch21.R`。
+以下代码来自 `scripts/r_companions/ch21.R`（与 Python notebook 对应）。
 
 ```{r}
-#| label: companion-main
-source(file.path(root, "scripts", "r_companions", "ch21.R"))
+#| label: companion
+# helpers: see setup chunk (source _common.R)
+## Ch.21 RDD — local linear with triangular kernel (base R)
+## bootstrap common helpers
+local({
+  for (cand in c("../..", "..", ".", "../../..")) {
+    f <- file.path(cand, "scripts/r_companions/_common.R")
+    if (file.exists(f)) { source(f, local = FALSE); break }
+  }
+})
+local_linear_rdd <- function(y, x, c = 0, h, kernel = c("triangular", "rectangular")) {
+  kernel <- match.arg(kernel)
+  u <- (x - c) / h
+  w <- if (kernel == "triangular") pmax(1 - abs(u), 0) else as.numeric(abs(u) <= 1)
+  d <- as.numeric(x >= c)
+  X <- cbind(1, x - c, d, d * (x - c))
+  sw <- sqrt(w)
+  b <- as.numeric(qr.solve(X * sw, y * sw))
+  ## treatment effect = coef on d
+  list(tau = b[3], beta = b, n_eff = sum(w > 0))
+}
+cat("Ch.21 local_linear_rdd() loaded\n")
 ```
 
 
-## Notebook 结构说明
+## Notebook 导读
 
-#### 载入数据
+### 载入数据
 
-#### 21.5 矩形核 (21.4)，h = 13.8, 7, 20
+### 21.5 矩形核 (21.4)，h = 13.8, 7, 20
 
-#### 21.6 基线 LL（标准化三角核），h = 8, 4, 12
+### 21.6 基线 LL（标准化三角核），h = 8, 4, 12
 
 $h=8$ 应接近 Table 21.1 的 $-1.51\ (0.71)$。
 
-#### 21.7–21.9 安慰剂结果变量
-
+### 21.7–21.9 安慰剂结果变量
 
 # 依赖包
 
@@ -371,10 +398,14 @@ pkgs <- c(
   "haven", "readxl", "data.table", "sandwich", "lmtest", "AER",
   "quantreg", "boot", "MASS", "Matrix", "nnet", "ggplot2", "knitr"
 )
-# 章节扩展：Ch14–16 vars/urca；Ch17 plm；Ch19 np；Ch26 mlogit
+# 扩展：vars/urca (Ch14–16), plm (Ch17), np (Ch19), mlogit (Ch26)
 miss <- setdiff(pkgs, rownames(installed.packages()))
-if (length(miss)) install.packages(miss, repos = "https://cloud.r-project.org")
+if (length(miss)) {
+  install.packages(miss, repos = "https://cloud.r-project.org")
+}
 ```
 
 ---
-*第 21 章 · R/Quarto · md + ipynb 融合*
+
+*第 21 章 · R/Quarto · 理论 Markdown + R companion 融合*  
+*重新生成：`python3 scripts/convert_chapters_to_qmd.py`*

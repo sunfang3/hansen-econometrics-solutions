@@ -1,3 +1,11 @@
+## bootstrap
+local({
+  for (cand in c("../..", "..", ".", "../../..")) {
+    f <- file.path(cand, "scripts/r_companions/_common.R")
+    if (file.exists(f)) { source(f, local = FALSE); break }
+  }
+})
+
 ## Ch.23 Nonlinear LS — skeleton (Nerlove / RR / PSS paths)
 ## bootstrap common helpers
 local({

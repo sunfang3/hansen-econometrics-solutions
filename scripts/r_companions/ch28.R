@@ -1,3 +1,11 @@
+## bootstrap
+local({
+  for (cand in c("../..", "..", ".", "../../..")) {
+    f <- file.path(cand, "scripts/r_companions/_common.R")
+    if (file.exists(f)) { source(f, local = FALSE); break }
+  }
+})
+
 ## Chapter 28 — Hispanic women model selection (parallel to §28.18)
 ## Translated from docs/ch28 notebook
 

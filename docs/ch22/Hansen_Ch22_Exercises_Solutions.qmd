@@ -30,22 +30,30 @@ execute:
 ::: {.callout-note}
 ## 说明
 
-- **理论：** 来自同目录 Markdown 逐步解答。
-- **代码：** Python notebook 已融合为 **R**（`scripts/r_companions/ch22.R` 优先；否则为带注释的翻译草稿）。
-- **数据：** `hansen/econometrics/data/`（gitignore）；渲染前请确保数据已下载。
-- 默认 `execute: eval: false`。有数据时改为 `true` 或交互运行代码块。
-- 缺包时：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot"))` 等。
+- **理论：** 同目录 Markdown 逐步解答全文嵌入。
+- **代码：** R 实现（`scripts/r_companions/ch22.R`）**内联**于下文；数据在 `hansen/econometrics/data/`。
+- 默认 `execute: eval: false`。有数据/包时改为 `true`，或在 R 中 `source()` companion。
+- 装包示例：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot","knitr"))`
 :::
 
 ```{r}
 #| label: setup
-root <- if (dir.exists("../../hansen")) "../.." else if (dir.exists("hansen")) "." else "../.."
+#| include: true
+root <- if (dir.exists("../../hansen")) {
+  "../.."
+} else if (dir.exists("hansen")) {
+  "."
+} else {
+  "../.."
+}
 data_root <- file.path(root, "hansen", "econometrics", "data")
 companion_dir <- file.path(root, "scripts", "r_companions")
 if (file.exists(file.path(companion_dir, "_common.R"))) {
   source(file.path(companion_dir, "_common.R"), local = FALSE)
 }
-knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+if (requireNamespace("knitr", quietly = TRUE)) {
+  knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+}
 options(stringsAsFactors = FALSE)
 ```
 
@@ -229,55 +237,33 @@ $$\boxed{\ V=\frac{E[\sin^2(e)]}{(E[\cos(e)])^2}\,(E[XX'])^{-1}=\frac{1-E[\cos^2
 | 22.3 | 四次方损失 vs OLS 效率比较（MC 验证 $V/V_{\mathrm{OLS}}=5/3$）code cell |
 
 
-# 实证与数值代码（来自 notebook，R 版）
+# 实证与数值代码（R）
+
+以下代码来自 `scripts/r_companions/ch22.R`（与 Python notebook 对应）。
+
+```{r}
+#| label: companion
+# helpers: see setup chunk (source _common.R)
+## Ch.22 M-estimator — LAD via quantreg or optim
+set.seed(22)
+n <- 300L
+X <- cbind(1, rnorm(n))
+y <- as.numeric(X %*% c(1, 2) + rt(n, df=3))
+if (requireNamespace("quantreg", quietly=TRUE)) {
+  print(coef(quantreg::rq(y ~ X[,2], tau=0.5)))
+} else {
+  # crude LAD via optim
+  lad <- function(b) sum(abs(y - X %*% b))
+  print(optim(c(0,0), lad)$par)
+}
+```
+
+
+## Notebook 导读
 
 ### 理论结论的蒙特卡洛验证（无需外部数据）
 
 验证 Ex 22.3：正态误差下四次方损失 $g(u)=u^4/4$ 估计量的方差约为 OLS 的 $5/3$ 倍（因为 OLS 是正态 MLE，最优）。
-
-```{r}
-#| label: nb-cell-01
-# 原 Python notebook 代码（保留备查）→ R 对照草稿
-# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
-
-# import numpy as np
-# from scipy.optimize import minimize_scalar
-# PY: rng = np.random.default_rng(22)
-
-# 设定: Y = beta*X + e, e ~ N(0, sigma^2), X ~ N(0,1)
-# 四次方损失 g(u)=u^4/4: minimize sum (Y-X*theta)^4 / 4
-# 一阶条件: sum (Y_i - X_i*theta)^3 * X_i = 0 (凸问题, 唯一解)
-
-# PY: n = 500; reps = 2000; beta_true = 1.0; sigma = 1.0
-# PY: ols_est, quartic_est = [], []
-# PY: for r in range(reps):
-# PY:     X = rng.standard_normal(n)
-# PY:     e = rng.standard_normal(n) * sigma
-# PY:     Y = beta_true * X + e
-    # OLS: minimize sum (Y-X*theta)^2
-# PY:     b_ols = np.sum(X * Y) / np.sum(X ** 2)
-# PY:     ols_est.append(b_ols)
-    # 四次方损失: minimize sum (Y-X*theta)^4 / 4 (凸, 用有界优化)
-# PY:     res = minimize_scalar(lambda th: np.sum((Y - X * th) ** 4),
-# PY:                           bounds=(b_ols - 2, b_ols + 2), method='bounded')
-# PY:     quartic_est.append(res.x)
-
-# PY: ols_est = np.array(ols_est)
-# PY: quartic_est = np.array(quartic_est)
-# PY: ratio = np.var(quartic_est) / np.var(ols_est)
-# PY: print(f"[Ex 22.3] 正态误差下四次方损失 vs OLS:")
-# PY: print(f"  OLS 方差     = {np.var(ols_est):.6f}")
-# PY: print(f"  四次方方差   = {np.var(quartic_est):.6f}")
-# PY: print(f"  方差比       = {ratio:.4f} (理论 5/3 = {5/3:.4f})")
-# PY: print(f"  ⇒ 四次方损失比 OLS 效率低约 {ratio:.2f} 倍 (OLS 是正态 MLE, 最优)")
-
-# --- R 惯用写法提示 ---
-# read_dta: haven::read_dta(file.path(data_root, ...))
-# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
-# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
-# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
-```
-
 
 # 依赖包
 
@@ -288,10 +274,14 @@ pkgs <- c(
   "haven", "readxl", "data.table", "sandwich", "lmtest", "AER",
   "quantreg", "boot", "MASS", "Matrix", "nnet", "ggplot2", "knitr"
 )
-# 章节扩展：Ch14–16 vars/urca；Ch17 plm；Ch19 np；Ch26 mlogit
+# 扩展：vars/urca (Ch14–16), plm (Ch17), np (Ch19), mlogit (Ch26)
 miss <- setdiff(pkgs, rownames(installed.packages()))
-if (length(miss)) install.packages(miss, repos = "https://cloud.r-project.org")
+if (length(miss)) {
+  install.packages(miss, repos = "https://cloud.r-project.org")
+}
 ```
 
 ---
-*第 22 章 · R/Quarto · md + ipynb 融合*
+
+*第 22 章 · R/Quarto · 理论 Markdown + R companion 融合*  
+*重新生成：`python3 scripts/convert_chapters_to_qmd.py`*

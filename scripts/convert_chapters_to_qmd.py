@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """
-Fuse each chapter's Markdown solutions + notebook into Quarto (.qmd) with R.
+Fuse each chapter's Markdown solutions + R companion (+ notebook narrative)
+into a single Quarto .qmd with knitr / MathJax.
 
-Priority for code:
-1. scripts/r_companions/chXX.R if present (hand-translated R)
-2. Else: notebook markdown + R chunks with original Python preserved as comments
-   and a structural R draft (execute: false by default)
+Every chapter gets:
+  1. YAML (R/knitr, MathJax, toc)
+  2. Full theory from Hansen_ChXX_Exercises_Solutions.md
+  3. Inlined R code from scripts/r_companions/chXX.R (or auto draft)
+  4. Optional notebook markdown section headers
 """
 
 from __future__ import annotations
@@ -90,24 +92,11 @@ def yaml_header(ch: int, title: str) -> str:
         ::: {{.callout-note}}
         ## 说明
 
-        - **理论：** 来自同目录 Markdown 逐步解答。
-        - **代码：** Python notebook 已融合为 **R**（`scripts/r_companions/ch{ch:02d}.R` 优先；否则为带注释的翻译草稿）。
-        - **数据：** `hansen/econometrics/data/`（gitignore）；渲染前请确保数据已下载。
-        - 默认 `execute: eval: false`。有数据时改为 `true` 或交互运行代码块。
-        - 缺包时：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot"))` 等。
+        - **理论：** 同目录 Markdown 逐步解答全文嵌入。
+        - **代码：** R 实现（`scripts/r_companions/ch{ch:02d}.R`）**内联**于下文；数据在 `hansen/econometrics/data/`。
+        - 默认 `execute: eval: false`。有数据/包时改为 `true`，或在 R 中 `source()` companion。
+        - 装包示例：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot","knitr"))`
         :::
-
-        ```{{r}}
-        #| label: setup
-        root <- if (dir.exists("../../hansen")) "../.." else if (dir.exists("hansen")) "." else "../.."
-        data_root <- file.path(root, "hansen", "econometrics", "data")
-        companion_dir <- file.path(root, "scripts", "r_companions")
-        if (file.exists(file.path(companion_dir, "_common.R"))) {{
-          source(file.path(companion_dir, "_common.R"), local = FALSE)
-        }}
-        knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
-        options(stringsAsFactors = FALSE)
-        ```
 
         """
     )
@@ -143,56 +132,52 @@ def demote_headings(text: str, by: int = 1) -> str:
     return "".join(out)
 
 
-def py_as_r_comment_block(src: str) -> str:
-    """Keep original Python as comments + light R idioms for readability."""
-    lines = [
-        "# 原 Python notebook 代码（保留备查）→ R 对照草稿",
-        "# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R",
-        "",
-    ]
-    for line in src.splitlines():
-        if re.match(r"^\s*(import|from)\s+", line):
-            lines.append(f"# {line}")
-            continue
-        # light substitutions for readability
-        t = line
-        t = t.replace("True", "TRUE").replace("False", "FALSE").replace("None", "NULL")
-        t = t.replace("np.", "").replace("pd.", "")
-        if line.strip().startswith("#"):
-            lines.append(t)
-        else:
-            lines.append("# PY: " + line if line.strip() else "")
-    lines.append("")
-    lines.append("# --- R 惯用写法提示 ---")
-    lines.append("# read_dta: haven::read_dta(file.path(data_root, ...))")
-    lines.append("# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients")
-    lines.append("# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')")
-    lines.append("# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))")
-    return "\n".join(lines)
+def load_companion_r(ch: int) -> str:
+    p = R_COMP / f"ch{ch:02d}.R"
+    if not p.is_file():
+        return (
+            f"# (no companion scripts/r_companions/ch{ch:02d}.R yet)\n"
+            f"message('Chapter {ch}: theory-only or pending R port')\n"
+        )
+    text = p.read_text(encoding="utf-8")
+    # Drop recursive source of _common — qmd setup sources it once
+    text = re.sub(
+        r"^## bootstrap\nlocal\(\{[\s\S]*?\}\)\n*",
+        "# helpers: see setup chunk (source _common.R)\n",
+        text,
+        count=1,
+    )
+    text = re.sub(
+        r"^source\(file\.path\([^\n]+_common\.R[^\n]+\)\s*\n",
+        "# helpers: see setup chunk\n",
+        text,
+        count=1,
+        flags=re.M,
+    )
+    return text.rstrip() + "\n"
 
 
-def notebook_sections(nb_path: Path) -> str:
+def notebook_md_excerpt(nb_path: Path, max_cells: int = 8) -> str:
     nb = json.loads(nb_path.read_text(encoding="utf-8"))
-    parts = [
-        "\n\n# 实证与数值代码（来自 notebook，R 版）\n\n",
-    ]
-    code_i = 0
+    parts: list[str] = []
+    n = 0
     for cell in nb.get("cells", []):
-        src = "".join(cell.get("source", []))
-        if not src.strip():
+        if cell.get("cell_type") != "markdown":
             continue
-        if cell.get("cell_type") == "markdown":
-            # skip redundant title pointing only to md
-            if re.search(r"理论.*见同目录", src) and len(src) < 800:
-                continue
-            parts.append(demote_headings(src, 1).rstrip() + "\n\n")
-        elif cell.get("cell_type") == "code":
-            code_i += 1
-            r_body = py_as_r_comment_block(src)
-            parts.append(
-                f"```{{r}}\n#| label: nb-cell-{code_i:02d}\n{r_body}\n```\n\n"
-            )
-    return "".join(parts)
+        src = "".join(cell.get("source", [])).strip()
+        if not src or len(src) > 1500:
+            continue
+        if re.search(r"理论.*见同目录|Hansen_Ch\d+_Exercises_Solutions\.md", src):
+            continue
+        if src.startswith("# Hansen") and n == 0:
+            continue
+        parts.append(demote_headings(src, 1).rstrip())
+        n += 1
+        if n >= max_cells:
+            break
+    if not parts:
+        return ""
+    return "\n\n## Notebook 导读\n\n" + "\n\n".join(parts) + "\n"
 
 
 def packages_footer(ch: int) -> str:
@@ -208,13 +193,17 @@ def packages_footer(ch: int) -> str:
           "haven", "readxl", "data.table", "sandwich", "lmtest", "AER",
           "quantreg", "boot", "MASS", "Matrix", "nnet", "ggplot2", "knitr"
         )
-        # 章节扩展：Ch14–16 vars/urca；Ch17 plm；Ch19 np；Ch26 mlogit
+        # 扩展：vars/urca (Ch14–16), plm (Ch17), np (Ch19), mlogit (Ch26)
         miss <- setdiff(pkgs, rownames(installed.packages()))
-        if (length(miss)) install.packages(miss, repos = "https://cloud.r-project.org")
+        if (length(miss)) {{
+          install.packages(miss, repos = "https://cloud.r-project.org")
+        }}
         ```
 
         ---
-        *第 {ch} 章 · R/Quarto · md + ipynb 融合*
+
+        *第 {ch} 章 · R/Quarto · 理论 Markdown + R companion 融合*  
+        *重新生成：`python3 scripts/convert_chapters_to_qmd.py`*
         """
     )
 
@@ -227,55 +216,69 @@ def convert_one(ch: int) -> Path | None:
 
     title = TITLES.get(ch, "")
     theory = strip_first_h1(md_path.read_text(encoding="utf-8"))
-
-    body = yaml_header(ch, title)
-    body += "# 理论解答\n\n"
-    body += theory.rstrip() + "\n"
-
-    companion = R_COMP / f"ch{ch:02d}.R"
+    r_code = load_companion_r(ch)
     nb_path = find_ipynb(ch)
 
-    if companion.is_file():
-        rel = companion.relative_to(ROOT).as_posix()
-        body += "\n\n# 实证与数值代码（R companion）\n\n"
-        body += f"手写/精译 R 脚本：`{rel}`。\n\n"
-        body += "```{r}\n#| label: companion-main\n"
-        body += f'source(file.path(root, "scripts", "r_companions", "ch{ch:02d}.R"))\n'
-        body += "```\n"
-        # Also include notebook markdown narrative if useful
-        if nb_path:
-            nb = json.loads(nb_path.read_text(encoding="utf-8"))
-            md_cells = [
-                "".join(c.get("source", []))
-                for c in nb.get("cells", [])
-                if c.get("cell_type") == "markdown"
-            ]
-            if len(md_cells) > 1:
-                body += "\n\n## Notebook 结构说明\n\n"
-                for m in md_cells[1:6]:  # a few section intros
-                    if len(m) < 1200:
-                        body += demote_headings(m, 2).rstrip() + "\n\n"
-    elif nb_path:
-        body += notebook_sections(nb_path)
-    else:
-        body += "\n\n::: {.callout-tip}\n本章以理论为主；无独立 notebook 或 companion。\n:::\n"
+    body = yaml_header(ch, title)
+    body += textwrap.dedent(
+        f"""\
+        ```{{r}}
+        #| label: setup
+        #| include: true
+        root <- if (dir.exists("../../hansen")) {{
+          "../.."
+        }} else if (dir.exists("hansen")) {{
+          "."
+        }} else {{
+          "../.."
+        }}
+        data_root <- file.path(root, "hansen", "econometrics", "data")
+        companion_dir <- file.path(root, "scripts", "r_companions")
+        if (file.exists(file.path(companion_dir, "_common.R"))) {{
+          source(file.path(companion_dir, "_common.R"), local = FALSE)
+        }}
+        if (requireNamespace("knitr", quietly = TRUE)) {{
+          knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+        }}
+        options(stringsAsFactors = FALSE)
+        ```
+
+        # 理论解答
+
+        """
+    )
+    body += theory.rstrip() + "\n"
+    body += "\n\n# 实证与数值代码（R）\n\n"
+    body += f"以下代码来自 `scripts/r_companions/ch{ch:02d}.R`（与 Python notebook 对应）。\n\n"
+    body += "```{r}\n#| label: companion\n"
+    body += r_code
+    if not r_code.endswith("\n"):
+        body += "\n"
+    body += "```\n"
+
+    if nb_path:
+        body += notebook_md_excerpt(nb_path)
 
     body += packages_footer(ch)
 
     out = DOCS / f"ch{ch:02d}" / f"Hansen_Ch{ch:02d}_Exercises_Solutions.qmd"
-    # For ch29, existing qmd is python-oriented; overwrite with R-style fusion
     out.write_text(body, encoding="utf-8")
-    print(f"wrote {out.relative_to(ROOT)} ({out.stat().st_size // 1024} KB)"
-          f"  companion={'yes' if companion.is_file() else 'no'}"
-          f"  nb={'yes' if nb_path else 'no'}")
+    print(f"wrote {out.relative_to(ROOT)} ({out.stat().st_size // 1024} KB)")
     return out
 
 
 def main() -> None:
-    R_COMP.mkdir(parents=True, exist_ok=True)
-    written = [convert_one(ch) for ch in CHAPTERS]
-    written = [p for p in written if p]
-    print(f"Done: {len(written)} qmd files on branch toolset")
+    written = []
+    for ch in CHAPTERS:
+        p = convert_one(ch)
+        if p:
+            written.append(p)
+    print(f"Done: {len(written)} qmd files")
+    missing = [f"ch{ch:02d}" for ch in CHAPTERS if not (R_COMP / f"ch{ch:02d}.R").is_file()]
+    if missing:
+        print("Missing companions:", missing)
+    else:
+        print("All chapters have R companions.")
 
 
 if __name__ == "__main__":
