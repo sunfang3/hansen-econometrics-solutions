@@ -17,6 +17,7 @@ Bruce E. Hansen《Econometrics》习题解答（按 Hansen 体系完整解题）
 | **Ch.11** | **Multivariate Regression**（**11.1–11.15 全文**） | **350–351** | **`.md` / `.ipynb`** |
 | **Ch.12** | **Instrumental Variables**（**12.1–12.28 全文**） | **425–431** | **`.md` / `.ipynb`** |
 | **Ch.13** | **Generalized Method of Moments**（**13.1–13.28 全文**） | **455–460** | **`.md` / `.ipynb`** |
+| **Ch.14** | **Time Series**（**14.1–14.22 全文**） | **525–528** | **`.md` / `.ipynb`** |
 | Ch.29 | Machine Learning | 943 等 | `.md` / `.qmd` / `.html` |
 
 解答位于 `docs/chXX/`。
@@ -27,7 +28,7 @@ Bruce E. Hansen《Econometrics》习题解答（按 Hansen 体系完整解题）
 
 - https://users.ssc.wisc.edu/~bhansen/econometrics/
 
-常用子集：`cps09mar`、`Invest1993`、`Nerlove1963`、`MRW1992`、`DDK2011`、`AJR2001`、`Card1995`、`AK1991`。
+常用子集：`cps09mar`、`Invest1993`、`Nerlove1963`、`MRW1992`、`DDK2011`、`AJR2001`、`Card1995`、`AK1991`、`FRED-QD`、`FRED-MD`。
 
 Notebook 中数据路径指向本地 `hansen/econometrics/data/...`（该目录被 `.gitignore` 忽略，需自行下载）。
 
