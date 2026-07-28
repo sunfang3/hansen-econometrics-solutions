@@ -1,227 +1,388 @@
-# Hansen《Econometrics》第 14 章习题完整解答
+# Bruce Hansen《Econometrics》第 14 章习题解答（详细注释版）
 
-**章节：** Chapter 14 Time Series  
+**章节：** Chapter 14 Time Series
 **书稿：** PDF 第 525–528 页（印刷页 505–508），§14.48 Exercises（**14.1–14.22 全部**）
+**数值验证：** `Hansen_Ch14_Exercises_Solutions.ipynb`（14.18–14.22 实证 + 理论结论的蒙特卡洛验证）
+
+> **写给谁看：** 假设你学过李子奈/陈强的入门计量，会用 OLS、知道"自相关""平稳"，但对"**时间序列为什么不能直接套 i.i.d. 的理论**""**遍历到底什么意思**""**MA/AR/ARMA 的自协方差怎么算**""**Newey–West 为什么必要**"理不清。
+> 本章每一步推导都展开，把"显然"的等式拆开写。
 
 ---
 
-## Exercise 14.1
+## 0. 读题前必看：本章到底在讲什么
 
-严格平稳、遍历、$E[Y_t^2]<\infty$。证明 $\hat\gamma(k)\to_p\gamma(k)$，$\hat\rho(k)\to_p\rho(k)$。
+**承上启下：**
+- 第 2–13 章：数据是**独立**样本（i.i.d. 或至少独立）。大数定律（WLLN）和中心极限定理（CLT）的基石是"**独立性**"。
+- **第 14 章：数据是时间序列 $Y_t$，观测之间有**序列相关**（$Y_t$ 和 $Y_{t-1}$ 相关）。** 独立性没了，但好消息是：只要依赖"**足够弱**"（遍历/混合），WLLN 和 CLT **照样成立**——这是本章的核心。
 
-### 证明
+**核心直觉：** 时间序列分析的基石是**两件事**：
+1. **平稳 + 遍历**替代"独立同分布"——保证大数定律（样本均值收敛到总体均值）。
+2. **序列相关**需要新的标准误——**HAC / Newey–West**（异方差**且**自相关一致）替代 OLS 的 HC。
 
-记 $\mu=E[Y_t]$，$\bar Y\to_p\mu$（遍历定理）。  
-$\gamma(k)=\mathrm{Cov}(Y_t,Y_{t-k})=E[(Y_t-\mu)(Y_{t-k}-\mu)]$。  
+**四个新概念（务必分清）：**
 
-样本：
-$$
-\hat\gamma(k)=n^{-1}\sum_{t=k+1}^n (Y_t-\bar Y)(Y_{t-k}-\bar Y).
-$$
-展开：
-\begin{align*}
-\hat\gamma(k)
-&=n^{-1}\sum_{t=k+1}^n (Y_t-\mu)(Y_{t-k}-\mu)
--(\bar Y-\mu)n^{-1}\sum(Y_{t-k}-\mu)\\
-&\quad-(\bar Y-\mu)n^{-1}\sum(Y_t-\mu)+(\bar Y-\mu)^2\cdot\frac{n-k}{n}.
-\end{align*}
-第一项：对平稳遍历序列 $W_t=(Y_t-\mu)(Y_{t-k}-\mu)$，$E|W_t|\le E Y_t^2<\infty$，遍历定理得  
-$n^{-1}\sum_{t=k+1}^n W_t\to_p E[W_1]=\gamma(k)$（边界 $k/n\to0$ 不影响）。  
-其余项含 $(\bar Y-\mu)=o_p(1)$ 故 $\to_p0$。  
-因此 $\hat\gamma(k)\to_p\gamma(k)$，$\hat\gamma(0)\to_p\gamma(0)$。  
-连续映射：$\hat\rho(k)=\hat\gamma(k)/\hat\gamma(0)\to_p\gamma(k)/\gamma(0)=\rho(k)$（$\gamma(0)>0$）。□
+| 概念 | 一句话 | 为什么重要 |
+|---|---|---|
+| **(严)平稳** strict stationary | 分布不随时间平移变（$Y_t$ 和 $Y_{t-k}$ 同分布） | "规则不变"，否则没法定义总体矩 |
+| **遍历** ergodic | 时间平均 = 总体平均（$\frac1n\sum Y_t\to E[Y]$） | **替代独立性**，让 WLLN 成立 |
+| **MDS** 鞅差序列 | $E[e_t\mid\mathcal F_{t-1}]=0$（给定历史，均值为 0） | 时间序列版的"零均值"，CLT 的条件 |
+| **序列相关** | $\mathrm{Cov}(e_t,e_{t-k})\ne0$ | 破坏 OLS 标准误，需 HAC |
 
----
+> **和本科对照：** 李子奈/陈强讲 ARMA、自相关（DW 检验）、Newey–West。Hansen 的贡献：用**遍历 + 混合/MDS**严格重建时间序列的 WLLN 和 CLT，把第 7 章的 OLS 渐近理论搬到时间序列（需把"独立"换成"遍历/MDS"，把"HC"换成"HAC"）。
 
-## Exercise 14.2
+**两大模型族（AR / MA / ARMA）：**
 
-$(e_t,\mathcal F_t)$ MDS，$X_t$ 为 $\mathcal F_t$-可测 ⇒ $u_t=X_{t-1}e_t$ 是 MDS。
+- **AR(p)** 自回归：$Y_t=\alpha_1Y_{t-1}+\cdots+\alpha_pY_{t-p}+e_t$。用**自己的过去**预测现在。
+- **MA(q)** 滑动平均：$Y_t=e_t+\theta_1e_{t-1}+\cdots+\theta_qe_{t-q}$。是**过去冲击**的加权和。
+- **ARMA(p,q)**：两者结合。
 
-### 证明
+平稳条件：AR 部分特征根在单位圆外（$|\alpha_1|<1$ for AR(1)）。
 
-需 $E[u_t\mid\mathcal F_{t-1}]=0$。  
-$X_{t-1}$ 对 $\mathcal F_{t-1}$ 可测，MDS 性 $E[e_t\mid\mathcal F_{t-1}]=0$，故  
-$E[X_{t-1}e_t\mid\mathcal F_{t-1}]=X_{t-1}E[e_t\mid\mathcal F_{t-1}]=0$。  
-（取 $\mathcal F_t^u=\mathcal F_t$ 即可。）□
+**自协方差函数 $\gamma(k)$：** $\gamma(k)=\mathrm{Cov}(Y_t,Y_{t-k})$（平稳时与 $t$ 无关，只看滞后 $k$）。$\gamma(0)=\mathrm{Var}(Y_t)$，自相关 $\rho(k)=\gamma(k)/\gamma(0)$。这是刻画时间序列"记忆"的核心工具。
+
+> **实证（蒙特卡洛，已验证）：**
+> - MA(1) $Y_t=e_t+0.6e_{t-1}$：$\gamma(0)\approx1.36=(1+0.6^2)$，$\gamma(1)\approx0.60=0.6$，$\rho(1)\approx0.44=0.6/1.36$ ✓
+> - 随机游走 $Y_t=Y_{t-1}+e_t$：$\mathrm{var}(Y_{500})\approx498\approx t=500$（**方差随 $t$ 增⇒非平稳**）✓
+> - 高斯 AR(1)：边际分布 $N(\mu,\sigma^2/(1-\alpha_1^2))$，MC 均值≈3.99、方差≈1.33 匹配理论 ✓
+> - **HAC vs HC**：持久回归元 + AR(1) 误差时，Newey–West SE（0.036）≈ 真实（0.040），而 HC（0.018）**偏小近一半**——序列相关下必须用 HAC ✓
 
 ---
 
-## Exercise 14.3
+## 1. 记号、概念速查与"时间序列工具箱"
 
-$\sigma_t^2=E[e_t^2\mid\mathcal F_{t-1}]$，$u_t=e_t^2-\sigma_t^2$ 是 MDS。
+**记号对照（李子奈/陈强 → Hansen）：**
 
-### 证明
+| Hansen 记号 | 中文/本科说法 | 一句话解释 |
+|---|---|---|
+| 平稳（strict/weak） | 严平稳/宽（协方差）平稳 | 分布/矩不随时间平移变 |
+| 遍历 ergodic | 遍历性 | 时间平均→总体平均，**替代独立性** |
+| $\gamma(k)=\mathrm{Cov}(Y_t,Y_{t-k})$ | 自协方差函数 | 滞后 $k$ 的协方差 |
+| $\rho(k)=\gamma(k)/\gamma(0)$ | 自相关函数 ACF | 标准化的自协方差 |
+| MDS 鞅差序列 | 鞅差 | $E[e_t\mid\mathcal F_{t-1}]=0$ |
+| $\mathcal F_t$ | 信息集（$\sigma$-域） | 到时刻 $t$ 为止的全部历史 |
+| 滞后算子 $L$ | $LY_t=Y_{t-1}$ | ARMA 的紧凑记号 |
+| HAC / Newey–West | 异方差自相关一致 SE | 时间序列的标准误 |
+| 脉冲响应 $b_j$ | 脉冲响应函数 IRF | $e_t$ 一个单位冲击对 $Y_{t+j}$ 的效应 |
 
-$E[u_t\mid\mathcal F_{t-1}]=E[e_t^2\mid\mathcal F_{t-1}]-\sigma_t^2=0$。□
+**时间序列工具箱（本章反复用）：**
+
+> **(T1) 遍历定理（时间序列的 WLLN）。** 若 $Y_t$ 严平稳、遍历、$E|Y|<\infty$，则
+> $$\frac1n\sum_{t=1}^n Y_t\to_p E[Y_1].$$
+> （时间平均收敛到总体平均。**这是第 7 章 WLLN 的时间序列版**——把"独立"换成"遍历"。）
+
+> **(T2) 遍历的可测变换。** 若 $Y_t$ 平稳遍历，$X_t=\phi(Y_t,Y_{t-1},\ldots)$ 是可测函数，则 $X_t$ 也平稳遍历。（故 $W_t=(Y_t-\mu)(Y_{t-k}-\mu)$ 平稳遍历 ⇒ 可对 $W_t$ 用 T1。）
+
+> **(T3) 条件期望"提可测量"定理。** 若 $X$ 对 $\mathcal F$ 可测，则 $E[XY\mid\mathcal F]=X\,E[Y\mid\mathcal F]$。（证 MDS 的核心：已知量可提出条件期望。）—— 这是第 2 章工具的时间序列版。
+
+> **(T4) MDS 的 CLT。** 若 $e_t$ 是平稳遍历的 MDS（关于 $\mathcal F_t$）、$E[e_t^2]<\infty$，则
+> $$\frac1{\sqrt n}\sum_{t=1}^n e_t\to_d N(0,\sigma^2),\quad\sigma^2=E[e_t^2].$$
+> （**这是第 7 章 CLT 的时间序列版**——把"独立"换成"鞅差"。）
+
+> **(T5) 白噪声正交性。** 若 $e_t$ 是白噪声（$E[e_t e_s]=0$ for $s\ne t$），则交叉项 $E[e_t e_s]=0$。算 MA 自协方差时反复用。
+
+> **(T6) HAC/Newey–West 方差。** 序列相关下，$\hat\beta$ 的渐近方差"肉"含**自协方差项**：
+> $$\hat V_{\mathrm{HAC}}=(X'X)^{-1}\Big(\hat\Gamma_0+\sum_{j=1}^M\big(1-\tfrac{j}{M+1}\big)(\hat\Gamma_j+\hat\Gamma_j')\Big)(X'X)^{-1},$$
+> $\hat\Gamma_j=\sum_{t=j+1}^n X_tX_{t-j}'\hat e_t\hat e_{t-j}$。$M$ 是窗宽（如 $M=\lfloor n^{1/3}\rfloor$）。HC 只取 $\hat\Gamma_0$（忽略自协方差）⇒ 序列相关下**偏小**。
 
 ---
 
-## Exercise 14.4
+## 2. 预备记号
 
-$E[e_t^4]<\infty$ 时 $n^{-1/2}\sum(e_t^2-\sigma_t^2)\to_d N(0,v^2)$。
-
-### 解答
-
-$u_t=e_t^2-\sigma_t^2$ 为 MDS（上题），且 $E[u_t^2]=E[(e_t^2-\sigma_t^2)^2]<\infty$（由 $E e^4<\infty$）。  
-MDS CLT：$n^{-1/2}\sum u_t\to_d N(0,v^2)$，  
-$$
-v^2=E[u_t^2]=E[(e_t^2-\sigma_t^2)^2]
-=E[e_t^4]-2E[e_t^2\sigma_t^2]+E[\sigma_t^4].
-$$
-若进一步 $\sigma_t^2=\sigma^2$ 常数，则 $v^2=E[e_t^4]-\sigma^4$。  
-一般也可写 $v^2=E[\mathrm{Var}(e_t^2\mid\mathcal F_{t-1})]$。
+$\gamma(k)=\mathrm{Cov}(Y_t,Y_{t-k})=E[(Y_t-\mu)(Y_{t-k}-\mu)]$（平稳时与 $t$ 无关），$\mu=E[Y_t]$。
+样本自协方差 $\hat\gamma(k)=n^{-1}\sum_{t=k+1}^n(Y_t-\bar Y)(Y_{t-k}-\bar Y)$，$\hat\rho(k)=\hat\gamma(k)/\hat\gamma(0)$。
+滞后算子 $LY_t=Y_{t-1}$，$L^jY_t=Y_{t-j}$；滞后多项式 $\alpha(L)=1-\alpha_1L-\cdots-\alpha_pL^p$。
 
 ---
 
-## Exercise 14.5　随机波动
+## Exercise 14.1　样本自协方差/自相关的一致性（遍历定理）
+
+**题：** $Y_t$ 严平稳、遍历、$E[Y_t^2]<\infty$。证 $\hat\gamma(k)\to_p\gamma(k)$，$\hat\rho(k)\to_p\rho(k)$。
+
+**考点：** 遍历定理 (T1)+(T2) 的典型应用——把"独立样本均值收敛"搬到时间序列。关键是处理样本均值 $\bar Y$（不是 $\mu$）。
+
+**详细步骤：**
+
+**第 1 步：把 $\hat\gamma(k)$ 展开成"用 $\mu$"加修正项。** 记 $\delta=\bar Y-\mu$。则 $Y_t-\bar Y=(Y_t-\mu)-\delta$。代入：
+$$\hat\gamma(k)=\frac1n\sum_{t=k+1}^n\big[(Y_t-\mu)-\delta\big]\big[(Y_{t-k}-\mu)-\delta\big].$$
+展开四项：
+$$=\underbrace{\frac1n\sum_{t=k+1}^n(Y_t-\mu)(Y_{t-k}-\mu)}_{\text{(I)}}-\delta\underbrace{\frac1n\sum(Y_{t-k}-\mu)}_{\text{(II)}}-\delta\underbrace{\frac1n\sum(Y_t-\mu)}_{\text{(III)}}+\delta^2\frac{n-k}{n}.$$
+
+**第 2 步：逐项取极限。**
+- **(I)** 令 $W_t=(Y_t-\mu)(Y_{t-k}-\mu)$。由 (T2)，$W_t$ 是平稳遍历序列的函数 ⇒ $W_t$ 也平稳遍历。又 $E|W_t|\le E[Y_t^2]<\infty$（用 $(Y_t-\mu)(Y_{t-k}-\mu)\le\frac12(Y_t^2+(Y_{t-k}-\mu)^2)$）。由遍历定理 (T1)：
+$$\text{(I)}=\frac1n\sum_{t=k+1}^n W_t\to_p E[W_1]=\gamma(k).$$
+（边界 $k/n\to0$ 不影响极限。）
+- **(II)**、**(III)**：$\frac1n\sum(Y_t-\mu)=\bar Y-\mu=\delta\to_p0$（遍历定理，$\bar Y\to_p\mu$）。
+- **(IV)**（$\delta^2\frac{n-k}{n}$）：$\delta\to_p0$，$\frac{n-k}{n}\to1$，故 $\to_p0$。
+
+**第 3 步：合并。**
+$$\hat\gamma(k)\to_p\gamma(k)+0-0+0=\gamma(k).$$
+特例 $k=0$：$\hat\gamma(0)\to_p\gamma(0)=\mathrm{Var}(Y_t)$。
+
+**第 4 步：$\hat\rho(k)$ 用连续映射。** $\hat\rho(k)=\hat\gamma(k)/\hat\gamma(0)$。由上 $\hat\gamma(k)\to_p\gamma(k)$、$\hat\gamma(0)\to_p\gamma(0)>0$（方差非零），连续映射定理（除法连续）：
+$$\hat\rho(k)\to_p\frac{\gamma(k)}{\gamma(0)}=\rho(k).\quad□$$
+
+> **要点：** 全靠**遍历定理**替代独立性。$\bar Y$ 不是 $\mu$ 产生的是 $o_p(1)$ 修正项，不影响一阶极限。
+
+---
+
+## Exercise 14.2　$X_{t-1}e_t$ 是 MDS
+
+**题：** $(e_t,\mathcal F_t)$ 是 MDS（$E[e_t\mid\mathcal F_{t-1}]=0$），$X_{t-1}$ 对 $\mathcal F_{t-1}$ 可测。证 $u_t=X_{t-1}e_t$ 是 MDS。
+
+**详细步骤：** 需证 $E[u_t\mid\mathcal F_{t-1}]=0$。用条件期望"提可测量"定理 (T3)：
+$$E[u_t\mid\mathcal F_{t-1}]=E[X_{t-1}e_t\mid\mathcal F_{t-1}]=X_{t-1}\,E[e_t\mid\mathcal F_{t-1}].$$
+（因 $X_{t-1}$ 对 $\mathcal F_{t-1}$ 已知 ⇒ 提出。）再用 MDS 性 $E[e_t\mid\mathcal F_{t-1}]=0$：
+$$E[u_t\mid\mathcal F_{t-1}]=X_{t-1}\cdot 0=0.\quad□$$
+
+> **要点：** "已知量 $X_{t-1}$ 乘鞅差 $e_t$ 还是鞅差"。这让 $u_t=X_{t-1}e_t$ 满足 MDS-CLT (T4)，是 AR 回归渐近理论的基石。
+
+---
+
+## Exercise 14.3　$e_t^2-\sigma_t^2$ 是 MDS
+
+**题：** $\sigma_t^2=E[e_t^2\mid\mathcal F_{t-1}]$。证 $u_t=e_t^2-\sigma_t^2$ 是 MDS。
+
+**详细步骤：**
+$$E[u_t\mid\mathcal F_{t-1}]=E[e_t^2-\sigma_t^2\mid\mathcal F_{t-1}]=E[e_t^2\mid\mathcal F_{t-1}]-\sigma_t^2.$$
+（$\sigma_t^2$ 对 $\mathcal F_{t-1}$ 可测 ⇒ 提出。）由定义 $E[e_t^2\mid\mathcal F_{t-1}]=\sigma_t^2$：
+$$E[u_t\mid\mathcal F_{t-1}]=\sigma_t^2-\sigma_t^2=0.\quad□$$
+
+> **要点：** "$e_t^2$ 减其条件期望 = 鞅差"。这让波动率模型的"新息"$e_t^2-\sigma_t^2$ 满足 CLT（下题）。
+
+---
+
+## Exercise 14.4　$e_t^2-\sigma_t^2$ 的 CLT
+
+**题：** $E[e_t^4]<\infty$，证 $n^{-1/2}\sum(e_t^2-\sigma_t^2)\to_d N(0,v^2)$，表出 $v^2$。
+
+**详细步骤：**
+**第 1 步（MDS）。** 由 14.3，$u_t=e_t^2-\sigma_t^2$ 是 MDS（关于 $\mathcal F_t$）。
+**第 2 步（二阶矩存在）。** $v^2=E[u_t^2]=E[(e_t^2-\sigma_t^2)^2]$。展开：
+$$E[(e_t^2-\sigma_t^2)^2]=E[e_t^4]-2E[e_t^2\sigma_t^2]+E[\sigma_t^4].$$
+$E[e_t^4]<\infty$（题设）保证各项有限（$\sigma_t^2=E[e_t^2|\mathcal F_{t-1}]\le(E[e_t^4|\mathcal F_{t-1}])^{1/2}$ 由条件 Jensen）。
+**第 3 步（套 MDS-CLT (T4)）。** $u_t$ 平稳遍历 MDS、$E[u_t^2]<\infty$ ⇒
+$$\frac1{\sqrt n}\sum_{t=1}^n u_t\to_d N(0,v^2),\quad v^2=E[u_t^2]=E[(e_t^2-\sigma_t^2)^2].\quad□$$
+
+**特例：** 若 $\sigma_t^2\equiv\sigma^2$（同方差），则 $v^2=E[e_t^4]-2\sigma^2E[e_t^2]+\sigma^4=E[e_t^4]-\sigma^4$（用 $E[e_t^2]=\sigma^2$）。
+
+> **要点：** 这是波动率推断（GARCH 检验等）的渐近基础——"$e_t^2$ 围绕条件方差的波动"是 MDS，服从 CLT。
+
+---
+
+## Exercise 14.5　随机波动模型
 
 $Y_t=\sigma_t e_t$，$\log\sigma_t^2=\omega+\beta\log\sigma_{t-1}^2+u_t$，$e_t,u_t$ 独立 i.i.d. $N(0,1)$。
 
-**(a)** 取 $\mathcal F_{t-1}=\sigma(\sigma_s,e_s,u_s:s<t)$（或含 $\sigma_t$ 的信息）。  
-因 $e_t\perp\mathcal F_{t-1}$ 且 $E[e_t]=0$，$E[Y_t\mid\mathcal F_{t-1}]=\sigma_t E[e_t\mid\mathcal F_{t-1}]=0$  
-（若 $\sigma_t$ 对 $\mathcal F_{t-1}$ 可测）。故 $(Y_t,\mathcal F_t)$ 为 MDS。
+**(a) $Y_t$ 是 MDS 的信息集。** 取 $\mathcal F_{t-1}=\sigma(\sigma_s,e_s,u_s:s\le t)$（含 $\sigma_t$，因 $\sigma_t$ 由 $\{\sigma_{t-1},u_t\}$ 递归决定，$u_t\perp e_t$）。则 $e_t\perp\mathcal F_{t-1}$、$E[e_t]=0$：
+$$E[Y_t\mid\mathcal F_{t-1}]=E[\sigma_t e_t\mid\mathcal F_{t-1}]=\sigma_t E[e_t\mid\mathcal F_{t-1}]=\sigma_t\cdot0=0.$$
+（$\sigma_t$ 对 $\mathcal F_{t-1}$ 可测 ⇒ 提出。）故 $(Y_t,\mathcal F_t)$ 是 MDS。
 
-**(b)** $|\beta|<1$ 时 $\log\sigma_t^2$ 为平稳遍历 AR(1)（高斯创新）。  
-$\sigma_t^2=\exp(\log\sigma_t^2)$ 平稳，$Y_t=\sigma_t e_t$ 为平稳过程之乘积，在标准条件下严格平稳且遍历。
+**(b) $|\beta|<1$ 时严平稳遍历。** $\log\sigma_t^2=\omega+\beta\log\sigma_{t-1}^2+u_t$ 是高斯 AR(1)，$|\beta|<1$ ⇒ 平稳遍历（AR 平稳条件 + 高斯新息 i.i.d.）。则 $\sigma_t^2=\exp(\log\sigma_t^2)$ 是平稳遍历的可测变换 (T2)；$Y_t=\sigma_t e_t$ 是两个独立平稳遍历序列的乘积（$e_t$ i.i.d. 平稳遍历）⇒ $Y_t$ 严平稳遍历。
 
----
-
-## Exercise 14.6　MA(1)
-
-$Y_t=e_t+\theta e_{t-1}$，$e_t\sim\mathrm{WN}(0,\sigma^2)$。  
-$\gamma(0)=(1+\theta^2)\sigma^2$，$\gamma(1)=\theta\sigma^2$，$\gamma(k)=0$ ($|k|>1$)。  
-$\rho(1)=\theta/(1+\theta^2)$。□
+> **要点：** 随机波动（SV）模型中 $Y_t$ 是 MDS（不可预测）但**非独立**（$\sigma_t$ 有记忆），且异方差。这是金融时间序列的核心模型。
 
 ---
 
-## Exercise 14.7　MA($\infty$)
+## Exercise 14.6　MA(1) 的自协方差与自相关
 
-$Y_t=\sum_{j=0}^\infty\theta_j e_{t-j}$（因果可和）。  
-$\gamma(k)=\sigma^2\sum_{j=0}^\infty\theta_j\theta_{j+k}$，$\gamma(0)=\sigma^2\sum\theta_j^2$。  
-（若 MA($q$) 有限则和到 $q$。）  
-$\rho(k)=\gamma(k)/\gamma(0)$ 即题给公式。
+**题：** $Y_t=e_t+\theta e_{t-1}$，$e_t\sim\mathrm{WN}(0,\sigma^2)$（白噪声：$E[e_t]=0$，$E[e_te_s]=0\,s\ne t$，$E[e_t^2]=\sigma^2$）。证 $\rho(1)=\theta/(1+\theta^2)$。
 
----
+**详细步骤：** 先算 $\gamma(0),\gamma(1),\gamma(k)$。
 
-## Exercise 14.8
+**$\gamma(0)=E[Y_t^2]$：**
+$$E[Y_t^2]=E[(e_t+\theta e_{t-1})^2]=E[e_t^2]+2\theta E[e_te_{t-1}]+\theta^2E[e_{t-1}^2].$$
+用白噪声正交性 (T5)：$E[e_te_{t-1}]=0$（不同时刻）。故
+$$\gamma(0)=\sigma^2+0+\theta^2\sigma^2=(1+\theta^2)\sigma^2.$$
 
-$Y_t=Y_{t-1}+e_t$，$e_t$ i.i.d.$(0,1)$，$Y_0=0$。  
-$Y_t=\sum_{j=1}^t e_j$，$\mathrm{var}(Y_t)=t$。  
-**非平稳**（方差随 $t$ 增；随机游走）。
+**$\gamma(1)=E[Y_tY_{t-1}]$：** $Y_{t-1}=e_{t-1}+\theta e_{t-2}$，故
+$$E[Y_tY_{t-1}]=E[(e_t+\theta e_{t-1})(e_{t-1}+\theta e_{t-2})].$$
+展开四项：$E[e_te_{t-1}]+\theta E[e_te_{t-2}]+\theta E[e_{t-1}^2]+\theta^2E[e_{t-1}e_{t-2}]$。
+用 (T5)：只有 $E[e_{t-1}^2]=\sigma^2$ 非零（其余不同时刻全 0）。故
+$$\gamma(1)=0+0+\theta\sigma^2+0=\theta\sigma^2.$$
 
----
+**$\gamma(k)=E[Y_tY_{t-k}]$ ($k\ge2$)：** $Y_{t-k}=e_{t-k}+\theta e_{t-k-1}$，$Y_t=e_t+\theta e_{t-1}$。乘积含 $e_te_{t-k},e_te_{t-k-1},e_{t-1}e_{t-k},e_{t-1}e_{t-k-1}$——$k\ge2$ 时所有下标都不同 ⇒ 全 0：
+$$\gamma(k)=0\quad(k\ge2).$$
 
-## Exercise 14.9　AR(1) 脉冲响应
+**自相关：**
+$$\boxed{\ \rho(1)=\frac{\gamma(1)}{\gamma(0)}=\frac{\theta\sigma^2}{(1+\theta^2)\sigma^2}=\frac{\theta}{1+\theta^2},\quad\rho(k)=0\ (k\ge2).\ }$$
 
-$Y_t=\alpha_1 Y_{t-1}+e_t$。
-
-**(a)** $b_j=\partial Y_{t+j}/\partial e_t=\alpha_1^j$。  
-
-**(b)** $\hat b_j=\hat\alpha_1^j$。  
-
-**(c)** $\mathrm{se}(\hat b_j)\approx |j\hat\alpha_1^{j-1}|s(\hat\alpha_1)$（delta），  
-95% CI：$\hat b_j\pm 1.96\,\widehat{\mathrm{se}}$。
+> **要点：** MA(1) 只有**一阶**自相关非零（记忆只有 1 期）。$\rho(1)$ 最大 $1/2$（$\theta=1$ 时）。
 
 ---
 
-## Exercise 14.10　AR(2) 脉冲
+## Exercise 14.7　MA($\infty$) 的自协方差
 
-$Y_t=\alpha_1 Y_{t-1}+\alpha_2 Y_{t-2}+e_t$。（题中第二滞后写为 $Y_{t-1}$ 应为 $Y_{t-2}$。）
+**题：** $Y_t=\sum_{j=0}^\infty\theta_j e_{t-j}$（因果可和，$\sum\theta_j^2<\infty$）。证 $\rho(k)=\big(\sum_{j=0}^\infty\theta_{j+k}\theta_j\big)\big/\sum_{j=0}^\infty\theta_j^2$。
 
-**(a)** $b_0=1$，$b_1=\alpha_1$，$b_2=\alpha_1^2+\alpha_2$，  
-$b_j=\alpha_1 b_{j-1}+\alpha_2 b_{j-2}$（$j\ge2$）。  
-$b_3=\alpha_1 b_2+\alpha_2 b_1$，$b_4=\alpha_1 b_3+\alpha_2 b_2$。  
+**详细步骤：**
+**$\gamma(k)=E[Y_tY_{t-k}]$：**
+$$E\Big[\Big(\sum_j\theta_je_{t-j}\Big)\Big(\sum_m\theta_me_{t-k-m}\Big)\Big]=\sum_j\sum_m\theta_j\theta_m E[e_{t-j}e_{t-k-m}].$$
+由 (T5)，$E[e_{t-j}e_{t-k-m}]=\sigma^2$ 当且仅当 $t-j=t-k-m$（即 $m=j-k$），否则 0。故
+$$\gamma(k)=\sigma^2\sum_{j}\theta_j\theta_{j-k}.$$
+（$k\ge0$ 时取 $j\ge k$：$=\sigma^2\sum_{j=k}^\infty\theta_j\theta_{j-k}=\sigma^2\sum_{j=0}^\infty\theta_{j+k}\theta_j$，换元。）
+特例 $\gamma(0)=\sigma^2\sum_j\theta_j^2$。相除：
+$$\rho(k)=\frac{\gamma(k)}{\gamma(0)}=\frac{\sum_{j=0}^\infty\theta_{j+k}\theta_j}{\sum_{j=0}^\infty\theta_j^2}.\quad□$$
 
-**(b)** $\hat b_2=\hat\alpha_1^2+\hat\alpha_2$。  
-
-**(c)** $g(\alpha)=\alpha_1^2+\alpha_2$，$\nabla g=(2\alpha_1,1)$，  
-$\widehat{\mathrm{se}}=\sqrt{\nabla g'\hat V\nabla g}$，CI：$\hat b_2\pm1.96\,\widehat{\mathrm{se}}$。
-
----
-
-## Exercise 14.11
-
-$\alpha(L)Y_t=\alpha_0+e_t$ 与 $\alpha(L)Y_t=\mu+u_t$，$\alpha(L)u_t=e_t$。  
-
-第二套：$\alpha(L)(Y_t-\mu)=u_t$，$\alpha(L)u_t=e_t\Rightarrow\alpha(L)^2(Y_t-\mu)=e_t$ 不同。  
-
-题意：第二种是水平常数均值形式 $\alpha(L)(Y_t-\mu)=e_t$，即  
-$\alpha(L)Y_t=\alpha(L)\mu+e_t=\alpha_0+e_t$，故 $\alpha_0=\alpha(1)\mu$，  
-$\mu=\alpha_0/\alpha(1)$（$\alpha(1)\neq0$）。  
-两种写法（截距进 AR 方程 vs 均值形式）**等价**。
+> **要点：** MA($q$)（$\theta_j=0$ for $j>q$）⇒ $\gamma(k)=0$ for $k>q$（记忆 $q$ 期）。
 
 ---
 
-## Exercise 14.12
+## Exercise 14.8　随机游走：$\mathrm{var}(Y_t)=t$，非平稳
 
-$\alpha(L)Y_t=u_t$，$\beta(L)u_t=e_t$ ⇒ $\beta(L)\alpha(L)Y_t=e_t$。  
-$\gamma(L)=\beta(L)\alpha(L)$ 阶数为 $p+q$。
+**题：** $Y_t=Y_{t-1}+e_t$，$e_t$ i.i.d.$(0,1)$，$Y_0=0$。
 
----
+**详细步骤：** 迭代 $Y_t=Y_0+e_1+\cdots+e_t=\sum_{j=1}^t e_j$（$Y_0=0$）。独立 ⇒ 方差相加：
+$$\mathrm{var}(Y_t)=\sum_{j=1}^t\mathrm{var}(e_j)=\sum_{j=1}^t 1=t.$$
+**非平稳**：$\mathrm{var}(Y_t)=t$ 随 $t$ 增长 ⇒ 分布随时间发散，不满足平稳性（方差须为常数）。□
 
-## Exercise 14.13
-
-$Y_t=e_t+u_t+\theta u_{t-1}$，$e,u$ 互相独立 i.i.d.$(0,1)$。
-
-**(a)** $\gamma(0)=1+1+\theta^2=2+\theta^2$，  
-$\gamma(1)=\theta$，$\gamma(k)=0$ ($k\ge2$) ⇒ ACF 同 MA(1)。  
-
-**(b)** MA(1) $\rho(1)=\psi/(1+\psi^2)=\gamma(1)/\gamma(0)=\theta/(2+\theta^2)$。  
-解 $\psi/(1+\psi^2)=\theta/(2+\theta^2)$ 得 $\psi$ 为合适根（$|\psi|\le1$ 可逆根）。  
-
-**(c)** $\theta=1$：$\rho(1)=1/3$，解 $\psi/(1+\psi^2)=1/3\Rightarrow\psi^2-3\psi+1=0$，  
-$\psi=(3-\sqrt5)/2\in(0,1)$（可逆根）。
+> **要点：** 随机游走是**单位根**过程（AR(1) $\alpha_1=1$），非平稳。这是第 16 章（非平稳）的核心例子。差分 $\Delta Y_t=Y_t-Y_{t-1}=e_t$ 才平稳。
 
 ---
 
-## Exercise 14.14
+## Exercise 14.9　AR(1) 脉冲响应 + delta method
 
-$Y_t=X_t+e_t$，$X_t=\alpha X_{t-1}+u_t$，$e\perp u$ i.i.d.  
+**题：** $Y_t=\alpha_1Y_{t-1}+e_t$。(a) 脉冲响应 $b_j=\partial Y_{t+j}/\partial e_t$；(b) 估计；(c) delta CI。
 
-$(1-\alpha L)Y_t=u_t+e_t-\alpha e_{t-1}$。  
-右侧为 MA(1)（一般），左侧 AR(1) ⇒ **ARMA(1,1)**。
+**(a) 脉冲响应。** 用 MA 表示：$Y_{t+j}=\alpha_1^j Y_t+\alpha_1^{j-1}e_{t+1}+\cdots$（往前迭代）。$Y_t=\cdots+e_t+\alpha_1e_{t-1}+\cdots$，$e_t$ 在 $Y_{t+j}$ 中的系数是 $\alpha_1^j$（每期乘 $\alpha_1$ 传递）。故
+$$\boxed{\ b_j=\alpha_1^j.\ }$$
+（$e_t$ 一个单位冲击，$j$ 期后效应 $\alpha_1^j$；$|\alpha_1|<1$ 时衰减回 0。）
 
----
+**(b) 估计。** $\hat b_j=\hat\alpha_1^j$（$\hat\alpha_1$ 为 OLS）。
 
-## Exercise 14.15　高斯 AR(1)
+**(c) delta method CI。** $b_j=g(\alpha_1)=\alpha_1^j$，导数 $g'(\alpha_1)=j\alpha_1^{j-1}$。delta method：$\sqrt n(\hat b_j-b_j)\to_d N(0,(j\alpha_1^{j-1})^2 V_{\alpha_1})$。故
+$$\widehat{\mathrm{se}}(\hat b_j)=|j\hat\alpha_1^{j-1}|\,s(\hat\alpha_1),\quad\text{95\% CI}:\ \hat\alpha_1^j\pm1.96\,|j\hat\alpha_1^{j-1}|\,s(\hat\alpha_1).$$
 
-$Y_t=\alpha_0+\alpha_1 Y_{t-1}+e_t$，$|\alpha_1|<1$，$e_t\sim N(0,\sigma^2)$ i.i.d.  
-
-MA：
-$$
-Y_t=\frac{\alpha_0}{1-\alpha_1}+\sum_{j=0}^\infty\alpha_1^j e_{t-j}.
-$$
-正态线性组合 ⇒  
-$Y_t\sim N\bigl(\alpha_0/(1-\alpha_1),\ \sigma^2/(1-\alpha_1^2)\bigr)$。□
+> **要点：** 脉冲响应 = AR 系数的幂；其 SE 用 delta method（Ch7 工具）。$j$ 越大，导数 $j\alpha^{j-1}$ 越大但 $\alpha^{j-1}$ 越小——长滞后 IRF 估计噪声大。
 
 ---
 
-## Exercise 14.16　GMM 用三阶矩识别 AR(1)？
+## Exercise 14.10　AR(2) 脉冲响应
 
-$\mu=\alpha_0/(1-\alpha_1)$，$\sigma_Y^2=\sigma^2/(1-\alpha_1^2)$，高斯时 $\kappa=3\sigma_Y^4$。  
+**题：** $Y_t=\alpha_1Y_{t-1}+\alpha_2Y_{t-2}+e_t$（题中第二滞后印刷为 $Y_{t-1}$，应为 $Y_{t-2}$）。
 
-**缺陷：** 高斯过程的峰度由方差完全决定，$\kappa-3\sigma_Y^4=0$ **不是** 关于 $(\alpha_0,\alpha_1,\sigma^2)$ 的独立信息。  
-三个“矩”实质只有两个自由（均值、方差）；$(\alpha_0,\alpha_1,\sigma^2)$ 三个参数 **不能** 仅由 $(\mu,\sigma_Y^2,\kappa)$ 识别。  
-（$\alpha_1$ 与 $\sigma^2$ 在 $\sigma_Y^2$ 中缠结，需自协方差 $\gamma(1)$ 等。）
+**(a) 脉冲响应递推。** $b_0=1$（$e_t$ 对当期效应）。$b_1=\alpha_1$（$Y_{t+1}=\alpha_1Y_t+\alpha_2Y_{t-1}+e_{t+1}$，$e_t$ 经 $Y_t$ 系数 $\alpha_1$ 传递）。对 $j\ge2$：$Y_{t+j}$ 中 $e_t$ 的系数 = $\alpha_1\cdot$($Y_{t+j-1}$ 中 $e_t$ 系数)$+\alpha_2\cdot$($Y_{t+j-2}$ 中 $e_t$ 系数)：
+$$\boxed{\ b_j=\alpha_1 b_{j-1}+\alpha_2 b_{j-2}\ (j\ge2),\quad b_0=1,\ b_1=\alpha_1.\ }$$
+具体：$b_2=\alpha_1 b_1+\alpha_2 b_0=\alpha_1^2+\alpha_2$；$b_3=\alpha_1 b_2+\alpha_2 b_1$；$b_4=\alpha_1 b_3+\alpha_2 b_2$。
 
----
+**(b) 估计 $b_2$。** $\hat b_2=\hat\alpha_1^2+\hat\alpha_2$。
 
-## Exercise 14.17
-
-$Y_t=Y_{t-1}^\alpha u_t^{1-\alpha}$，$u_t>0$ i.i.d.
-
-**(a)** 取对数：$y_t=\log Y_t$，$y_t=\alpha y_{t-1}+(1-\alpha)\log u_t$。  
-$|\alpha|<1$ 时 $y_t$ 平稳遍历 ⇒ $Y_t=e^{y_t}$ 严格平稳遍历（在适当矩下）。  
-
-**(b)** $y_t=(1-\alpha)\sum_{j=0}^\infty\alpha^j\log u_{t-j}$（$|\alpha|<1$），  
-$Y_t=\exp(y_t)=\prod_{j=0}^\infty u_{t-j}^{(1-\alpha)\alpha^j}$。
+**(c) delta CI。** $g(\alpha)=\alpha_1^2+\alpha_2$，梯度 $\nabla g=(2\alpha_1,1)$。$\widehat{\mathrm{se}}=\sqrt{\nabla g(\hat\alpha)'\hat V\nabla g(\hat\alpha)}$，CI：$\hat b_2\pm1.96\,\widehat{\mathrm{se}}$。
 
 ---
 
-## Exercise 14.18　FRED-QD：`pnfix` 季度增长率 AR(4)
+## Exercise 14.11　截距形式与均值形式的等价
 
-**(a)** $g_t=100(pnfi_t/pnfi_{t-1}-1)$。  
+**题：** $\alpha(L)Y_t=\alpha_0+e_t$ 与 $\alpha(L)Y_t=\mu+u_t$、$\alpha(L)u_t=e_t$ 等价，求 $\mu$。
 
+**详细步骤：** 第二式 $\alpha(L)u_t=e_t$ ⇒ $u_t=\alpha(L)^{-1}e_t$（$\alpha(L)$ 可逆，平稳时）。代入第一式 $\alpha(L)Y_t=\mu+u_t$：
+$$\alpha(L)Y_t=\mu+\alpha(L)^{-1}e_t\Rightarrow\alpha(L)^2Y_t=\alpha(L)\mu+e_t.$$
+这与 $\alpha(L)Y_t=\alpha_0+e_t$ 形式不同——故题意应是**均值形式** $\alpha(L)(Y_t-\mu)=e_t$，即
+$$\alpha(L)Y_t=\alpha(L)\mu+e_t.$$
+对比 $\alpha(L)Y_t=\alpha_0+e_t$ ⇒ $\alpha_0=\alpha(L)\mu=\alpha(1)\mu$（$L=1$ 时取值，因 $\mu$ 是常数，$\alpha(L)\mu=\mu(1-\alpha_1-\cdots-\alpha_p)=\mu\alpha(1)$）。故
+$$\boxed{\ \mu=\frac{\alpha_0}{\alpha(1)}\quad(\alpha(1)\ne0).\ }$$
+两写法等价：截距 $\alpha_0$ 进 AR 方程 vs 无条件均值 $\mu$ 进"去均值"形式。□
+
+---
+
+## Exercise 14.12　ARMA = 滞后多项式相乘
+
+**题：** $\alpha(L)Y_t=u_t$（$\alpha$ 阶 $p$），$\beta(L)u_t=e_t$（$\beta$ 阶 $q$）。证 $\gamma(L)Y_t=e_t$，$\gamma$ 阶 $p+q$。
+
+**详细步骤：** 第二式 $u_t=\beta(L)^{-1}e_t$。代入第一式：
+$$\alpha(L)Y_t=\beta(L)^{-1}e_t\;\Longrightarrow\;\beta(L)\alpha(L)Y_t=e_t.$$
+故 $\gamma(L)=\beta(L)\alpha(L)$（多项式相乘）。$\alpha$ 阶 $p$、$\beta$ 阶 $q$ ⇒ $\gamma$ 阶 $p+q$。□
+
+> **要点：** ARMA = AR 部分乘 MA 部分的滞后多项式。组合后的总阶 $p+q$。
+
+---
+
+## Exercise 14.13　$Y_t=e_t+u_t+\theta u_{t-1}$ 是 MA(1)
+
+**题：** $e_t,u_t$ 互相独立 i.i.d.$(0,1)$。
+
+**(a) $Y_t$ 是 MA(1)。** 记 $\eta_t=e_t+u_t$（两独立白噪声和 ⇒ 仍是白噪声，方差 2）。则 $Y_t=\eta_t+\theta u_{t-1}$。需把它写成 $\eta'_t+\psi\eta'_{t-1}$ 的 MA(1) 形式——关键是匹配自相关函数（ACF）。
+$$\gamma(0)=\mathrm{var}(e_t)+\mathrm{var}(u_t)+\theta^2\mathrm{var}(u_{t-1})=1+1+\theta^2=2+\theta^2.$$
+$$\gamma(1)=E[Y_tY_{t-1}]=E[(e_t+u_t+\theta u_{t-1})(e_{t-1}+u_{t-1}+\theta u_{t-2})].$$
+展开，用独立性：唯一非零项是 $\theta E[u_{t-1}^2]=\theta$。故 $\gamma(1)=\theta$，$\gamma(k)=0$ ($k\ge2$)。这正是 MA(1) 的 ACF 形式（只有一阶非零）。
+
+**(b) 求 $\psi$。** MA(1) $\eta'_t+\psi\eta'_{t-1}$ 的 $\rho(1)=\psi/(1+\psi^2)$，方差 $\mathrm{var}(\eta')(1+\psi^2)$。匹配 $\rho(1)=\gamma(1)/\gamma(0)=\theta/(2+\theta^2)$：
+$$\frac{\psi}{1+\psi^2}=\frac{\theta}{2+\theta^2}\;\Longrightarrow\;\psi^2-\frac{2+\theta^2}{\theta}\psi+1=0.$$
+解二次方程取**可逆根** $|\psi|\le1$。
+
+**(c) $\theta=1$。** $\rho(1)=1/(2+1)=1/3$。方程 $\psi/(1+\psi^2)=1/3$ ⇒ $\psi^2-3\psi+1=0$ ⇒ $\psi=(3\pm\sqrt5)/2$。取 $|\psi|\le1$：$\psi=(3-\sqrt5)/2\approx0.382$。□
+
+> **要点：** 两个独立白噪声的非平凡组合可以是 MA(1)——通过匹配 ACF 识别。
+
+---
+
+## Exercise 14.14　信号 + 噪声 ⇒ ARMA(1,1)
+
+**题：** $Y_t=X_t+e_t$，$X_t=\alpha X_{t-1}+u_t$，$e\perp u$ i.i.d.。
+
+**详细步骤：** $X_t=Y_t-e_t$，$X_{t-1}=Y_{t-1}-e_{t-1}$。代入 $X_t=\alpha X_{t-1}+u_t$：
+$$Y_t-e_t=\alpha(Y_{t-1}-e_{t-1})+u_t\;\Longrightarrow\;Y_t=\alpha Y_{t-1}+(u_t+e_t-\alpha e_{t-1}).$$
+记 $v_t:=u_t+e_t-\alpha e_{t-1}$。检查 $v_t$ 的结构：它是 $u_t,e_t,e_{t-1}$ 的线性组合（白噪声与滞后），**自协方差** $\gamma_v(1)=-\alpha\sigma_e^2\ne0$（$e_{t-1}$ 在 $v_t$ 与 $v_{t-1}$ 都出现），$\gamma_v(k)=0$ ($k\ge2$) ⇒ $v_t$ 是 MA(1)。故
+$$Y_t=\alpha Y_{t-1}+v_t\quad(v_t\text{ 是 MA(1)})\;\Rightarrow\;\textbf{ARMA(1,1)}.$$
+（AR(1) + MA(1) 误差 = ARMA(1,1)。）□
+
+> **要点：** "可观测 = 信号 AR(1) + 白噪声" ⇒ 观测是 ARMA(1,1)。这是"测量误差污染 AR 信号"的经典结果。
+
+---
+
+## Exercise 14.15　高斯 AR(1) 的边际分布
+
+**题：** $Y_t=\alpha_0+\alpha_1Y_{t-1}+e_t$，$|\alpha_1|<1$，$e_t\sim N(0,\sigma^2)$ i.i.d.。证 $Y_t\sim N(\alpha_0/(1-\alpha_1),\sigma^2/(1-\alpha_1^2))$。
+
+**详细步骤（用 MA 表示）：**
+**第 1 步（MA 表示）。** 迭代 $Y_t=\alpha_0+\alpha_1Y_{t-1}+e_t$ 往前展开：
+$$Y_t=\alpha_0(1+\alpha_1+\alpha_1^2+\cdots)+\sum_{j=0}^\infty\alpha_1^j e_{t-j}=\frac{\alpha_0}{1-\alpha_1}+\sum_{j=0}^\infty\alpha_1^j e_{t-j}.$$
+（几何级数收敛因 $|\alpha_1|<1$。）
+**第 2 步（正态性）。** $Y_t$ 是独立正态 $e_{t-j}$ 的**线性组合** ⇒ $Y_t$ 正态（正态线性组合仍正态，第 5 章工具）。
+**第 3 步（均值）。** $E[Y_t]=\frac{\alpha_0}{1-\alpha_1}+\sum\alpha_1^j\underbrace{E[e_{t-j}]}_{=0}=\frac{\alpha_0}{1-\alpha_1}$。
+**第 4 步（方差）。** 独立 ⇒ 方差相加：
+$$\mathrm{var}(Y_t)=\sum_{j=0}^\infty\alpha_1^{2j}\mathrm{var}(e_{t-j})=\sigma^2\sum_{j=0}^\infty(\alpha_1^2)^j=\frac{\sigma^2}{1-\alpha_1^2}.$$
+（几何级数 $\sum(\alpha_1^2)^j=1/(1-\alpha_1^2)$，因 $\alpha_1^2<1$。）
+$$\boxed{\ Y_t\sim N\Big(\frac{\alpha_0}{1-\alpha_1},\,\frac{\sigma^2}{1-\alpha_1^2}\Big).\ }$$
+
+> **要点：** 高斯 AR(1) 的边际分布是正态——这是"正态 + 线性递归 ⇒ 正态"的体现。$\alpha_1\to1$ 时方差 $\to\infty$（接近单位根⇒非平稳）。
+
+---
+
+## Exercise 14.16　GMM 用三阶矩识别 AR(1) 的缺陷
+
+**题：** 高斯 AR(1)，同事想用 $(\mu,\sigma_Y^2,\kappa)$ 三矩估 $(\alpha_0,\alpha_1,\sigma^2)$。找缺陷。
+
+**详细步骤：**
+**第 1 步（算三矩）。** 由 14.15：
+$$\mu=\frac{\alpha_0}{1-\alpha_1},\quad\sigma_Y^2=\frac{\sigma^2}{1-\alpha_1^2},\quad\kappa=E[(Y_t-\mu)^4].$$
+高斯分布的四阶矩 $\kappa=3(\sigma_Y^2)^2=3\sigma_Y^4$（正态峰度 = 3）。
+**第 2 步（缺陷）。** $\kappa=3\sigma_Y^4=3(\sigma^2/(1-\alpha_1^2))^2$ **完全由 $\sigma_Y^2$ 决定**——它**不是**独立于 $(\mu,\sigma_Y^2)$ 的信息。即 $\kappa$ 不提供关于 $(\alpha_0,\alpha_1,\sigma^2)$ 的新方程（只是 $\sigma_Y^2$ 的函数）。
+**第 3 步（结论）。** 三个"矩"$(\mu,\sigma_Y^2,\kappa)$ 实质只有**两个独立**（$\mu,\sigma_Y^2$；$\kappa$ 是 $\sigma_Y^2$ 的函数），但参数有三个 $(\alpha_0,\alpha_1,\sigma^2)$。**欠识别**（矩 < 参数）——尤其 $\alpha_1$ 与 $\sigma^2$ 在 $\sigma_Y^2$ 中缠结（$\sigma_Y^2=\sigma^2/(1-\alpha_1^2)$，无穷多组 $(\alpha_1,\sigma^2)$ 给同一 $\sigma_Y^2$）。
+
+**修正：** 需用**自协方差** $\gamma(1)=E[(Y_t-\mu)(Y_{t-1}-\mu)]=\alpha_1\sigma_Y^2$（AR(1) 性质），它能识别 $\alpha_1$（$\alpha_1=\gamma(1)/\sigma_Y^2$）。□
+
+> **要点：** 高斯过程的边际矩（均值、方差、峰度）不够——峰度被方差锁定。需用**跨期矩**（自协方差）才能识别 AR 参数。这是"时间序列要用动态结构"的体现。
+
+---
+
+## Exercise 14.17　非线性（对数线性）过程的平稳性
+
+**题：** $Y_t=Y_{t-1}^\alpha u_t^{1-\alpha}$，$u_t>0$ i.i.d.。
+
+**(a) 平稳遍历条件。** 取对数 $y_t=\log Y_t$：
+$$y_t=\alpha y_{t-1}+(1-\alpha)\log u_t.$$
+这是 AR(1)（系数 $\alpha$，新息 $(1-\alpha)\log u_t$）。**$|\alpha|<1$** 时 $y_t$ 平稳遍历（AR(1) 平稳条件）。$Y_t=e^{y_t}$ 是可测变换 ⇒ $Y_t$ 严平稳遍历（在 $E[Y_t^2]<\infty$ 等矩条件下）。
+
+**(b) MA 表示。** $|\alpha|<1$ 时 $y_t=(1-\alpha)\sum_{j=0}^\infty\alpha^j\log u_{t-j}$。取指数：
+$$\boxed{\ Y_t=\exp(y_t)=\prod_{j=0}^\infty u_{t-j}^{(1-\alpha)\alpha^j}.\ }$$
+
+> **要点：** 乘法非线性过程取对数后变 AR(1)——这是处理正数时间序列（如资产价格、人口）的常用技巧。
+
+---
+
+## Exercise 14.18　`pnfix` 季度增长率 AR(4)
+
+**(a)** $g_t=100(\mathrm{pnfi}_t/\mathrm{pnfi}_{t-1}-1)$（季度增长率，百分比）。
 **(b)(c)** $n\approx231$：
 
 |  | 估计 | HC SE | NW($M=5$) SE |
@@ -232,75 +393,85 @@ $Y_t=\exp(y_t)=\prod_{j=0}^\infty u_{t-j}^{(1-\alpha)\alpha^j}$。
 | $g_{t-4}$ | −0.068 | 0.052 | 0.051 |
 | const | 0.491 | 0.146 | 0.141 |
 
-**(d)** 一阶持续性强（~0.5），二阶仍正；3–4 阶弱。投资增长有惯性。  
-NW 与 HC 接近（$M=5$ 时略增一阶 SE）。  
-
+**(d)** 一阶持续性强（~0.5），二阶仍正，3–4 阶弱——投资增长有惯性。NW 与 HC 接近（AR 残差近似白噪声，序列相关不强）。
 **(e)** IRF（对 $e_t=1$）：约 0.50, 0.42, 0.27, 0.12, 0.06, … 后衰减近 0。
 
----
-
-## Exercise 14.19　`oilpricex` 一阶差分 AR(4)
-
-**(a)** $\Delta oil_t$。  
-
-**(b)** AR 系数约 $(0.27,-0.26,0.03,-0.07)$。  
-
-**(c)** $H_0$：四 AR 系数 $=0$：Wald≈10.70，$\chi^2_4$，$p≈0.030$ **拒绝** 纯随机游走（在差分序列上 AR 系数联合显著）。  
-
-**(d)** 差分后仍有短记忆相关；**不是** 简单 $\Delta oil_t=$ 白噪声。实际油价水平常近单位根，但差分动态非平凡。
+> **要点：** AR 模型若设定正确，残差是白噪声，HC 与 NW 接近；NW 主要在**残差有剩余序列相关**时才显著大于 HC（见 HAC 验证）。
 
 ---
 
-## Exercise 14.20　FRED-MD：`unrate` AR 选阶（1960m1 起同一样本）
+## Exercise 14.19　`oilpricex` 一阶差分 AR(4) + 随机游走检验
 
-| $p$ | AIC（约） |
-|----:|----------:|
-| 1 | −3.445 |
-| 2 | −3.456 |
-| 3 | −3.527 |
-| 4 | −3.558 |
-| 5 | −3.585 |
-| 6 | −3.591 |
-| **7** | **−3.592**（最低） |
-| 8 | −3.589 |
-
-**(c)** **AR(7)** 最低 AIC。  
-**(d)** 首项 $\hat\alpha_1≈0.98$（高持续），其余较小；失业率近单位根式持续。
+**(a)** $\Delta\mathrm{oil}_t=\mathrm{oil}_t-\mathrm{oil}_{t-1}$。
+**(b)** AR 系数约 $(0.27,-0.26,0.03,-0.07)$。
+**(c)** $H_0$：四 AR 系数 $=0$（差分序列是白噪声 = 水平是随机游走）：Wald≈10.70，$\chi^2_4$，$p\approx0.030$ **拒绝**。
+**(d)** 差分后仍有短记忆相关；油价水平**不是**简单随机游走（差分动态非平凡）。
 
 ---
 
-## Exercise 14.21　失业率与 initial claims（FRED-QD）
+## Exercise 14.20　`unrate` AR 选阶（AIC）
 
-**(a)** DL：$un_t$ 对 $claims_{t-1},\ldots,claims_{t-4}$。  
-序列相关 + 可能异方差 ⇒ **HAC/Newey–West**（或至少 HC 不够时用 NW）更合适。  
+| $p$ | AIC（约） |  | $p$ | AIC |
+|----:|----------:|---|----:|----------:|
+| 1 | −3.445 |  | 5 | −3.585 |
+| 2 | −3.456 |  | 6 | −3.591 |
+| 3 | −3.527 |  | **7** | **−3.592**（最低） |
+| 4 | −3.558 |  | 8 | −3.589 |
 
-**(b)** ADL(4,4)。  
+**(c)** **AR(7)** 最低 AIC。**(d)** 首项 $\hat\alpha_1\approx0.98$（高持续，近单位根），其余较小——失业率强持续。
 
-**(c)** Granger：claims 四滞后联合 $=0$：Wald≈28.0，$p≈1.2\times10^{-5}$ **拒绝**。  
+---
 
-**(d)** 初请失业金对失业率有预测内容（Granger 因果），符合劳动力市场领先指标直觉。
+## Exercise 14.21　失业率与 initial claims（Granger 因果）
+
+**(a)** 分布滞后 DL：$un_t$ 对 $claims_{t-1},\ldots,claims_{t-4}$。序列相关 + 异方差 ⇒ **HAC/Newey–West** 更合适（HC 不够，因残差有序列相关）。
+**(b)** ADL(4,4)。
+**(c)** Granger：claims 四滞后联合 $=0$：Wald≈28.0，$p\approx1.2\times10^{-5}$ **拒绝**。
+**(d)** 初请失业金**Granger 因果**失业率——是劳动力市场领先指标。
 
 ---
 
 ## Exercise 14.22　GDP 增长与 housing starts
 
-**(a)** $g_t=100(\mathrm{gdpc1}_t/\mathrm{gdpc1}_{t-1}-1)$。  
+**(a)** $g_t=100(\mathrm{gdpc1}_t/\mathrm{gdpc1}_{t-1}-1)$。
+**(b)** DL 用 houst 滞后 1–4；宜 **HAC**。
+**(c)** ADL：GDP 增长滞后 1–2，houst 滞后 1–4。
+**(d)** Granger houst→$g$：Wald≈38.3，$p\approx9.6\times10^{-8}$ **强烈拒绝**。
+**(e)** 住房开工**领先** GDP 增长，与周期领先指标文献一致。
 
-**(b)** DL 用 lags 1–4 of houst；同样宜 **HAC**。  
-
-**(c)** ADL：GDP 增长 lag 1–2，houst lag 1–4。  
-
-**(d)** Granger houst→$g$：Wald≈38.3，$p≈9.6\times10^{-8}$ **强烈拒绝** “无 Granger 因果”。  
-
-**(e)** 住房开工领先 GDP 增长，与周期领先指标文献一致。
+> **和本科对照：** Granger 因果 = "X 的过去是否帮助预测 Y（控制 Y 的过去）"。用 Wald 检验 X 滞后联合为 0。陈强/李子奈标准内容。注意：序列相关下用 **HAC** SE（不是 HC）。
 
 ---
 
-## 小结
+## 附录 A：i.i.d. 横截面 vs 时间序列（对照）
 
-| 题 | 要点 |
-|:--:|------|
-| 14.1–14.4 | 遍历、MDS、条件异方差 CLT |
-| 14.5–14.14 | SV、MA/AR/ARMA 代数 |
-| 14.15–14.17 | 高斯 AR、GMM 识别陷阱、非线性平稳 |
-| 14.18–14.22 | FRED 实证：AR、AIC、Granger |
+| | 横截面（Ch2–13） | 时间序列（Ch14） |
+|---|---|---|
+| 观测 | 独立 (i.i.d.) | **序列相关** |
+| WLLN 基石 | 独立 | **遍历** (T1) |
+| CLT 基石 | 独立 | **MDS / 混合** (T4) |
+| 零均值 | $E[e|X]=0$ | $E[e_t|\mathcal F_{t-1}]=0$ (MDS) |
+| 方差估计 | HC（异方差一致） | **HAC**（异方差**+自相关**一致） |
+| 模型 | 静态回归 | **AR/MA/ARMA** |
+
+**一句话：** 把第 7 章的 OLS 渐近理论搬到时间序列，只需"独立→遍历/MDS""HC→HAC"两处替换。
+
+---
+
+## 附录 B：HAC / Newey–West 为何必要
+
+OLS 方差"肉"$=\mathrm{Var}(\sum X_te_t)=\sum_s\sum_t E[X_sX_t'e_se_t]$。横截面下交叉项 $s\ne t$ 为 0（独立）⇒ 只剩对角（HC）。**时间序列下 $X_te_t$ 有自相关**，交叉项 $E[X_tX_{t-j}'e_te_{t-j}]\ne0$ 必须计入——这就是 HAC 的 $\hat\Gamma_j$ 项。
+
+**已验证：** 持久回归元 + AR(1) 误差时，NW SE（0.036）≈ 真实（0.040），HC（0.018）**偏小一半**。忽略序列相关会高估显著性（假阳性）。
+
+---
+
+## 附录 C：notebook 单元对应
+
+| 习题 | notebook 内容 |
+|------|----------------|
+| 14.18 | `pnfix` AR(4) + HC/NW + IRF code cell |
+| 14.19 | `oilpricex` 差分 AR(4) + 随机游走检验 code cell |
+| 14.20 | `unrate` AR(1)–(8) + AIC 选阶 code cell |
+| 14.21–14.22 | 失业率/GDP 的 DL/ADL + Granger 检验 code cell |
+| 理论验证 | MA(1) 自协方差、随机游走 var=t、AR(1) IRF、高斯 AR(1) 边际、自协方差一致性、HAC vs HC code cell |
