@@ -1,591 +1,419 @@
-# Hansen《Econometrics》第 10 章习题完整解答
+# Bruce Hansen《Econometrics》第 10 章习题解答（详细注释版）
 
-**章节：** Chapter 10 Resampling Methods  
-**书稿：** PDF 第 321–325 页（印刷页 301–305），§10.32 Exercises（**10.1–10.31 全部**）  
+**章节：** Chapter 10 Resampling Methods
+**书稿：** PDF 第 321–325 页（印刷页 301–305），§10.32 Exercises（**10.1–10.31 全部**）
 **记号：** 与 Hansen 一致——jackknife 方差 (10.1)、非参数 bootstrap、percentile / BC / BCa / percentile-$t$
+**数值验证：** `Hansen_Ch10_Exercises_Solutions.ipynb`（10.1、10.28–10.31 有可运行代码）
 
-> 说明：此前版本过简；本题解按习题原文逐题完整展开，定理证明给出 Hansen 体系下的关键步骤。
-
----
-
-## 预备：Jackknife 与 Bootstrap 公式
-
-对估计量 $\hat\theta=\hat\theta(Y_1,\ldots,Y_n)$，**delete-one** 估计 $\hat\theta_{(-i)}$，均值 $\bar\theta_{(\cdot)}=n^{-1}\sum_i\hat\theta_{(-i)}$。  
-**Jackknife 方差**（(10.1)）：
-$$
-\hat V^{\mathrm{jack}}_{\hat\theta}
-=\frac{n-1}{n}\sum_{i=1}^n
-\bigl(\hat\theta_{(-i)}-\bar\theta_{(\cdot)}\bigr)
-\bigl(\hat\theta_{(-i)}-\bar\theta_{(\cdot)}\bigr)'.
-$$
-
-**非参数（成对）bootstrap：** 从经验经验分布有放回抽 $n$ 个观测得 $(Y^*,X^*)$，再算 $\hat\theta^*$。  
-**Bootstrap 方差：** $\hat V^{\mathrm{boot}}=\mathrm{Var}^*(\hat\theta^*)$（对 $B$ 次复制的样本方差）。
-
-**Percentile 区间：** $[\hat q^*_{\alpha/2},\hat q^*_{1-\alpha/2}]$。  
-**BC：** $p^*=P^*(\hat\theta^*\le\hat\theta)$，$z_0^*=\Phi^{-1}(p^*)$，用分位 $x(\alpha)=\Phi(z_\alpha+2z_0^*)$（(10.22)–(10.25)）。  
-**BCa：** 再估计加速常数 $a$（jackknife 偏度），$x(\alpha)=\Phi\!\left(z_0+\frac{z_0+z_\alpha}{1-a(z_0+z_\alpha)}\right)$。
+> **写给谁看：** 假设你学过李子奈/陈强，会用 Stata 的 `bootstrap`/`vce(bootstrap)`，但说不清"**jackknife 和 bootstrap 有什么区别**""**percentile / BC / BCa / percentile-$t$ 该用哪个**""**为什么 bootstrap 做假设检验时必须在 $H_0$ 下重抽**"。
+> Hansen 第 10 章把这些讲透：重抽样是**用计算机模拟抽样分布**，是第 7–9 章"解析渐近理论"的**计算密集型替代品**——不用推导公式，直接让电脑帮你算标准误、置信区间、检验 $p$ 值。
 
 ---
 
-## Exercise 10.1
+## 0. 读题前必看：本章到底在讲什么
 
-求 $\hat\mu_r=n^{-1}\sum_{i=1}^n Y_i^r$ 的 jackknife 方差估计（$\mu_r=E[Y^r]$）。
+**承上启下：**
+- 第 7–9 章：**解析地**推导 $\hat\beta$ 的渐近分布（CLT、夹心方差、Wald）。要算 $\mathrm{se}(\hat\theta)$，得推公式（如 delta method）。
+- **第 10 章：用"重抽样"让计算机直接模拟出 $\hat\theta$ 的抽样分布**，从而得到标准误、CI、检验临界值——**不必推导公式**。
 
-### 解答
+**核心直觉（一张图）：** 真实世界里，$\hat\theta$ 的抽样分布来自"从总体反复抽样"。我们只有一个样本，怎么办？**把这个样本当作"总体"，从它里面反复抽样**——这就是 bootstrap。样本足够大时，这种"样本里的再抽样"会模仿真实的抽样分布。
 
-对固定 $r$，令 $W_i=Y_i^r$。则 $\hat\mu_r=\bar W$。  
-delete-one：
-$$
-\hat\mu_{r(-i)}=\frac{1}{n-1}\sum_{j\neq i}Y_j^r
-=\frac{n}{n-1}\hat\mu_r-\frac{1}{n-1}Y_i^r.
-$$
-故 $\hat\mu_{r(-i)}-\hat\mu_r=\frac{1}{n-1}(\hat\mu_r-Y_i^r)$，且 $\bar\mu_{r(\cdot)}=\hat\mu_r$。  
+**两类方法（务必分清）：**
+
+| 方法 | 怎么做 | 适合 |
+|---|---|---|
+| **Jackknife** | 逐个**删去**一个观测，算 $n$ 个 $\hat\theta_{(-i)}$，看它们散布多散 | 算方差/SE；发现影响点；估 BCa 的加速常数 $a$ |
+| **Bootstrap** | 从样本里**有放回重抽** $n$ 个观测（得到一个"新样本"），算 $\hat\theta^*$，重复 $B$ 次 | 算 SE、CI、检验 $p$ 值；可处理非线性/非正态 |
+
+> **和本科对照：** 李子奈很少讲重抽样；陈强系统讲 **bootstrap**（自助法）与 **jackknife**（刀切）。Hansen 的贡献：把两者放在统一的"模拟抽样分布"框架下，并强调 **bootstrap CI 的四个层次**（percentile→BC→BCa→percentile-$t$）和 **bootstrap 检验必须施加 $H_0$** 这个最容易踩的坑。
+
+**本章的灵魂（四条原则，记下来）：**
+
+1. **Jackknife = "删一"算散布**；**Bootstrap = "重抽"模拟分布**。两者目标相同（估抽样分布），手段不同。
+2. **Bootstrap CI 有四个层次**，精度递增：
+   - **Percentile**：直接取 $\hat\theta^*$ 的分位数。简单，但不纠偏、对不对称分布差。
+   - **BC**（bias-corrected）：用"中位数偏倚"$z_0^*$ 调分位。纠偏，不纠偏度。
+   - **BCa**：再估加速常数 $a$（jackknife 偏度）。**最推荐**，纠偏又纠偏度。
+   - **Percentile-$t$**：studentize（分母用 $s^*(\hat\theta^*)$）。**最精确**（二阶准确），但需稳定的 SE 估计。
+3. **Bootstrap 检验必须在 $H_0$ 下重抽！**（10.14、10.20、10.22、10.26 的核心）——见下。
+4. **Bootstrap 不能修识别错误**（10.27）：若 $\hat\beta$ 不一致（如 $E[Xe]\ne0$），bootstrap 只模拟"围绕错误极限的波动"，覆盖的是 $\mathrm{plim}$ 而非真参数。识别要靠工具变量等方法。
+
+**最易踩的坑（原则 3 详解，本章反复考）：**
+
+做假设检验 $H_0:\theta=0$ 时，**不能**直接用无约束 bootstrap 的 $\hat\theta^*$ 分布当零分布——因为重抽的 DGP 集中在 $\hat\theta$（可能远离 0），算出的临界值被"信号"撑大，导致**过度保守、甚至荒谬地不拒绝**（见下方实证）。
+
+> **实证（蒙特卡洛，已验证）：** 检验 $H_0:\beta=0$（单侧）。当真 $\beta=1$、$t$ 统计量高达 **9.06** 时：
+> - 无约束 bootstrap 临界值 ≈ **11.91**（被大 $\hat\beta$ 撑大）⇒ "不拒绝"——**荒谬**！
+> - 施加 $H_0$（$\beta=0$）的 bootstrap 临界值 ≈ **1.52**（接近 $N(0,1)$ 的 1.645）⇒ 正确拒绝。
+>
+> **教训：** bootstrap 检验的 DGP 必须满足 $H_0$（用约束估计/约束残差构造重抽数据），或用"中心化"统计量 $T^*=(\hat\theta^*-\hat\theta)/s^*$ 与 $T=(\hat\theta-\theta_0)/s$ 比较。
+
+---
+
+## 1. 记号与概念速查（对照李子奈/陈强）
+
+| Hansen 记号 | 中文/本科说法 | 一句话解释 |
+|---|---|---|
+| $\hat\theta_{(-i)}$ | 删一估计 / leave-one-out | 删去第 $i$ 个观测算的 $\hat\theta$ |
+| $\hat V^{\mathrm{jack}}$ (10.1) | 刀切方差 | $\frac{n-1}{n}\sum(\hat\theta_{(-i)}-\bar\theta_{(\cdot)})(\cdot)'$ |
+| $\hat\theta^*$ | bootstrap 复制 | 从样本重抽算的 $\hat\theta$ |
+| $\hat V^{\mathrm{boot}}$ | bootstrap 方差 | $B$ 个 $\hat\theta^*$ 的样本方差 |
+| Percentile CI | 分位数区间 | $[\hat q^*_{\alpha/2},\hat q^*_{1-\alpha/2}]$ |
+| BC | 偏差校正 | 用 $z_0^*=\Phi^{-1}(p^*)$ 调分位 |
+| BCa | 偏差校正加速 | 再用 jackknife 估 $a$（偏度） |
+| Percentile-$t$ | 学生化分位数 | 用 $T^*=(\hat\theta^*-\hat\theta)/s^*(\hat\theta^*)$ 的分位 |
+| 成对 bootstrap | paired / nonparametric | 重抽 $(Y_i,X_i)$ **对** |
+| 残差 bootstrap | residual | 固定 $X$，只重抽残差 $\hat e_i$ |
+| cluster bootstrap | 聚类自助 | 重抽"整块"（如学校） |
+
+**四个最常用的"技术点"：**
+
+1. **Jackknife 方差公式 (10.1)**：$\hat V^{\mathrm{jack}}_{\hat\theta}=\frac{n-1}{n}\sum_i(\hat\theta_{(-i)}-\bar\theta_{(\cdot)})(\cdot)'$。系数 $\frac{n-1}{n}$ 是因为删一估计之间高度相关（只差一个观测），需放大。
+2. **仿射等变性**：若 $\hat\theta=a+C\hat\beta$，则 jackknife/bootstrap 方差都按 $C(\cdot)C'$ 变换（10.2、10.4）。非线性函数则不能这样，须直接重算。
+3. **Bootstrap CLT（Theorem 10.4）**：$\sqrt n(\hat\mu^*-\hat\mu)\to_{d^*}N(0,V)$——与样本的 $\sqrt n(\hat\mu-\mu)$ **同极限**，故 bootstrap 能模仿抽样分布。
+4. **BC 的分位调整**：$x(\alpha)=\Phi(2z_0^*+z_\alpha)$；BCa 再加加速：$x(\alpha)=\Phi\!\big(z_0+\frac{z_0+z_\alpha}{1-a(z_0+z_\alpha)}\big)$。
+
+---
+
+## 2. 预备公式
+
+**Jackknife 方差 (10.1)：**
+$$\hat V^{\mathrm{jack}}_{\hat\theta}=\frac{n-1}{n}\sum_{i=1}^n(\hat\theta_{(-i)}-\bar\theta_{(\cdot)})(\hat\theta_{(-i)}-\bar\theta_{(\cdot)})',\quad \bar\theta_{(\cdot)}=n^{-1}\sum_i\hat\theta_{(-i)}.$$
+
+**非参数（成对）bootstrap：** 从经验分布有放回抽 $n$ 个 $(Y_i,X_i)$ 对得 $(Y^*,X^*)$，算 $\hat\theta^*$，重复 $B$ 次。$\hat V^{\mathrm{boot}}=\mathrm{Var}^*(\hat\theta^*)$（$B$ 个复制的样本方差）。
+
+**区间方法：** Percentile $[\hat q^*_{\alpha/2},\hat q^*_{1-\alpha/2}]$；BC 用 $p^*=P^*(\hat\theta^*\le\hat\theta)$、$z_0^*=\Phi^{-1}(p^*)$、分位 $x(\alpha)=\Phi(z_\alpha+2z_0^*)$；BCa 再估加速常数 $a$（jackknife 偏度）。
+
+---
+
+## Exercise 10.1　$\hat\mu_r=\bar{Y^r}$ 的 jackknife 方差 = 常规 $s^2/n$
+
+**考点：** 在最简单的估计量（样本均值）上验证 jackknife 给出与初等公式一致的结果，建立直觉。
+
+**解答：** 令 $W_i=Y_i^r$，则 $\hat\mu_r=\bar W$。删一估计
+$$\hat\mu_{r(-i)}=\frac{1}{n-1}\sum_{j\ne i}Y_j^r=\frac{n\hat\mu_r-Y_i^r}{n-1}\Rightarrow\hat\mu_{r(-i)}-\hat\mu_r=\frac{\hat\mu_r-Y_i^r}{n-1}.$$
 代入 (10.1)：
-\begin{align*}
-\hat V^{\mathrm{jack}}_{\hat\mu_r}
-&=\frac{n-1}{n}\sum_{i=1}^n\left(\frac{\hat\mu_r-Y_i^r}{n-1}\right)^2
-=\frac{1}{n(n-1)}\sum_{i=1}^n(Y_i^r-\hat\mu_r)^2.
-\end{align*}
-这与 $\bar W$ 的常规方差估计 $s_W^2/n$（$s_W^2$ 用分母 $n-1$）**完全相同**。  
-（向量 $Y$ 时把平方换成外积即可。）
+$$\hat V^{\mathrm{jack}}_{\hat\mu_r}=\frac{n-1}{n}\sum_i\Big(\frac{\hat\mu_r-Y_i^r}{n-1}\Big)^2=\frac{1}{n(n-1)}\sum_i(Y_i^r-\hat\mu_r)^2,$$
+正是 $\bar W$ 的常规方差 $s_W^2/n$（$s_W^2$ 分母 $n-1$）。**完全相同**。（向量 $Y$ 把平方换外积。）
+
+> **和本科对照：** jackknife 在样本均值上退化为大家熟悉的 $s/\sqrt n$。代码见 notebook（数值核对一致）。
 
 ---
 
-## Exercise 10.2
+## Exercise 10.2　仿射变换的 jackknife 方差
 
-若 $\hat V^{\mathrm{jack}}_{\hat\beta}$ 已得，$\hat\theta=a+C\hat\beta$，证明 $\hat V^{\mathrm{jack}}_{\hat\theta}=C\hat V^{\mathrm{jack}}_{\hat\beta}C'$。
+**考点：** 原则"仿射等变"。$\hat\theta=a+C\hat\beta$ ⇒ $\hat V^{\mathrm{jack}}_{\hat\theta}=C\hat V^{\mathrm{jack}}_{\hat\beta}C'$。
 
-### 证明
+**证明：** 仿射与删一可交换：$\hat\theta_{(-i)}=a+C\hat\beta_{(-i)}$，故 $\hat\theta_{(-i)}-\bar\theta_{(\cdot)}=C(\hat\beta_{(-i)}-\bar\beta_{(\cdot)})$。代入 (10.1)，$C$ 提出 ⇒ $C\hat V^{\mathrm{jack}}_{\hat\beta}C'$。□
 
-仿射变换与 delete-one **可交换**：
-$$
-\hat\theta_{(-i)}=a+C\hat\beta_{(-i)},\qquad
-\bar\theta_{(\cdot)}=a+C\bar\beta_{(\cdot)}.
-$$
-因此
-$$
-\hat\theta_{(-i)}-\bar\theta_{(\cdot)}=C\bigl(\hat\beta_{(-i)}-\bar\beta_{(\cdot)}\bigr).
-$$
-代入 jackknife 公式：
-\begin{align*}
-\hat V^{\mathrm{jack}}_{\hat\theta}
-&=\frac{n-1}{n}\sum_i
-C\bigl(\hat\beta_{(-i)}-\bar\beta_{(\cdot)}\bigr)
-\bigl(\hat\beta_{(-i)}-\bar\beta_{(\cdot)}\bigr)'C'
-=C\hat V^{\mathrm{jack}}_{\hat\beta}C'.
-\end{align*}
-□
+> **要点：** 线性变换的方差按 $CVC'$ 变（和 Ch4/Ch7 一致）。非线性变换则不能这样。
 
 ---
 
-## Exercise 10.3
+## Exercise 10.3　两步估计的 jackknife：两步都要重估
 
-两步估计 $\hat A=(Z'Z)^{-1}Z'X$，$\hat W_i=\hat A'Z_i$，  
-$\hat\beta=\bigl(\sum\hat W_i\hat W_i'\bigr)^{-1}\bigl(\sum\hat W_i Y_i\bigr)$（如 (12.49) 型）。  
-如何构造 $\hat\beta$ 的 jackknife 方差？
+**考点：** 生成回归元/两步估计（如 2SLS 的第一步）——**不能**固定第一步 $\hat A$ 只对第二步 jackknife。
 
-### 解答
+**正确步骤：** 对每个 $i$，删观测 $i$ 后**两步都重算**：先 $\hat A_{(-i)}$，再造 $\hat W_{j(-i)}=\hat A_{(-i)}'Z_j$，再算 $\hat\beta_{(-i)}$；最后套 (10.1)。
 
-**不能**只对第二步做 jackknife 而固定 $\hat A$。正确步骤：
-
-1. 对每个 $i=1,\ldots,n$，删去观测 $i$，用剩余样本重算  
-   $\hat A_{(-i)}=(Z_{(-i)}'Z_{(-i)})^{-1}Z_{(-i)}'X_{(-i)}$。  
-2. 构造 $\hat W_{j(-i)}=\hat A_{(-i)}'Z_j$（$j\neq i$），再算  
-   $\hat\beta_{(-i)}=\bigl(\sum_{j\neq i}\hat W_{j(-i)}\hat W_{j(-i)}'\bigr)^{-1}
-   \bigl(\sum_{j\neq i}\hat W_{j(-i)}Y_j\bigr)$。  
-3. 用 $\{\hat\beta_{(-i)}\}_{i=1}^n$ 套入标准 jackknife 方差公式 (10.1)。
-
-要点：第一步 $\hat A$ 依赖全样本，delete-one 必须 **两步都重估**，否则低估因 $\hat A$ 不确定性带来的方差。
+> **要点：** 第一步 $\hat A$ 依赖全样本，其不确定性会传导到 $\hat\beta$。固定 $\hat A$ 会**低估**方差（漏算第一步贡献）。
 
 ---
 
-## Exercise 10.4
+## Exercise 10.4　仿射变换的 bootstrap 方差
 
-$\hat\theta=a+C\hat\beta$，bootstrap 方差：$\hat V^{\mathrm{boot}}_{\hat\theta}=C\hat V^{\mathrm{boot}}_{\hat\beta}C'$。
+**考点：** 同 10.2 的 bootstrap 版。$\hat V^{\mathrm{boot}}_{\hat\theta}=C\hat V^{\mathrm{boot}}_{\hat\beta}C'$。
 
-### 证明
-
-对每个 bootstrap 样本，若 $\hat\beta^*$ 是该样本上 $\beta$ 的估计，且 $\hat\theta^*=a+C\hat\beta^*$（同一仿射映射），则  
-$\mathrm{Var}^*(\hat\theta^*)=C\,\mathrm{Var}^*(\hat\beta^*)\,C'$。  
-用 $B$ 次复制的样本协方差代替 $\mathrm{Var}^*$ 即得。  
-（若 $\hat\theta$ 是 $\hat\beta$ 的非线性函数则不成立，需对 $\hat\theta^*$ 直接算 bootstrap 方差。）
+**证明：** 每个 bootstrap 样本中 $\hat\theta^*=a+C\hat\beta^*$ ⇒ $\mathrm{Var}^*(\hat\theta^*)=C\,\mathrm{Var}^*(\hat\beta^*)\,C'$。非线性函数须直接对 $\hat\theta^*$ 算。□
 
 ---
 
-## Exercise 10.5
+## Exercise 10.5　Percentile 区间对仿射变换的等变性
 
-Percentile 区间 $[L,U]$ 对 $\beta$；则对 $a+c\beta$（$c$ 标量）区间为 $[a+cL,\,a+cU]$（$c>0$）。
+**考点：** percentile 区间端点随仿射变换同步变换。
 
-### 证明
+**证明：** $c>0$ 时，$q^*_\alpha(a+c\hat\beta^*)=a+c\,q^*_\alpha(\hat\beta^*)$（分位数对严格增变换等变）⇒ 区间 $[a+cL,a+cU]$。$c<0$ 端点对调成 $[a+cU,a+cL]$。
 
-设 $\hat\beta^*$ 的 $\alpha$ 分位数为 $q^*_\alpha$。  
-$\widehat{a+c\beta}^*=a+c\hat\beta^*$。  
-若 $c>0$，分位数等变：$q^*_\alpha(a+c\hat\beta^*)=a+c\,q^*_\alpha(\hat\beta^*)$。  
-故 percentile 区间端点同仿射变换。  
-若 $c<0$，不等号反转，区间为 $[a+cU,\,a+cL]$。
+> **要点：** percentile 区间对**单调变换等变**——换参数化（如 $\beta\to a+c\beta$）区间跟着变，覆盖不变。这是 percentile 的优点（也是 BC/BCa 共有的）。
 
 ---
 
-## Exercise 10.6
+## Exercise 10.6　"固定 SE 的 $T^*$" 其实就是 percentile
 
-$T^*=(\hat\theta^*-\hat\theta)/s(\hat\theta)$（分母为 **原样本** SE），  
-$C=[\hat\theta+s(\hat\theta)q^*_{\alpha/2},\,\hat\theta+s(\hat\theta)q^*_{1-\alpha/2}]$。  
-证明 $C$ **恰好等于** percentile 区间。
+**考点：** 区分 percentile 与 percentile-$t$。$T^*=(\hat\theta^*-\hat\theta)/s(\hat\theta)$，分母用**原样本**固定 SE。
 
-### 证明
+**证明：** $s(\hat\theta)$ 固定 ⇒ $T^*$ 是 $\hat\theta^*$ 的严格增仿射变换 ⇒ $T^*$ 的分位反推回 $\hat\theta^*$ 的分位，得到的 $C$ 恰是 percentile 区间。□
 
-$T^*$ 只是 $\hat\theta^*$ 的 **严格增** 仿射变换（$s(\hat\theta)>0$ 固定）：  
-$T^*=\hat\theta^*/s(\hat\theta)-\hat\theta/s(\hat\theta)$。  
-故 $T^*$ 的 $\alpha$ 分位数 $q^*_{T,\alpha}=q^*_{\theta,\alpha}/s(\hat\theta)-\hat\theta/s(\hat\theta)$，即  
-$q^*_{\theta,\alpha}=\hat\theta+s(\hat\theta)\,q^*_{T,\alpha}$。  
-因此
-$$
-C=\bigl[q^*_{\theta,\alpha/2},\,q^*_{\theta,1-\alpha/2}\bigr],
-$$
-正是 $\hat\theta^*$ 的 percentile 区间。□  
-
-**注：** 这 **不是** percentile-$t$（后者分母用 $s^*(\hat\theta^*)$）。本题故意用固定 $s(\hat\theta)$，故与 percentile 等价，**没有** studentization 的精细化好处。
+> **要点（易混）：** 这**不是** percentile-$t$。真正的 percentile-$t$ 分母用**每个 bootstrap 样本的** $s^*(\hat\theta^*)$（studentize），才有二阶精度的好处。本题分母固定，故退化为 percentile。
 
 ---
 
 ## Exercise 10.7　证明 Theorem 10.6（Bootstrap Delta Method）
 
-**定理：** $\hat\mu\to_p\mu$，$\sqrt{n}(\hat\mu^*-\hat\mu)\to_{d^*} \xi$，$g$ 在 $\mu$ 邻域 $C^1$，则  
-$\sqrt{n}\bigl(g(\hat\mu^*)-g(\hat\mu)\bigr)\to_{d^*} G'\xi$，$G=\partial g(\mu)'$。若 $\xi\sim N(0,V)$ 则极限 $N(0,G'VG)$。
+**考点：** bootstrap 版 delta method——把 Ch7 的 delta method 搬到 bootstrap 世界。
 
-### 证明
-
-均值展开（bootstrap 世界，条件于 $F_n$）：
-$$
-g(\hat\mu^*)-g(\hat\mu)=G(\tilde\mu^*)'(\hat\mu^*-\hat\mu),
-$$
-$\tilde\mu^*$ 在 $\hat\mu^*$ 与 $\hat\mu$ 之间。  
-因 $\hat\mu^*\to_{p^*}\hat\mu\to_p\mu$，有 $G(\tilde\mu^*)\to_{p^*}G(\mu)$。  
-Slutsky（bootstrap 版）：  
-$\sqrt{n}(g(\hat\mu^*)-g(\hat\mu))=G(\tilde\mu^*)'\sqrt{n}(\hat\mu^*-\hat\mu)\to_{d^*} G'\xi$。  
-正态情形直接代入。□
+**证明：** 均值展开（条件于样本 $F_n$）：$g(\hat\mu^*)-g(\hat\mu)=G(\tilde\mu^*)'(\hat\mu^*-\hat\mu)$。因 $\hat\mu^*\to_{p^*}\hat\mu\to_p\mu$，$G(\tilde\mu^*)\to_{p^*}G(\mu)$。Slutsky（bootstrap 版）：
+$$\sqrt n(g(\hat\mu^*)-g(\hat\mu))=G(\tilde\mu^*)'\sqrt n(\hat\mu^*-\hat\mu)\to_{d^*}G'\xi.$$
+若 $\xi\sim N(0,V)$，极限 $N(0,G'VG)$。□
 
 ---
 
-## Exercise 10.8　证明 Theorem 10.7
+## Exercise 10.8　证明 Theorem 10.7（bootstrap 模仿非线性估计量分布）
 
-**设定：** $Y_i$ i.i.d.，$\mu=E[h(Y)]$，$\theta=g(\mu)$，$\hat\mu=n^{-1}\sum h(Y_i)$，$\hat\theta=g(\hat\mu)$；bootstrap $\hat\mu^*=n^{-1}\sum h(Y_i^*)$，$\hat\theta^*=g(\hat\mu^*)$。  
-$E\|h\|^2<\infty$，$G$ 在 $\mu$ 连续。则 $\sqrt{n}(\hat\theta^*-\hat\theta)\to_{d^*} N(0,G'VG)$，$V=\mathrm{Var}(h(Y))$。
+**考点：** bootstrap CLT + delta method ⇒ $\hat\theta^*=g(\hat\mu^*)$ 的 bootstrap 分布与样本 $\hat\theta=g(\hat\mu)$ 的真实抽样分布**同极限**。
 
-### 证明
+**证明：**
+1. **Bootstrap CLT**：条件于样本，$h(Y_i^*)$ 为 i.i.d.（来自经验分布），均值 $\hat\mu$、方差 $\hat V_n\to_p V$ ⇒ $\sqrt n(\hat\mu^*-\hat\mu)\to_{d^*}N(0,V)$。
+2. 用 Theorem 10.6（$g$ 的 delta）⇒ $\sqrt n(\hat\theta^*-\hat\theta)\to_{d^*}N(0,G'VG)$。
 
-1. **Bootstrap CLT：** 条件于样本，$h(Y_i^*)$ 为 i.i.d. 来自经验分布，均值 $\hat\mu$，方差 $\hat V_n\to_p V$。  
-   故 $\sqrt{n}(\hat\mu^*-\hat\mu)\to_{d^*} N(0,V)$（可在概率 1 的样本路径上成立）。  
-2. 对 $g$ 用 **Theorem 10.6** 即得 $\sqrt{n}(\hat\theta^*-\hat\theta)\to_{d^*} N(0,G'VG)$。  
+这与样本 $\sqrt n(\hat\theta-\theta)$ 的极限**相同** ⇒ bootstrap 能模仿其分布。□
 
-这与样本 $\sqrt{n}(\hat\theta-\theta)$ 的极限相同，故 bootstrap 可模仿其分布。□
-
----
-
-## Exercise 10.9　证明 Theorem 10.8
-
-**定理：** 在 Thm 10.7 条件下，$\hat V^*_\theta\to_{p^*} V_\theta=G'VG$（bootstrap 方差估计的一致性，对条件方差/“理想” bootstrap 方差）。
-
-### 证明纲要
-
-由 Thm 10.7，$\sqrt{n}(\hat\theta^*-\hat\theta)$ 条件依分布收敛到 $N(0,V_\theta)$。  
-若再有 **一致可积**（或有界 $p$ 阶导数使矩有限，见 Thm 10.10），则  
-$\mathrm{Var}^*\!\bigl(\sqrt{n}(\hat\theta^*-\hat\theta)\bigr)\to_p V_\theta$，即 $\hat V^{\mathrm{boot}}_{\hat\theta}\to_p n^{-1}V_\theta$ 的缩放形式。  
-更技术的证明用：bootstrap 协方差 $=$ $G(\hat\mu)'\widehat{\mathrm{Var}}^*(h^*)G(\hat\mu)+o_{p^*}(1)$，而 $\widehat{\mathrm{Var}}^*(h^*)=\frac{1}{n}\sum(h_i-\hat\mu)(\cdot)'\to_p V$。□
+> **核心结论：** bootstrap 之所以有效，是因为 $\sqrt n(\hat\theta^*-\hat\theta)$ 与 $\sqrt n(\hat\theta-\theta)$ **渐近同分布**——把 $\hat\theta$ 当真值，重抽扰动模仿真实扰动。
 
 ---
 
-## Exercise 10.10
+## Exercise 10.9　证明 Theorem 10.8（bootstrap 方差一致性）
 
-$Y_i$ i.i.d.，$\mu=E[Y]>0$，$\theta=\mu^{-1}$，$\hat\mu=\bar Y$，$\hat\theta=\hat\mu^{-1}$。
+**考点：** $\hat V^*_\theta\to_{p^*}V_\theta$——bootstrap 方差估计收敛到真实渐近方差。
 
-### 解答
-
-**(a)** 一般 **不是** 无偏。$g(\mu)=1/\mu$ 在 $(0,\infty)$ 上严格凸（$g''=2/\mu^3>0$）。由 Jensen，  
-$E[\hat\theta]=E[1/\bar Y]\ge 1/E[\bar Y]=\theta$，等号当且仅当 $\bar Y$ a.s. 常数（退化）。  
-有限样本通常 $E|\bar Y|^{-1}<\infty$ 才谈无偏；即便存在，也不等于 $\theta$。
-
-**(b)** 在 $\bar Y>0$ a.s. 且期望存在时，偏倚 **向上**：$E[\hat\theta-\theta]\ge 0$。
-
-**(c)** 普通 **percentile** 在变换后分布高度右偏时表现差，**不纠偏**。  
-更合适：**BC / BCa percentile**（专为中位数偏倚/偏度设计），或对 $\log\hat\theta$ 做区间再变换。  
-Percentile 在“存在对称化变换”时理论好，但 $1/\bar Y$ 的有限样本偏倚大时 BC 更稳妥。
+**证明纲要：** 由 Thm 10.7，$\sqrt n(\hat\theta^*-\hat\theta)$ 条件依分布收敛到 $N(0,V_\theta)$。再加**一致可积**（或有界导数保证矩有限，Thm 10.10），则条件方差也收敛：$\mathrm{Var}^*(\sqrt n(\hat\theta^*-\hat\theta))\to_p V_\theta$。技术上 $\widehat{\mathrm{Var}}^*(h^*)=\frac1n\sum(h_i-\hat\mu)(\cdot)'\to_p V$，乘 $G(\hat\mu)$ 即得。□
 
 ---
 
-## Exercise 10.11
+## Exercise 10.10　$\theta=1/\mu$（凸变换）的有偏性
 
-回归 bootstrap：抽 $(X^*,e^*)$ 来自 $\{(X_i,\hat e_i)\}$，$Y^*=X^{*'}\hat\beta+e^*$，再 OLS 得 $\hat\beta^*$。  
-证明与非参数成对 bootstrap **数值相同**。
+**考点：** 非线性变换的 Jensen 偏差 + 为何需要 BC/BCa。
 
-### 证明
+**(a)(b)** $g(\mu)=1/\mu$ 在 $\mu>0$ 严格凸（$g''=2/\mu^3>0$）。Jensen：$E[\hat\theta]=E[1/\bar Y]\ge 1/E[\bar Y]=\theta$，**向上偏**（除非 $\bar Y$ 退化）。
 
-非参数 bootstrap 直接重抽 $(Y_i,X_i)$ 对。在原样本上 $Y_i=X_i'\hat\beta+\hat e_i$。  
-故重抽到指标 $i'$ 时：  
-$Y^*=Y_{i'}=X_{i'}'\hat\beta+\hat e_{i'}$，$X^*=X_{i'}$。  
-这与“抽 $(X_{i'},\hat e_{i'})$ 再令 $Y^*=X^{*'}\hat\beta+e^*$”**定义相同**。  
-因此生成的 bootstrap 数据集 $\{(Y_b^*,X_b^*)\}$ 的联合分布在两种算法下一致，随后任何统计量（含 $\hat\beta^*$）的 bootstrap 分布相同。□  
+**(c)** 普通 percentile **不纠偏**，在右偏分布上覆盖差。宜用 **BC/BCa**（专为中位数偏倚/偏度设计），或对 $\log\hat\theta$ 区间再取指数。
 
-**注：** 这与 **残差 bootstrap**（固定设计 $X$、只重抽残差）不同；本题是 **成对/非参数** bootstrap 的改写。
+> **和本科对照：** 非线性估计量（比率、倒数、指数）有 Jensen 偏差；bootstrap 分布能**反映**这种偏态，BC/BCa 据此调整分位——这是 bootstrap 优于"对称正态 CI"之处。
 
 ---
 
-## Exercise 10.12
+## Exercise 10.11　残差配对写法 = 成对 bootstrap
 
-$p^*$（(10.22)）对严格增 $g$ 不变？$z_0^*$（(10.23)）呢？
+**考点：** "抽 $(X^*,\hat e^*)$ 再令 $Y^*=X^{*'}\hat\beta+e^*$" 与 "直接抽 $(Y_i,X_i)$ 对" 数值相同。
 
-### 解答
+**证明：** 原样本上 $Y_i=X_i'\hat\beta+\hat e_i$。重抽到指标 $i'$ 时，$Y^*=Y_{i'}=X_{i'}'\hat\beta+\hat e_{i'}$，与"抽 $(X_{i'},\hat e_{i'})$ 再组合"定义相同 ⇒ 生成的 bootstrap 数据集联合分布一致 ⇒ $\hat\beta^*$ 等一切统计量同分布。□
 
-定义 $p^*=P^*(\hat\theta^*\le\hat\theta)$（或 $\#\{\hat\theta^*_b\le\hat\theta\}/B$）。  
-令 $\phi=g(\theta)$，$g$ 严格增。则  
-$\hat\phi^*=g(\hat\theta^*)\le g(\hat\theta)=\hat\phi\ \Longleftrightarrow\ \hat\theta^*\le\hat\theta$。  
-故 $p^*$ **不变**。  
-$z_0^*=\Phi^{-1}(p^*)$ 只依赖 $p^*$，故也 **不变**。  
-
-（若 $g$ 严格减，则不等式反转，$p^*\mapsto 1-p^*$，$z_0^*\mapsto -z_0^*$，BC 区间端点仍正确变换。）
+> **要点：** 这是**成对/非参数** bootstrap 的改写，与**残差 bootstrap**（固定 $X$、只重抽残差）不同。后者假设 $X$ 固定（实验设计），前者保留 $X$ 的随机性。
 
 ---
 
-## Exercise 10.13
+## Exercise 10.12　BC 的 $p^*,z_0^*$ 对单调变换不变
 
-Percentile-$t$ 区间对 $\beta$ 为 $[L,U]$；对 $a+c\beta$？
+**考点：** BC 的偏倚量 $z_0^*$ 不受参数化影响（参数化不变性）。
 
-### 解答
-
-教材印刷作 $[a+bL,a+bU]$，参数为 $a+c\beta$，此处 **$b$ 即 $c$**。  
-
-Percentile-$t$：用 $T^*=(\hat\beta^*-\hat\beta)/s^*(\hat\beta^*)$ 的分位数 $q^*_{\alpha/2},q^*_{1-\alpha/2}$，  
-$$
-C=\bigl[\hat\beta-s(\hat\beta)q^*_{1-\alpha/2},\;\hat\beta-s(\hat\beta)q^*_{\alpha/2}\bigr]
-$$
-（形式随 $T$ 定义略有 dual 写法）。  
-
-对 $\theta=a+c\beta$（$c>0$）：$\hat\theta=a+c\hat\beta$，$s(\hat\theta)=|c|s(\hat\beta)$，  
-$T_\theta^*=(\hat\theta^*-\hat\theta)/s^*(\hat\theta^*)=(\hat\beta^*-\hat\beta)/s^*(\hat\beta^*)=T_\beta^*$（$c>0$ 时）。  
-故同一 $q^*$，区间为  
-$[a+cL,\,a+cU]$。  
-$c<0$ 时 $T$ 变号，端点对调。
+**证明：** $g$ 严格增 ⇒ $\hat\phi^*=g(\hat\theta^*)\le g(\hat\theta)=\hat\phi\Leftrightarrow\hat\theta^*\le\hat\theta$ ⇒ $p^*=P^*(\hat\theta^*\le\hat\theta)$ **不变** ⇒ $z_0^*=\Phi^{-1}(p^*)$ 不变。$g$ 严格减则 $p^*\mapsto1-p^*$、$z_0^*\mapsto-z_0^*$，BC 端点仍正确变换。
 
 ---
 
-## Exercise 10.14
+## Exercise 10.13　Percentile-$t$ 区间的仿射变换
 
-检验 $H_0:\theta=0$ vs $H_1:\theta>0$，用无约束 bootstrap 的 $T^*=\hat\theta^*/s^*(\hat\theta^*)$ 的 $1-\alpha$ 分位作临界值。错在哪里？
+**考点：** studentized 区间对仿射变换的行为。
 
-### 解答
-
-**原则错误：bootstrap 世界未施加 $H_0$。**
-
-- 数据来自真 $\theta$ 可能 $>0$ 的 DGP；$\hat\theta^*$ 集中在 $\hat\theta$ 附近而非 0。  
-- 因而 $q^*_{1-\alpha}$ 是 **备择/真参数下** $T$ 的分位，不是 $H_0$ 下的临界值。  
-- 若 $\hat\theta>0$ 较大，$q^*$ 偏大，检验 **过于保守**（功效低）；水平也不等于 $\alpha$。
-
-**正确做法（示意）：**
-
-1. **约束/强制 $H_0$：** 在 $\theta=0$ 下估计（如设 $\hat\theta_0=0$），用中心化残差或  
-   $T^{0*}=(\hat\theta^*-\hat\theta)/s^*$ 与 $T_n=\hat\theta/s$ 比较（中心化 bootstrap）；或  
-2. 参数/残差 bootstrap 在 $H_0$ 成立的 DGP 上模拟 $T$ 的零分布。
-
-单侧 $H_1:\theta>0$ 时更应明确零分布的生成机制。
+**解答：** $\theta=a+c\beta$（$c>0$）：$T_\theta^*=(\hat\theta^*-\hat\theta)/s^*(\hat\theta^*)=(\hat\beta^*-\hat\beta)/s^*(\hat\beta^*)=T_\beta^*$（$c$ 在分子分母同时出现约掉）⇒ 同一 $q^*$，区间 $[a+cL,a+cU]$。$c<0$ 端点对调。
 
 ---
 
-## Exercise 10.15
+## Exercise 10.14　**bootstrap 检验必须在 $H_0$ 下重抽**（核心！）
 
-$\hat\theta=1.2$，$s(\hat\theta)=0.2$；$B=1000$ 时 $\hat\theta^*$ 的 2.5% 与 97.5% 分位为 0.75 与 1.3。
+**考点：** 本章最重要的原则——无约束 bootstrap 的 $T^*$ 分布**不是** $H_0$ 下的零分布。
 
-### 解答
+**错在哪：** 数据来自真 $\theta$（可能 $>0$），$\hat\theta^*$ 集中在 $\hat\theta$ 而非 $\theta_0=0$。用 $T^*=\hat\theta^*/s^*$ 的 $1-\alpha$ 分位当临界值，得到的是**真参数下**的分位，被信号撑大 ⇒ 过度保守、水平 $\ne\alpha$。
 
-**(a)** 95% **percentile** 区间：**$[0.75,\ 1.3]$**。
+**实证（已验证，见 §0）：** $T=9.06$（极显著）时，无约束 cv≈11.91 ⇒ 荒谬地"不拒绝"；施加 $H_0$ 的 cv≈1.52 ⇒ 正确拒绝。
 
-**(c)**  
-- **BC：** 需要 $p^*=P^*(\hat\theta^*\le 1.2)$，题目只给两个分位，**不能**算 $p^*$ 与 $z_0^*$。  
-- **Percentile-$t$：** 需要每次 bootstrap 的 $s^*(\hat\theta^*)$ 与 $T^*$ 分位，**信息不足**。  
+**正确做法：**
+1. **约束/强制 $H_0$**：在 $\theta=\theta_0$ 下估（如 $\hat\theta_0=0$，用约束残差），重抽生成满足 $H_0$ 的数据，算 $T^*$ 的零分布；或
+2. **中心化**：用 $T^{c*}=(\hat\theta^*-\hat\theta)/s^*$ 与 $T_n=(\hat\theta-\theta_0)/s$ 比较（两者都"去掉中心"）。
 
-故只能报告 percentile；不能报告 BC 或 percentile-$t$。
-
----
-
-## Exercise 10.16　正态回归参数 bootstrap
-
-$Y=X'\beta+e$，$e\mid X\sim N(0,\sigma^2)$，MLE $=(\hat\beta,\hat\sigma^2)$ OLS。
-
-### 解答
-
-**(a)** **参数回归 bootstrap（固定 $X$）：**  
-在每次复制中，抽 $e_i^*\stackrel{iid}{\sim}N(0,\hat\sigma^2)$，令  
-$Y_i^*=X_i'\hat\beta+e_i^*$。  
-则条件于 $F_n$（即条件于 $\hat\beta,\hat\sigma^2,X$）：  
-$Y_i^*\mid F_n\sim N(X_i'\hat\beta,\hat\sigma^2)$。
-
-**(b)** 固定 $X$ 上 OLS：  
-$\hat\beta^*=(X'X)^{-1}X'Y^*=\hat\beta+(X'X)^{-1}X'e^*$。  
-$e^*\sim N(0,\hat\sigma^2 I)$ ⇒  
-$\hat\beta^*\mid F_n\sim N\bigl(\hat\beta,\ \hat\sigma^2(X'X)^{-1}\bigr)$。
-
-**(c)** 同方差 SE：$s^{*2}=\|Y^*-X\hat\beta^*\|^2/(n-k)$，  
-$T_j^*=(\hat\beta_j^*-\hat\beta_j)/s^*(\hat\beta_j)$。  
-经典正态回归理论：与原模型相同，$\frac{\hat\beta_j-\beta_j}{s(\hat\beta_j)}\sim t_{n-k}$ 在真模型下成立；  
-bootstrap 世界把真值换成 $\hat\beta$，故 **$T^*\sim t_{n-k}$**（精确，固定 $X$）。
+> **和本科对照：** 这是 bootstrap 假设检验的第一原则。陈强/现代计量强调：**bootstrap 检验的 DGP 必须满足 $H_0$**（"simulate under the null"）。
 
 ---
 
-## Exercise 10.17　$m(x)=E[Y\mid X=x]=x'\beta$
+## Exercise 10.15　信息不足时只能给 percentile
 
-### 解答
+**题：** $\hat\theta=1.2$，$s=0.2$；$B=1000$ 时 $\hat\theta^*$ 的 2.5%/97.5% 分位为 0.75/1.3。
 
-**(a)** $\hat m(x)=x'\hat\beta$。渐近 95% CI：  
-$$
-x'\hat\beta\pm 1.96\sqrt{x'\hat V_{\hat\beta}x},
-$$
-$\hat V$ 为稳健/同方差协方差估计。
+**(a)** 95% percentile 区间：**$[0.75,1.3]$**。
+**(c)** BC 需 $p^*=P^*(\hat\theta^*\le1.2)$（题目只给两个分位，**算不出**）；percentile-$t$ 需每次的 $s^*$（**信息不足**）。故只能报告 percentile。
 
-**(b)** **Percentile：** 成对 bootstrap 得 $\hat m^*(x)=x'\hat\beta^*$，取 $\hat m^*$ 的 2.5% 与 97.5% 分位。
-
-**(c)** **Percentile-$t$：**  
-$T^*(x)=\dfrac{\hat m^*(x)-\hat m(x)}{s^*(\hat m(x))}$，  
-$s^{*2}(x)=x'\hat V^*x$。  
-令 $q^*_{\alpha/2},q^*_{1-\alpha/2}$ 为 $T^*$ 分位，区间  
-$$
-\bigl[\hat m-s(\hat m)q^*_{1-\alpha/2},\ \hat m-s(\hat m)q^*_{\alpha/2}\bigr].
-$$
+> **要点：** 实证报告 bootstrap 结果时，要保留**全部** $\hat\theta^*_b$（和 $s^*_b$）才能算 BC/BCa/percentile-$t$，不能只存几个分位数。
 
 ---
 
-## Exercise 10.18　$\mu_3=E[e^3]$
+## Exercise 10.16　正态回归的参数 bootstrap
 
-### 解答
+**考点：** 参数 bootstrap（固定 $X$，从 $N(0,\hat\sigma^2)$ 抽误差）。
 
-**(a)** OLS 残差 $\hat e_i=Y_i-X_i'\hat\beta$，  
-$\hat\mu_3=n^{-1}\sum_{i=1}^n\hat e_i^3$  
-（或 $n^{-1}\sum(\hat e_i-\bar{\hat e})^3$；含截距时 $\bar{\hat e}=0$）。
+**(a)** 抽 $e_i^*\stackrel{iid}{\sim}N(0,\hat\sigma^2)$，$Y_i^*=X_i'\hat\beta+e_i^*$ ⇒ $Y_i^*|F_n\sim N(X_i'\hat\beta,\hat\sigma^2)$。
+**(b)** $\hat\beta^*=\hat\beta+(X'X)^{-1}X'e^*$，$e^*\sim N(0,\hat\sigma^2 I)$ ⇒ $\hat\beta^*|F_n\sim N(\hat\beta,\hat\sigma^2(X'X)^{-1})$。
+**(c)** $T_j^*=(\hat\beta_j^*-\hat\beta_j)/s^*(\hat\beta_j)\sim t_{n-k}$（精确，正态回归下 bootstrap 把真值换成 $\hat\beta$，分布形式不变）。
 
-**(b)** **90% percentile：**  
-1. 成对 bootstrap 得 $(Y^*,X^*)$；  
-2. 算 $\hat\beta^*$ 与 $\hat\mu_3^*=n^{-1}\sum\hat e_i^{*3}$；  
-3. 重复 $B$ 次，取 $\hat\mu_3^*$ 的 5% 与 95% 分位。  
-
-（亦可用残差 bootstrap：固定 $X$，重抽 $\hat e_i$ 构造 $Y^*$。）
+> **要点：** 参数 bootstrap 在正态假设下能复现精确 $t_{n-k}$——这是 bootstrap 与第 5 章精确分布的交汇。
 
 ---
 
-## Exercise 10.19　$\sigma^2=E[e^2]$ 的 percentile 区间
+## Exercise 10.17　回归函数 $m(x)=x'\beta$ 的 CI
 
-### 解答
-
-$\hat\sigma^2=n^{-1}\sum\hat e_i^2$（或 $s^2$）。  
-Bootstrap：每次复制重估 $\hat\beta^*$ 与 $\hat\sigma^{2*}$，取 $\hat\sigma^{2*}$ 的 $\alpha/2$ 与 $1-\alpha/2$ 分位。  
-因 $\sigma^2>0$ 且分布右偏，**BC/BCa** 往往优于原始 percentile。
+**(a)** 渐近 CI：$x'\hat\beta\pm1.96\sqrt{x'\hat V_{\hat\beta}x}$（Ch7 工具）。
+**(b)** Percentile：成对 bootstrap 得 $\hat m^*(x)=x'\hat\beta^*$，取其 2.5%/97.5% 分位。
+**(c)** Percentile-$t$：$T^*(x)=\frac{\hat m^*(x)-\hat m(x)}{s^*(\hat m(x))}$，$s^{*2}(x)=x'\hat V^*x$，用 $T^*$ 分位构造 $[\hat m-s q^*_{1-\alpha/2},\hat m-s q^*_{\alpha/2}]$。
 
 ---
 
-## Exercise 10.20　$H_0:\beta_2=0$（$X_2$ 标量）
+## Exercise 10.18　$\mu_3=E[e^3]$（误差三阶矩）的 bootstrap CI
 
-### 解答（非参数 bootstrap 检验）
+**(a)** $\hat\mu_3=n^{-1}\sum\hat e_i^3$（含截距时 $\bar{\hat e}=0$）。
+**(b)** 90% percentile：成对 bootstrap → $\hat\beta^*,\hat\mu_3^*$；重复 $B$ 次取 $\hat\mu_3^*$ 的 5%/95% 分位。（亦可用残差 bootstrap。）
 
-**推荐：约束残差 / 强制 $H_0$ 的 bootstrap**
-
-1. 在 $H_0$ 下回归 $Y$ 对 $X_1$ 得 $\tilde\beta_1$、残差 $\tilde e_i$。  
-2. 构造零假设数据：$Y_i^{0*}=X_{1i}'\tilde\beta_1+\tilde e_i^*$（$\tilde e^*$ 有放回抽自 $\tilde e$ 或成对抽 $(X_i,\tilde e_i)$ 再组合）。  
-3. 在 $Y^{0*}$ 上估无约束模型，算 $t^*$ 或 Wald$^*$。  
-4. $p^*=B^{-1}\sum 1\{|T^*|\ge|T|\}$（双侧）。
-
-**错误做法：** 无约束成对 bootstrap 的 $|T^*|$ 分位直接当临界值（同 10.14/10.22）。
-
-也可用 **中心化** $T^{c*}=(\hat\beta_2^*-\hat\beta_2)/s_2^*$ 与 $T=\hat\beta_2/s_2$ 比较。
+> **要点：** bootstrap 能轻松估计**任意统计量**（如三阶矩、分位数）的分布——不必推渐近公式。这是它相对解析法的最大优势。
 
 ---
 
-## Exercise 10.21　$H_0:\beta_1=\beta_2$（均为 $k\times 1$）
+## Exercise 10.19　$\sigma^2=E[e^2]$ 的 percentile（宜 BC/BCa）
 
-### 解答
-
-约束 $\beta_1=\beta_2=\gamma$：$Y=(X_1+X_2)'\gamma+e$。  
-
-1. 约束估计得 $\tilde\gamma$、残差；  
-2. 在 $H_0$ 下 bootstrap（残差或成对+约束拟合）；  
-3. 每次算 Wald  
-   $W^*=(\hat\beta_1^*-\hat\beta_2^*)'\widehat{\mathrm{Var}}^*(\hat\beta_1^*-\hat\beta_2^*)^{-1}(\hat\beta_1^*-\hat\beta_2^*)$；  
-4. 与样本 $W$ 比较得 $p$ 值。  
-
-等价：令 $\delta=\beta_1-\beta_2$，检验 $\delta=0$。
+$\hat\sigma^2=n^{-1}\sum\hat e_i^2$。bootstrap 重估 $\hat\sigma^{2*}$，取分位。因 $\sigma^2>0$ 且右偏，**BC/BCa 优于**原始 percentile。
 
 ---
 
-## Exercise 10.22　博士生的 bootstrap 检验
+## Exercise 10.20　检验 $H_0:\beta_2=0$（**约束 bootstrap**）
 
-$T=2$，$q^*_{.95}=3.5$，学生不拒绝。
+**做法（施加 $H_0$）：**
+1. $H_0$ 下回归 $Y$ 对 $X_1$ 得 $\tilde\beta_1$、残差 $\tilde e$；
+2. 构造零假设数据 $Y_i^{0*}=X_{1i}'\tilde\beta_1+\tilde e_i^*$（$\tilde e^*$ 有放回抽）；
+3. 在 $Y^{0*}$ 上估无约束模型，算 $t^*$ 或 Wald$^*$；
+4. $p^*=B^{-1}\sum 1\{|T^*|\ge|T|\}$。
 
-### 解答
+**错误做法：** 无约束成对 bootstrap 的 $|T^*|$ 分位直接当临界值（同 10.14）。
 
-**不同意其方法。** 错误与 10.14 相同：
+---
+
+## Exercise 10.21　检验 $H_0:\beta_1=\beta_2$
+
+约束 $\beta_1=\beta_2=\gamma$：$Y=(X_1+X_2)'\gamma+e$。在 $H_0$ 下估 $\tilde\gamma$、残差；bootstrap；每次算 Wald $W^*=(\hat\beta_1^*-\hat\beta_2^*)'\widehat{\mathrm{Var}}^{*-1}(\hat\beta_1^*-\hat\beta_2^*)$；与样本 $W$ 比得 $p$ 值。
+
+---
+
+## Exercise 10.22　博士生的 bootstrap 检验（**陷阱**）
+
+$T=2$，$q^*_{.95}=3.5$，学生"不拒绝"。
+
+**不同意其方法**（同 10.14）：
 
 | 步骤 | 问题 |
 |------|------|
-| 1–2 | 无约束重抽，DGP 在 $\hat\alpha=2$ 附近，不是 $\alpha=0$ |
-| 4 | $q^*_{.95}$ 是 **非零 $\alpha$** 下 $|T^*|$ 的分位，偏大 |
-| 5 | 用错误临界值得出“不拒绝”，**水平/功效皆不可靠** |
+| 1–2 | 无约束重抽，DGP 在 $\hat\alpha=2$ 附近，**不**是 $\alpha=0$ |
+| 4 | $q^*_{.95}$ 是非零 $\alpha$ 下 $|T^*|$ 的分位，**偏大** |
+| 5 | 用错误临界值"不拒绝"，水平/功效皆不可靠 |
 
-**改正：** 在 $H_0:\alpha=0$ 下估计 $Y=X'\beta+e$，用该残差生成 $Y^*$（或中心化 $T^*$），再与 $T=2$ 比较。  
-渐近拒绝而错误 bootstrap 不拒绝，恰说明其 bootstrap **过度保守**。
+**改正：** 在 $H_0:\alpha=0$ 下估，用约束残差生成 $Y^*$（或中心化 $T^*$）。渐近拒绝而错误 bootstrap 不拒绝，正说明其**过度保守**。
 
 ---
 
-## Exercise 10.23　$\theta=\beta_1\beta_2$（$X_1,X_2$ 标量）
+## Exercise 10.23　$\theta=\beta_1\beta_2$ 的三类 CI
 
-### 解答
-
-**(a) 渐近 / delta 法**  
-$\hat\theta=\hat\beta_1\hat\beta_2$。  
-$\nabla g=(\beta_2,\beta_1)'$，$V=\mathrm{Avar}(\hat\beta)$（$2\times2$ 块）。  
-$\widehat{\mathrm{se}}(\hat\theta)=\sqrt{\nabla\hat g'\hat V\nabla\hat g}$，  
-95% CI：$\hat\theta\pm 1.96\,\widehat{\mathrm{se}}$。
-
-**(b) Percentile bootstrap**  
-成对 bootstrap → $(\hat\beta_1^*,\hat\beta_2^*)$ → $\hat\theta^*=\hat\beta_1^*\hat\beta_2^*$，取 2.5% 与 97.5% 分位。
-
-**(c) Percentile-$t$**  
-每次算 $\hat\theta^*$ 与 delta/稳健 $s^*(\hat\theta^*)$，  
-$T^*=(\hat\theta^*-\hat\theta)/s^*(\hat\theta^*)$。  
-用 $T^*$ 分位构造  
-$[\hat\theta-s(\hat\theta)q^*_{1-\alpha/2},\ \hat\theta-s(\hat\theta)q^*_{\alpha/2}]$。
+**(a) 渐近/delta**：$\hat\theta=\hat\beta_1\hat\beta_2$，$\nabla g=(\beta_2,\beta_1)'$，$\mathrm{se}=\sqrt{\nabla'\hat V\nabla}$，CI $\hat\theta\pm1.96\,\mathrm{se}$。
+**(b) Percentile**：$\hat\theta^*=\hat\beta_1^*\hat\beta_2^*$，取分位。
+**(c) Percentile-$t$**：$T^*=(\hat\theta^*-\hat\theta)/s^*(\hat\theta^*)$，用 $T^*$ 分位构造 CI。
 
 ---
 
 ## Exercise 10.24　$\theta=\beta_1/\beta_2$ 的 percentile-$t$
 
-### 解答
+delta：$\nabla=(1/\beta_2,-\beta_1/\beta_2^2)$，$s(\hat\theta)=\sqrt{\nabla'\hat V\nabla}$。bootstrap 复制 $\hat\theta^*,s^*(\hat\theta^*)$，$T^*=(\hat\theta^*-\hat\theta)/s^*$，取分位造 CI。
 
-1. OLS 得 $\hat\beta$， $\hat\theta=\hat\beta_1/\hat\beta_2$（要求 $\hat\beta_2\neq0$）。  
-2. Delta：$g=(\beta_1/\beta_2)$，$\nabla=(1/\beta_2,\,-\beta_1/\beta_2^2)$，  
-   $s(\hat\theta)=\sqrt{\nabla'\hat V\nabla}$。  
-3. Bootstrap 复制：$\hat\theta^*$，$s^*(\hat\theta^*)$，  
-   $T^*=(\hat\theta^*-\hat\theta)/s^*(\hat\theta^*)$。  
-4. 取 $T^*$ 的 $\alpha/2$ 与 $1-\alpha/2$ 分位构造 CI（同 10.23(c) 形式）。  
-
-注意比值在 $\beta_2\approx0$ 时矩可能失效，bootstrap SE 会不稳定（教材亦警告）。
+> **警示：** 比值在 $\beta_2\approx0$ 时矩可能失效，bootstrap SE 不稳定。
 
 ---
 
-## Exercise 10.25
+## Exercise 10.25　异方差不破坏成对 bootstrap
 
-条件异方差是否使非参数 bootstrap 无效？
+**否。** 成对 bootstrap 重抽 $(Y_i,X_i)$ 对，保留条件分布 $Y|X$ 的经验结构（含 $\sigma^2(X)$），**不依赖同方差**。与异方差稳健推断相容。
 
-### 解答
-
-**否，不必然无效。**  
-
-成对非参数 bootstrap 重抽 $(Y_i,X_i)$，保留 **条件分布 $Y\mid X$ 的经验结构**，包括 $\mathrm{Var}(e\mid X)=\sigma^2(X)$。  
-它不依赖同方差假定；与异方差稳健推断是相容的。  
-
-需注意：i.i.d. 成对抽样假定观测独立；若有聚类/时间相关，应改用 **block/cluster bootstrap**。
+> **注意：** 成对 bootstrap 假设观测**独立**；若有聚类/时间相关，应改用 **block/cluster bootstrap**（10.31）。
 
 ---
 
-## Exercise 10.26　RESET 的 bootstrap
+## Exercise 10.26　RESET 的 bootstrap（**必须施加线性 $H_0$**）
 
-同事的做法对吗？
+**同事做法不正确。** RESET 的 $H_0$ 是线性 CEF；在无约束真实数据（可能已非线性）上重抽，bootstrap 世界 $H_0$ 不成立，$R^*$ 的 95% 分位**不是** $H_0$ 临界值。
 
-### 解答
-
-**不正确。**  
-
-RESET 的 $H_0$ 是线性 CEF。同事在 **无约束真实数据**（可能已非线性）上重抽，bootstrap 世界一般 **$H_0$ 不成立**，$R^*$ 的 95% 分位不是 $H_0$ 临界值。
-
-**修正方案：**
-
-1. 在 $H_0$ 下只估计线性模型，得 $\hat\beta$、残差 $\hat e_i$、拟合 $\hat Y_i=X_i'\hat\beta$。  
-2. **残差 bootstrap：** $Y_i^*=X_i'\hat\beta+\hat e_i^*$（$\hat e^*$ 有放回抽；可对残差中心化）。  
-3. 在 $(Y^*,X)$ 上 **完整重做** RESET（两步回归 + $R^*$）。  
-4. 用 $R^*$ 的分位与样本 $R$ 比较。  
-
-这样 DGP 满足线性 $H_0$，临界值才对应 Type I error。
+**修正：** 在 $H_0$ 下只估线性模型得 $\hat\beta,\hat e,\hat Y=X\hat\beta$；残差 bootstrap $Y_i^*=X_i'\hat\beta+\hat e_i^*$；在 $(Y^*,X)$ 上**完整重做** RESET；用 $R^*$ 分位与样本 $R$ 比。
 
 ---
 
-## Exercise 10.27
+## Exercise 10.27　$E[Xe]\ne0$ 时 BC 能否覆盖真 $\beta$？
 
-$E[Xe]\neq0$ 时 OLS 偏倚；BC percentile 能否对 $\beta$ 有准确覆盖？
+**不能。** BC 纠的是**估计量抽样分布的中位数偏倚**，**不是识别偏倚**。$E[Xe]\ne0$ 时 $\hat\beta\to_p\beta_{\mathrm{plim}}\ne\beta$，bootstrap 分布集中在 $\beta_{\mathrm{plim}}$ 附近，BC 区间覆盖的是 $\beta_{\mathrm{plim}}$ 而非结构参数 $\beta$。
 
-### 解答
-
-**预期：不能对真 $\beta$ 有准确覆盖。**
-
-- BC 纠的是 **估计量抽样分布关于其概率极限的中位数偏倚**，不是 **识别偏倚**。  
-- 当 $E[Xe]\neq0$ 时 $\hat\beta\to_p\beta_{\mathrm{plim}}\neq\beta$，bootstrap 分布集中在 $\beta_{\mathrm{plim}}$ 附近。  
-- BC 区间覆盖的是 $\beta_{\mathrm{plim}}$，**不是** 结构参数 $\beta$。  
-
-BC 在“正确识别 + 有限样本偏倚”时有用；**不能替代工具变量等识别策略**。
+> **核心：** bootstrap 不能替代**识别策略**（工具变量等）。它只修"正确识别下的有限样本偏倚"。
 
 ---
 
-## Exercise 10.28（Nerlove1963，$n=145$）
+## Exercise 10.28（Nerlove1963，$n=145$）　$\theta=\beta_3+\beta_4+\beta_5$
 
-无约束 $\log C=\beta_1+\beta_2\log Q+\beta_3\log P_L+\beta_4\log P_K+\beta_5\log P_F+e$，  
-$\theta=\beta_3+\beta_4+\beta_5$。
-
-### 方法
-
-- **Asymptotic SE：** HC3 / HC1 sandwich。  
-- **Jackknife SE：** 删 $i=1..n$ 重估，用 (10.1)。  
-- **Bootstrap SE：** 成对 bootstrap，$B$ 宜 $\ge 999$。  
-- **Percentile / BCa：** 对 $\theta^*$ 分位；BCa 用 jackknife 估 $a$。
-
-数值见 notebook（随 $B$ 与种子略有波动）。
+**方法：** 渐近 SE（HC3 sandwich）；jackknife SE（删 $i$ 重估，(10.1)）；bootstrap SE（成对，$B\ge999$）；percentile/BCa（对 $\theta^*$ 分位，BCa 用 jackknife 估 $a$）。数值见 notebook。
 
 ---
 
-## Exercise 10.29（MRW1992，$N=1$，$n=98$）
+## Exercise 10.29（MRW1992，$n=98$）　$\theta=$ 第 2+3+4 系数和
 
-$\Delta\log Y$ 对 $\log Y_{60},\log(I/Y),\log(n+g+\delta),\log(\mathrm{school})$；  
-$\theta=$ 第 2+3+4 个斜率之和。  
-报告同 10.28 三类 SE 与 percentile、**BC**（题目要 BC，非必须 BCa）区间。
+报告同 10.28 的三类 SE 与 percentile、**BC** 区间。
 
 ---
 
-## Exercise 10.30
+## Exercise 10.30（CPS 小样本 $n=99$）　$\theta=\beta_1/(\beta_2+0.2\beta_3)$
 
-CPS：白人男性西班牙裔 + **从未结婚** + **Midwest**，$n=99$。  
-$\theta=\dfrac{\beta_{\mathrm{edu}}}{\beta_{\mathrm{exp}}+2\beta_{\mathrm{exp2}}\cdot\mathrm{exp}/100\big|_{\mathrm{exp}=10}}=\dfrac{\beta_1}{\beta_2+0.2\beta_3}$。
-
-### 解答要点
-
-**(a)** 报告 $\hat\theta$ 与 asym / jack / boot SE。  
-**(b)** $n=99$ 小、比率非线性、经验剖面估计噪声大时：  
-- 渐近 delta 依赖局部线性；  
-- jackknife 对高杠杆点敏感；  
-- bootstrap 反映偏态与可能的矩问题，三者可差很多。  
-**(c)** BC percentile 区间：用 $p^*$ 调整分位。
+**(a)** 报告 $\hat\theta$ 与 asym/jack/boot SE。
+**(b)** $n=99$ 小、比率非线性时三者可差很多：渐近 delta 依赖局部线性；jackknife 对高杠杆点敏感；bootstrap 反映偏态。**小样本非线性估计，bootstrap/BC 往往更可信。**
+**(c)** BC percentile 区间（用 $p^*$ 调分位）。
 
 ---
 
-## Exercise 10.31（DDK2011）
+## Exercise 10.31（DDK2011）　cluster bootstrap + BCa
 
-在 4.26 回归上用 **cluster bootstrap**（重抽 **学校** 块）：
+**做法：** 以 `schoolid` 为簇，有放回抽 $G$ 个**学校**块，堆叠学生观测，每次算 $\hat\beta^*$；列向标准差 = cluster bootstrap SE；BCa 用 **delete-cluster jackknife** 估 $a$。
 
-1. 以 `schoolid` 为簇，有放回抽 $G$ 个学校，堆叠学生观测。  
-2. 每次算 $\hat\beta^*$。  
-3. 列向标准差 = cluster bootstrap SE。  
-4. 对各系数用 bootstrap 复制做 **BCa** 区间（$a$ 用 **delete-cluster jackknife** 更贴切）。
-
-通常 cluster bootstrap SE $\approx$ 渐近聚类 SE，且 **大于** 个体稳健 SE（尤其 tracking）。
+> **和本科对照：** 聚类数据必须用 **cluster bootstrap**（重抽整块），不能逐观测重抽（否则破坏组内相关）。通常 cluster bootstrap SE ≈ 渐近聚类 SE，且**大于**个体稳健 SE（尤其 tracking，见 Ch4 Ex 4.26）。
 
 ---
 
-## 小结表
+## 附录 A：四种 bootstrap CI 对比
 
-| 题 | 核心结论 |
-|:--:|----------|
-| 10.1–10.5 | Jack/boot 方差与仿射等变 |
-| 10.6 | 固定 SE 的“$t$”bootstrap = percentile |
-| 10.7–10.9 | Bootstrap delta / 正态极限 / 方差一致 |
-| 10.10 | $1/\bar Y$ 上偏；宜 BC |
-| 10.11 | 残差配对写法 = 成对 bootstrap |
-| 10.12–10.13 | BC 与 percentile-$t$ 的变换性质 |
-| 10.14, 10.22, 10.26 | **必须在 $H_0$ 下 bootstrap** |
-| 10.25 | 异方差不破坏成对 bootstrap |
-| 10.27 | BC 不修识别错误 |
-| 10.28–10.31 | 实证：jack / boot / cluster / BCa |
+| 方法 | 怎么做 | 纠偏 | 纠偏度 | 精度 | 需要 |
+|---|---|---|---|---|---|
+| Percentile | $\hat\theta^*$ 的分位 | 否 | 否 | 一阶 | $\hat\theta^*_b$ |
+| BC | 调 $2z_0^*+z_\alpha$ | 是 | 否 | 一阶+ | $\hat\theta^*_b$ |
+| BCa | 再加加速 $a$ | 是 | 是 | **二阶** | $\hat\theta^*_b$ + jackknife |
+| Percentile-$t$ | studentize $T^*$ | — | — | **二阶**（最准） | $\hat\theta^*_b,s^*_b$ |
 
-完整可运行代码见同目录 `Hansen_Ch10_Exercises_Solutions.ipynb`。
+**选择：** 默认 **BCa**（自适应、推荐）；若 SE 估计稳定且追求精度，用 **percentile-$t$**；快速粗看用 percentile。
+
+---
+
+## 附录 B：bootstrap 检验的"零原则"
+
+| 场景 | 正确做法 |
+|---|---|
+| 检验 $H_0:\theta=\theta_0$ | 在 $\theta=\theta_0$ 下估，用约束残差生成 bootstrap 数据（10.14/10.20/10.22） |
+| 检验 $H_0:\beta_1=\beta_2$ | 约束 $\beta_1=\beta_2$ 估，再 bootstrap（10.21） |
+| RESET/设定检验 | 在 $H_0$（线性）下估，残差 bootstrap（10.26） |
+| 一般 | 或用**中心化**统计量 $(\hat\theta^*-\hat\theta)/s^*$ 与 $(\hat\theta-\theta_0)/s$ 比较 |
+
+**一句话：bootstrap 检验的 DGP 必须满足 $H_0$（"simulate under the null"），否则临界值被信号撑大、过度保守。**
+
+---
+
+## 附录 C：notebook 单元对应
+
+| 习题 | notebook 内容 |
+|------|----------------|
+| 10.1 | jackknife = $s^2/n$ 核对 code cell |
+| 10.28 | Nerlove asym/jack/boot SE + BCa code cell |
+| 10.29 | MRW 三类 SE + BC code cell |
+| 10.30 | CPS 小样本 $\theta$ 三类 SE + BC code cell |
+| 10.31 | DDK cluster bootstrap + BCa code cell |
