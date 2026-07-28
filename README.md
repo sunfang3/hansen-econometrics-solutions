@@ -25,7 +25,10 @@ Bruce E. Hansen《Econometrics》习题解答（按 Hansen 体系完整解题）
 | **Ch.19** | **Nonparametric Regression**（**19.1–19.11 全文**） | **718–719** | **`.md` / `.ipynb`** |
 | **Ch.20** | **Series Regression**（**20.1–20.18 全文**） | **755–758** | **`.md` / `.ipynb`** |
 | **Ch.21** | **Regression Discontinuity**（**21.1–21.9 全文**） | **771** | **`.md` / `.ipynb`** |
+| **Ch.22** | **M-Estimators**（**22.1–22.4 全文**） | **约 780s** | **`.md` / `.ipynb`** |
 | **Ch.23** | **Nonlinear Least Squares**（**23.1–23.10 全文**） | **798–799** | **`.md` / `.ipynb`** |
+| **Ch.24** | **Quantile Regression**（**24.1–24.16 全文**） | **约 820s** | **`.md` / `.ipynb`** |
+| **Ch.25** | **Binary Choice**（**25.1–25.19 全文**） | **836–838** | **`.md` / `.ipynb`** |
 | Ch.29 | Machine Learning | 943 等 | `.md` / `.qmd` / `.html` |
 
 解答位于 `docs/chXX/`。
