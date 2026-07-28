@@ -1,235 +1,430 @@
-# Hansen《Econometrics》第 7 章习题解答
+# Bruce Hansen《Econometrics》第 7 章习题解答（详细注释版）
 
-**章节：** Chapter 7 Asymptotic Theory for Least Squares  
-**书稿页码：** PDF 第 209–215 页（印刷页 189–195），Exercises 7.x  
+**章节：** Chapter 7 Asymptotic Theory for Least Squares
+**书稿页码：** PDF 第 209–215 页（印刷页 189–195），§7.22 Exercises
+**数值验证：** `Hansen_Ch07_Exercises_Solutions.ipynb`（Exercise 7.4、7.28 有可运行代码）
 
-计算（7.28）见：`Hansen_Ch07_Exercises_Solutions.ipynb`
-
----
-
-
-## Exercise 7.1
-
-短回归 $Y$ 对 $X_1$：$\hat\beta_1^s\to_p(E[X_1X_1'])^{-1}E[X_1Y]$。  
-一般 **不一致**。一致当 $E[X_1X_2']\beta_2=0$（如 $\beta_2=0$ 或 $X_1$ 与 $X_2$ 正交）。
+> **写给谁看：** 假设你学过李子奈/陈强，知道"大样本下 OLS 一致、渐近正态"，但说不清**为什么**、**需要什么条件**、和第 5 章的精确分布**差在哪**。
+> Hansen 第 7 章是全书的**枢纽**：它**去掉第 5 章的正态假定**，只用**大数定律（WLLN）+ 中心极限定理（CLT）**，在大样本下重新推出 $\hat\beta$ 的**一致性**与**渐近正态分布**。这正是现代实证"稳健推断"（robust $t$、稳健 SE）的理论根基。
 
 ---
 
-## Exercise 7.2　Ridge，$\lambda$ 固定
+## 0. 读题前必看：本章到底在讲什么
 
-$$\hat\beta=\Bigl(n^{-1}\sum XX'+n^{-1}\lambda I\Bigr)^{-1}n^{-1}\sum XY\to_p Q^{-1}E[XY]=\beta,$$
-因 $n^{-1}\lambda\to0$。**一致**。
+**承上启下：**
+- 第 4 章：在弱假设下（$E[Xe]=0$）证 $\hat\beta$ **无偏** + 给**夹心方差**（条件于 $X$ 的有限样本）。
+- 第 5 章：加**正态**假定，得到 $\hat\beta$、$t$、$F$ 的**精确有限样本**分布。
+- **第 7 章：去掉正态，靠 $n\to\infty$**，得到 $\hat\beta$ 的**渐近**分布——一致性 + 渐近正态。**不需要误差正态**。
 
----
+**两条定律撑起全章（务必分清）：**
 
-## Exercise 7.3　$\lambda=cn$
+| 定律 | 作用 | 给出 |
+|---|---|---|
+| **WLLN**（弱大数定律） | 样本均值 $\frac1n\sum\to_p E[\cdot]$ | **一致性** $\hat\beta\to_p\beta$ |
+| **CLT**（中心极限定理） | 标准化和 $\frac1{\sqrt n}\sum\to_d N(0,\text{var})$ | **渐近正态** $\sqrt n(\hat\beta-\beta)\to_d N(0,V_\beta)$ |
 
-$$\hat\beta\to_p(Q+cI)^{-1}Q\beta\neq\beta\quad(c>0).$$
-**不一致**。
+> **和本科对照：** 李子奈有"渐近性质"一节但常较粗略；陈强较系统讲大样本 OLS、稳健标准误、delta method。Hansen 的贡献：把过程拆成清晰的"**WLLN 证一致性 → CLT 证正态性 → Slutsky/CMT 组装**"三步，并把**夹心方差**统一了同方差与异方差。
 
----
+**全章最核心的一个分解（背下来，所有题都从它出发）：**
+$$\boxed{\ \sqrt n(\hat\beta-\beta)=\underbrace{\hat Q_{XX}^{-1}}_{\to_p Q^{-1}}\cdot\underbrace{\frac1{\sqrt n}\sum_{i=1}^n X_ie_i}_{\xrightarrow{\text{CLT}} N(0,\Omega)}\ \xrightarrow{\text{Slutsky}}\ N(0,\underbrace{Q^{-1}\Omega Q^{-1}}_{=:V_\beta})\ }$$
+其中 $Q=E[XX']$（"面包"），$\Omega=E[XX'e^2]$（"肉"）。
 
-## Exercise 7.4　Section 7.4 矩核对
+- **引擎**是中间的 $\frac1{\sqrt n}\sum X_ie_i$——CLT 作用于它（i.i.d.、有限方差）。
+- 左边的 $\hat Q_{XX}^{-1}\to_p Q^{-1}$ 是"良性"前因子（Slutsky 定理：概率极限为常数的因子可自由进出）。
+- 结果：$\sqrt n(\hat\beta-\beta)\to_d N(0,V_\beta)$，$V_\beta=Q^{-1}\Omega Q^{-1}$——**正是第 4 章那个夹心**，现在以**极限方差**的形式出现。
 
-$P(X_1=X_2=\pm1)=3/8$，$P(X_1=-X_2)=1/8$ 各组；条件二阶矩 $5/4$（同号）与 $1/4$（异号）。
+> **三件套的强弱层次（别混淆）：**
+> 1. $\hat\beta\to_p\beta$（一致性，$O_p(1)$）——需 WLLN，二阶矩。
+> 2. $\hat\beta=\beta+O_p(n^{-1/2})$（收敛速度）。
+> 3. $\sqrt n(\hat\beta-\beta)\to_d N(0,V_\beta)$（渐近分布）——需 CLT，**四阶矩**（保证 $\Omega<\infty$）。
 
-|  | 结果 |
-|--|------|
-| (a) $E[X_1]$ | $0$ |
-| (b) $E[X_1^2]$ | $1$ |
-| (c) $E[X_1X_2]$ | $1/2$ |
-| (d) $E[e^2]$ | $1$ |
-| (e) $E[X_1^2e^2]$ | $1$ |
-| (f) $E[X_1X_2e^2]$ | $7/8$ |
-
-(f) 计算：$(5/4)(3/4)+(1/4)(-1/4)=15/16-1/16=7/8$。
-
----
-
-## Exercise 7.5
-
-证明 (7.13)–(7.16)：标准 WLLN/CLT 下样本矩收敛与 $\hat Q_{XX}\to_p Q$、$n^{-1/2}X'e\to_d N(0,\Omega)$ 等（见教材推导；核心是 i.i.d. 有限二阶矩 + Cramér–Wold）。
-
----
-
-## Exercise 7.6
-
-矩条件 $E[X(Y-X'\beta)]=0$，$E[XX'e^2]=\Omega$。  
-$$\hat\beta=(X'X)^{-1}X'Y,\qquad \hat\Omega=n^{-1}\sum X_iX_i'\hat e_i^2.$$
+**与第 4、5 章的呼应（关键）：**
+- 第 4 章夹心 $\mathrm{var}(\hat\beta|X)=(X'X)^{-1}X'\Omega X(X'X)^{-1}$（有限样本、条件于 $X$）。
+- 第 7 章 $V_\beta=Q^{-1}\Omega Q^{-1}$（极限、无条件）——把 $X'X/n\to Q$、$\Omega$ 代入即得。**同一个夹心，两个视角。**
+- 第 5 章正态假定下的精确 $t_{n-k}$、$F$，本章换成渐近 $N(0,1)$、$\chi^2$——**临界值用正态/卡方，不再需要 $t$/$F$**（大样本下 $t_{n-k}\to N(0,1)$）。
 
 ---
 
-## Exercise 7.7　$Y$ 测量误差
+## 1. 记号与概念速查（对照李子奈/陈强）
 
-$Y=X'\beta+e+u$，$E[X(e+u)]=0$。  
-**(a)** 是：$\beta$ 仍是 $Y$ 对 $X$ 的投影系数。  
-**(b)** OLS 一致。  
-**(c)** $\sqrt{n}(\hat\beta-\beta)\to_d N(0,Q^{-1}\Omega Q^{-1})$，$\Omega=E[XX'(e+u)^2]$。
+| Hansen 记号 | 中文/本科说法 | 一句话解释 |
+|---|---|---|
+| $Q=E[XX']$ | 总体二阶矩矩阵 | "面包"；正定（Assumption 7.1） |
+| $\Omega=E[XX'e^2]$ | 渐近方差的"肉" | 异方差时与 $Q$ 不同 |
+| $V_\beta=Q^{-1}\Omega Q^{-1}$ | 渐近协方差（夹心） | 第 4 章夹心的极限版 |
+| $\hat\beta\to_p\beta$ | 一致性 | WLLN + CMT |
+| $\sqrt n(\hat\beta-\beta)\to_d N(0,V_\beta)$ | 渐近正态 | CLT + Slutsky |
+| $\hat V_\beta=\hat Q^{-1}\hat\Omega\hat Q^{-1}$ | 稳健协方差估计 | $\hat\Omega=n^{-1}\sum X_iX_i'\hat e_i^2$ |
+| delta method | δ 方法（线性化） | 非线性参数 $g(\beta)$ 的渐近分布 |
+| $O_p(\cdot)$, $o_p(\cdot)$ | 随机阶符号 | "$O_p(n^{-1/2})$"= 量级 $\sqrt n$ 收敛 |
 
----
-
-## Exercise 7.8
-
-$\hat\sigma^2=n^{-1}\sum\hat e_i^2$。在同方差/适当矩下  
-$\sqrt{n}(\hat\sigma^2-\sigma^2)\to_d N(0,\mathrm{var}(e^2))$（需展开 $\hat e_i=e_i-X_i'(\hat\beta-\beta)$ 的影响项，通常不改变一阶渐近方差若 $E[eX]=0$）。
-
----
-
-## Exercise 7.9
-
-$\hat\beta=\sum X_iY_i/\sum X_i^2$（OLS），$\tilde\beta=n^{-1}\sum Y_i/X_i$。  
-**(a)** OLS 在 $E[Xe]=0$ 下一致；$\tilde\beta$ 一般要求 $E[e/X]=0$ 等更强/不同条件，**不自动一致**。  
-**(b)** 同方差下 OLS 在 Gauss–Markov/渐近有效意义下更优；$\mathrm{var}(e\mid X)\propto X^2$ 时 $\tilde\beta$ 类估计可能更有效。
+**两个最常用的"组装"工具：**
+- **Slutsky 定理**：若 $A_n\to_p A$（常数），$Z_n\to_d Z$，则 $A_nZ_n\to_d AZ$。→ 让 $\hat Q^{-1}$ 这种"概率极限为常数"的因子自由进出。
+- **连续映射定理 CMT**：若 $Z_n\to_p Z$，$g$ 连续，则 $g(Z_n)\to_p g(Z)$。→ $\hat\beta=\hat Q^{-1}\hat Q_{XY}$ 是 $\hat Q$ 的连续函数，故收敛。
+- **delta method**：若 $\sqrt n(\hat\beta-\beta)\to_d N(0,V_\beta)$，$g$ 可微，则 $\sqrt n(g(\hat\beta)-g(\beta))\to_d N(0,G'V_\beta G)$，$G=\nabla g(\beta)$（梯度/Jacobian）。
 
 ---
 
-## Exercise 7.10　预测
+## 2. 预备记号
 
-**(a)** $\widehat Y_{n+1}=x'\hat\beta$。  
-**(b)** $\widehat{\mathrm{var}}\approx x'\hat V_{\hat\beta}x+\hat\sigma^2$（参数不确定性 + 创新方差）。
-
----
-
-## Exercise 7.11
-
-**(a)** $\tilde\Omega$ 用真误差：标准 CLT，$\sqrt{n}(\tilde\Omega-\Omega)\to_d N(0,\mathrm{Avar})$。  
-**(b)** $\hat e_i=e_i-X_i'(\hat\beta-\beta)$；差值 $o_p(n^{-1/2})$ 阶使 $\hat\Omega$ 与 $\tilde\Omega$ **同分布极限**。  
-**(c)** $E[e\mid X]=0$ 保证 $\hat\beta$ 一致并控制交叉项。
+模型 $Y=X'\beta+e$，$E[Xe]=0$（一致性需要；渐近正态与 delta method 常需 $E[e|X]=0$ 更强）。i.i.d. 观测。
+$Q=E[XX']$，$\Omega=E[XX'e^2]$，$V_\beta=Q^{-1}\Omega Q^{-1}$。
+样本矩 $\hat Q_{XX}=n^{-1}\sum X_iX_i'$，$\hat Q_{Xe}=n^{-1}\sum X_ie_i$，$\hat\Omega=n^{-1}\sum X_iX_i'\hat e_i^2$。
 
 ---
 
-## Exercise 7.12　$A=-\alpha^2/(2\beta)$
+## 主题一：一致性（概率极限）
 
-**(a)** $\hat A=-\hat\alpha^2/(2\hat\beta)$。  
-**(b)** delta 法：$\sqrt{n}(\hat A-A)\to_d N(0,G'V_\theta G)$，$G=\partial A/\partial(\alpha,\beta)$；  
-CI：$\hat A\pm z_{1-\eta/2}\mathrm{se}(\hat A)$。
+> 这组题反复练一件事：**写 $\hat\beta$ = 样本矩的函数 → WLLN 取极限 → 看是否等于 $\beta$**。
+> 关键判据：$\hat\beta\to_p\beta$ 当且仅当估计量所满足的**总体矩条件**是 $E[Xe]=0$（或更强 $E[e|X]=0$）。
 
----
+### Exercise 7.1　短回归的一致性（大样本 OVB）
 
-## Exercise 7.13　反向回归 $\theta=1/\gamma$
+**题：** 真模型 $Y=X_1'\beta_1+X_2'\beta_2+e$，$E[Xe]=0$。只用 $X_1$ 回归 $Y$ 得 $\hat\beta_1^s$。求 plim，是否一致？
 
-**(a)** $\hat\gamma=\sum Y_iX_i/\sum Y_i^2$。  
-**(b)** $\hat\theta=1/\hat\gamma$。  
-**(c)(d)** delta 法 $\mathrm{se}(\hat\theta)=|\hat\theta|^2\mathrm{se}(\hat\gamma)$。
+**证明：** 短回归 $\hat\beta_1^s=\hat Q_{11}^{-1}\hat Q_{1Y}$（$X_1$ 上的 OLS）。WLLN 取极限：
+$$\hat\beta_1^s\to_p(E[X_1X_1'])^{-1}E[X_1Y].$$
+代入 $Y=X_1'\beta_1+X_2'\beta_2+e$，并用 $E[X_1e]=0$（$X_1$ 是 $X$ 的分量，$E[Xe]=0\Rightarrow E[X_1e]=0$）：
+$$E[X_1Y]=E[X_1X_1']\beta_1+E[X_1X_2']\beta_2.$$
+故
+$$\boxed{\ \mathrm{plim}\,\hat\beta_1^s=\beta_1+(E[X_1X_1'])^{-1}E[X_1X_2']\beta_2\ }.$$
+**一般不一致**（多出遗漏变量偏差项）。**一致当且仅当** $E[X_1X_2']\beta_2=0$，即：$\beta_2=0$（$X_2$ 无效应）或 $E[X_1X_2']=0$（$X_2$ 与 $X_1$ 不相关）。
 
----
+> **和本科对照：** 这是**大样本版 OVB**，与 Ch2 Ex 2.21、Ch4 Ex 4.18 完全一脉相承。短回归系数收敛到"真值+偏差"，偏差 = 被遗漏变量的效应 × 它与保留变量的相关。
 
-## Exercise 7.14　$\theta=\beta_1\beta_2$
+### Exercise 7.2　岭回归（固定 $\lambda$）：一致
 
-**(a)** $\hat\theta=\hat\beta_1\hat\beta_2$。  
-**(b)** $\sqrt{n}(\hat\theta-\theta)\to_d N(0,g'Vg)$，$g=(\beta_2,\beta_1,\ldots)$。  
-**(c)** $\hat\theta\pm1.96\,\widehat{\mathrm{se}}$。
+**题：** $\hat\beta=(\sum X_iX_i'+\lambda I)^{-1}\sum X_iY_i$，$\lambda>0$ 固定。
 
----
+**证明：** 改写为 $\hat\beta=(n^{-1}\sum X_iX_i'+n^{-1}\lambda I)^{-1}(n^{-1}\sum X_iY_i)$。WLLN：$n^{-1}\sum X_iX_i'\to_p Q$；而 **$n^{-1}\lambda\to 0$**（$\lambda$ 固定、被 $n$ 稀释）。故
+$$\hat\beta\to_p(Q+0)^{-1}Q\beta=Q^{-1}Q\beta=\beta.\quad\text{一致}.$$
 
-## Exercise 7.15
+> **和本科对照：** Ch4 Ex 4.23 证岭回归**小样本有偏**；此处说明**固定 $\lambda$ 时大样本一致**——偏差 $\lambda/n\to 0$ 消失。这是"以偏差换方差"中偏差在大样本下自动消失的体现。
 
-$\hat\beta=\sum X_i^3Y_i/\sum X_i^4$。  
-由 $Y=X\beta+e$：$\hat\beta-\beta=\sum X_i^3e_i/\sum X_i^4$。  
-$\sqrt{n}(\hat\beta-\beta)\to_d N\bigl(0,\,E[X^6e^2]/(E[X^4])^2\bigr)$（需矩条件）。
+### Exercise 7.3　岭回归（$\lambda=cn$）：不一致
 
----
+**题：** $\lambda=cn$，$c>0$ 固定。
 
-## Exercise 7.16
+**证明：** 此时 $n^{-1}\lambda=c$ **不消失**：
+$$\hat\beta\to_p(Q+cI)^{-1}Q\beta\ne\beta\quad(c>0).\quad\text{不一致}.$$
+（$(Q+cI)^{-1}Q=I-c(Q+cI)^{-1}\ne I$，向 0 收缩。）
 
-随机一半子样本仍 i.i.d. 来自同一总体 ⇒ OLS **仍一致**（效率损失）。
+> **对比 7.2：** $\lambda$ 随 $n$ 线性增长时，收缩效应**不随 $n$ 消失**，故不一致。说明正则化强度要"够小"（$o(n)$）才能保持一致性。
 
----
+### Exercise 7.16　随机抽一半子样本：仍一致
 
-## Exercise 7.17
+**证明：** 随机抽取一半观测，仍是来自**同一总体**的 i.i.d. 样本（只是样本量从 $n$ 变 $n/2$）。OLS 一致性只依赖 i.i.d. + 矩条件，与样本量无关，故 $\hat\beta\to_p\beta$ **仍一致**，只是效率降低（方差约翻倍，见 7.19）。
 
-**(a)** $\widehat{\mathrm{se}}(\hat\theta)=\sqrt{s_1^2+s_2^2-2\hat\rho s_1 s_2}$，CI $\hat\beta_1-\hat\beta_2\pm1.96\,\widehat{\mathrm{se}}$。  
-**(b)** **不能**仅从两个 SE 得 $\hat\rho$。  
-**(c)** 作者结论 **不成立**：差 $0.2$，即便 $\rho=1$ 时 $\mathrm{se}(\mathrm{diff})$ 可为 0，但 $\rho$ 未知；$\rho=0$ 时 $z=0.2/\sqrt{2\cdot0.07^2}\approx2.02$，边界显著，但无 $\rho$ 不能断言。
+> **要点：** 一致性是"收敛到真值"的渐近性质，与"用了多少数据"无关（只要数据来自同一总体）。
 
----
+### Exercise 7.23　$\tilde\beta=n^{-1}\sum Y_i/X_i$ 的一致条件
 
-## Exercise 7.18
+**题：** $Y=X\beta+e$（$X$ 标量），$E[e|X]=0$，$\tilde\beta=n^{-1}\sum Y_i/X_i$。
 
-**(a)** $\hat m(x)=\hat\beta_0+\hat\beta_1x+\hat\beta_2x^2$。  
-**(b)** $\hat m\pm z\sqrt{x(x)'\hat V\hat x(x)}$，$x(x)=(1,x,x^2)'$。
+**证明：** $\tilde\beta-\beta=n^{-1}\sum(Y_i/X_i)-\beta=n^{-1}\sum e_i/X_i$。WLLN：$\tilde\beta-\beta\to_p E[e/X]$。
+- 由 $E[e|X]=0$，若 $E|e/X|<\infty$，则 $E[e/X]=E[(1/X)E[e|X]]=0$（条件期望定理）⇒ **一致**。
+- **但需 $E|e/X|<\infty$**（$1/X$ 可积，排除 $X$ 接近 0 的情况）。
 
----
+> **和本科对照：** "除以 $X$"的估计量比 OLS 需要**更强可积性**（$e/X$ 要有期望）。OLS 用 $X$ 加权只需 $Xe$ 的矩；这里用 $1/X$ 加权需 $e/X$ 的矩。
 
-## Exercise 7.19
+### Exercise 7.24　自变量乘性测量误差 → 衰减偏差
 
-独立折半样本 $\hat\beta_1,\hat\beta_2$ 渐近独立同分布 $N(\beta,V/n)$ 量级：  
-$\sqrt{n}(\hat\beta_1-\hat\beta_2)\to_d N(0,2V)$。
+**题：** 真模型 $Y=X^*\beta+e$（$e\perp X^*$），观察 $X=X^*v$，$v>0$ 随机尺度误差，$v\perp(X^*,e)$。OLS 的 plim？有无非平凡一致条件？
 
----
+**(a) 证明：** OLS plim $=E[XY]/E[X^2]$。代入 $Y=X^*\beta+e$、$X=X^*v$，用独立性（$E[vX^*e]=E[v]E[X^*]E[e]=0$）：
+$$\mathrm{plim}\,\hat\beta=\frac{E[vX^*(X^*\beta+e)]}{E[(X^*v)^2]}=\frac{\beta E[v]E[(X^*)^2]}{E[v^2]E[(X^*)^2]}=\beta\frac{E[v]}{E[v^2]}.$$
+因 $E[v^2]\ge(E[v])^2$（方差 $\ge0$），比值 $\frac{E[v]}{E[v^2]}$ 一般 $\ne1$ ⇒ **衰减偏差**（向 0 偏）。
 
-## Exercise 7.20　加权准则
+**(b) 非平凡一致条件：** 需 $E[v]/E[v^2]=1$，即 $E[v^2]=E[v]$，即 $E[v(v-1)]=0$。这是个**特殊**条件（如 $v$ 的分布恰好满足此关系），一般不成立。无干净的非平凡条件 ⇒ 测量误差在 $X$ **几乎总会导致偏差**。
 
-**(a)** $\hat\beta=(\sum W_iX_iX_i')^{-1}(\sum W_iX_iY_i)$。  
-**(b)** 加权投影：$E[WXX']^{-1}E[WXY]$（需 $E[WXX']$ 可逆）。  
-**(c)** $\hat\beta\to_p\beta_W$ 上述。  
-**(d)** 若 $E[WeX]=0$ 且 $\beta_W=\beta$，则 $\sqrt{n}(\hat\beta-\beta)\to_d N(0,G^{-1}\Omega_W G^{-1})$。
+> **和本科对照（重要！与 7.7 对照）：**
+> - **自变量**测量误差（本题）→ **衰减偏差**，OLS 不一致，性质严重。
+> - **因变量**测量误差（7.7 / Ch4 Ex 4.16）→ **无害**，OLS 仍一致，只增大方差。
+> 这是陈强反复强调的经典区分。
 
----
+### Exercise 7.25　加权估计需要 $E[e|X]=0$
 
-## Exercise 7.21
+**题：** $\tilde\beta=(\sum w(X_i)X_iX_i')^{-1}\sum w(X_i)X_iY_i$，$w>0$。plim？是否一致？
 
-估计 $\hat\beta$ 与 $\hat\gamma$（如对 $\hat e^2$ 回归 $Z$）；点预测 $x'\hat\beta$；  
-区间用 $\widehat{\mathrm{var}}=x'\hat Vx+z'\hat\gamma$（或更稳健）。
+**证明：** WLLN：
+$$\tilde\beta\to_p(E[w(X)XX'])^{-1}E[w(X)XY].$$
+代入 $Y=X'\beta+e$：$E[w(X)XY]=E[w(X)XX']\beta+E[w(X)Xe]$。
+- **关键：** 仅 $E[Xe]=0$ **推不出** $E[w(X)Xe]=0$（这正是 Ch2 的核心：$E[Xe]=0\not\Rightarrow E[h(X)e]=0$，见 Ex 2.11）。
+- 若 **$E[e|X]=0$**（更强），则 $E[w(X)Xe]=E[w(X)XE[e|X]]=0$ ⇒ plim $=\beta$，**一致**。
+- 若仅 $E[Xe]=0$：plim $=\beta+(E[wXX'])^{-1}E[wXe]\ne\beta$（除非 $w$ 常数）。
 
----
+> **三章呼应：** 这题把 Ch2（$E[Xe]=0$ vs $E[h(X)e]=0$）、Ch4、本章串起来——**加权/非线性估计量需要更强的 $E[e|X]=0$**，仅投影正交 $E[Xe]=0$ 不够。
 
-## Exercise 7.22
+### Exercise 7.27　截断极端值（$|X|\le c$）：一致
 
-**(a)** $\hat\beta\to_p\beta$，$X'\hat\beta\to_p X'\beta$，第二步回归一致得 $\gamma$。  
-**(b)** $\gamma=0$ 时第二步回归元 $X'\hat\beta=O_p(n^{-1/2})$，需非标准/退化 debias 分析；$\hat\gamma$ 有非标准极限（生成回归元）。
+**题：** 只用 $|X_i|\le c$ 的子样本做 OLS。
 
----
+**(a) 证明：** 这等价于加权 $w(X)=1\{|X|\le c\}$（7.25 的特例）。在 $E[e|X]=0$ 下，$E[w(X)Xe]=E[1\{|X|\le c\}XE[e|X]]=0$ ⇒ $\tilde\beta\to_p\beta$，**一致**。
 
-## Exercise 7.23
+**(b) 渐近分布：**
+$$\sqrt n(\tilde\beta-\beta)\to_d N(0,Q_c^{-1}\Omega_c Q_c^{-1}),\quad Q_c=E[XX'1\{|X|\le c\}],\ \Omega_c=E[XX'e^2 1\{|X|\le c\}].$$
 
-$\tilde\beta=n^{-1}\sum Y_i/X_i$。$Y=X\beta+e\Rightarrow\tilde\beta=\beta+n^{-1}\sum e_i/X_i$。  
-一致需 $E[e/X]=0$ 且 $E|e/X|<\infty$（比 $E[e\mid X]=0$ 更强的可积性）。
-
----
-
-## Exercise 7.24　回归元乘性测量误差
-
-$X=X^*v$。OLS 回归 $Y$ on $X$ 得 $\mathrm{plim}=E[XY]/E[X^2]$ 一般 $\neq\beta$。  
-**(b)** 例如 $v$ 与 $X^*$ 特殊相关使 $E[X^*v e]$ 等抵消；或 $v$ 常数。非平凡条件少见。
+> **和本科对照：** 这是"**截断/稳健回归**"——丢掉极端 $X$ 以防高杠杆点主导。代价是效率略降（$Q_c<Q$）。
 
 ---
 
-## Exercise 7.25
+## 主题二：渐近正态（夹心）
 
-$\tilde\beta\to_p E[w(X)XX']^{-1}E[w(X)XY]$。  
-若 $E[e\mid X]=0$ 则 $=\beta$（**一致**）。仅 $E[Xe]=0$ 时一般 **不一致**，除非 $w$ 常数。
+### Exercise 7.5　证明 (7.13)–(7.16)：样本矩收敛
+
+**考点：** 一致性 / 渐近正态定理的"零件"——都是 WLLN/CLT 的直接应用。
+
+**要点：** 在 i.i.d. + 有限二阶（或四阶）矩下：
+- $\hat Q_{XX}=n^{-1}\sum X_iX_i'\to_p Q$（WLLN，$X_iX_i'$ i.i.d.）；
+- $\hat Q_{Xe}=n^{-1}\sum X_ie_i\to_p E[Xe]=0$（WLLN + $E[Xe]=0$）；
+- $\frac1{\sqrt n}\sum X_ie_i\to_d N(0,\Omega)$（CLT，需 $E\|Xe\|^2<\infty$ 即四阶矩，$\Omega=E[XX'e^2]$）。
+
+> 这些拼起来就是 Theorem 7.1（一致性）和 Theorem 7.3（渐近正态）。
+
+### Exercise 7.6　$(\beta,\Omega)$ 的矩估计
+
+**题：** 模型 $Y=X'\beta+e$，$E[Xe]=0$，$\Omega=E[XX'e^2]$。求 MME。
+
+**解答：** 把总体矩换成样本矩（$e_i$ 用 $\hat e_i$ 代）：
+$$\hat\beta=(X'X)^{-1}X'Y=\hat Q_{XX}^{-1}\hat Q_{XY},\qquad \hat\Omega=n^{-1}\sum_{i=1}^n X_iX_i'\hat e_i^2.$$
+
+> **和本科对照：** OLS = **矩估计**（MME）。$\hat\Omega$ 是"肉"的估计，代入夹心得稳健协方差 $\hat V_\beta=\hat Q^{-1}\hat\Omega\hat Q^{-1}$（HC0）。
+
+### Exercise 7.7　因变量测量误差（潜变量 $Y^*$）
+
+**题：** $Y^*=X'\beta+e$（潜变量），观察 $Y=Y^*+u$，$E[Xu]=0$，$E[Y^*u]=0$。
+
+**(a)** $\beta$ 是否 $Y$ 对 $X$ 的投影系数？$E[XY]=E[X(Y^*+u)]=E[XY^*]+E[Xu]=E[X(X'\beta+e)]+0=E[XX']\beta$（用 $E[Xe]=0$）。故投影系数 $=(E[XX'])^{-1}E[XY]=\beta$。**是。**
+
+**(b)** $\hat\beta$（$Y$ 对 $X$ 的 OLS）$\to_p\beta$。**一致。**
+
+**(c)** 合成误差 $e+u$，$\sqrt n(\hat\beta-\beta)\to_d N(0,Q^{-1}\Omega Q^{-1})$，$\Omega=E[XX'(e+u)^2]$。
+
+> **对比 7.24：** 因变量测量误差**无害**（一致），只让"肉"变成 $E[XX'(e+u)^2]$（含 $u$ 的波动）。自变量测量误差才有衰减偏差。
+
+### Exercise 7.8　$\sqrt n(\hat\sigma^2-\sigma^2)$ 的渐近分布
+
+**证明：** $\hat\sigma^2=n^{-1}\sum\hat e_i^2$，$\hat e=e-X(\hat\beta-\beta)$（向量）。展开 $\hat e'\hat e=e'e-2e'X(\hat\beta-\beta)+(\hat\beta-\beta)'X'X(\hat\beta-\beta)$。后两项为 $O_p(1)$（量级估计：$X'e=O_p(\sqrt n)$，$(X'X)^{-1}=O_p(n^{-1})$），故 $n^{-1}\hat e'\hat e=n^{-1}e'e+O_p(n^{-1})$。于是
+$$\sqrt n(\hat\sigma^2-\sigma^2)=\sqrt n\Big(n^{-1}\sum e_i^2-\sigma^2\Big)+O_p(n^{-1/2})\to_d N(0,\mathrm{var}(e^2)).$$
+（修正项 $O_p(n^{-1/2})\to 0$，CLT 给出极限 $N(0,E[e^4]-\sigma^4)$。）
+
+> **要点：** 用 $\hat e$ 代替 $e$ 不改变**一阶**渐近分布（修正项低阶）。这是反复用的技巧（见 7.11）。
+
+### Exercise 7.11　$\tilde\Omega$（真误差）与 $\hat\Omega$（残差）同分布极限
+
+**题：** $\tilde\Omega=n^{-1}\sum X_i^2e_i^2$（不可行），$\hat\Omega=n^{-1}\sum X_i^2\hat e_i^2$（可行），$X$ 标量。
+
+**(a)** $\sqrt n(\tilde\Omega-\Omega)\to_d N(0,\mathrm{var}(X^2e^2))$（CLT，$X_i^2e_i^2$ i.i.d.）。
+
+**(b)** $\hat\Omega$ 与 $\tilde\Omega$ **同极限分布**。因 $\hat e_i=e_i-X_i(\hat\beta-\beta)$，$\hat\beta-\beta=O_p(n^{-1/2})$，差值 $\hat\Omega-\tilde\Omega=o_p(n^{-1/2})$，不改变一阶。
+
+**(c)** $E[e|X]=0$ 用于**控制展开中的交叉项**：$E[X^2 e\cdot X(\hat\beta-\beta)]$ 类项的低阶性依赖于此（让交叉项期望为 0）。
+
+> **核心技巧：** "用残差 $\hat e$ 代真误差 $e$ 不改变一阶渐近"——因为 $\hat e$ 与 $e$ 的差是 $O_p(n^{-1/2})$，乘以 $\sqrt n$ 后消失。这让所有可行估计量（$\hat\Omega$、HC0–HC3）都继承不可行版本的渐近性质。
+
+### Exercise 7.15　非标准估计量 $\hat\beta=\sum X_i^3Y_i/\sum X_i^4$
+
+**证明：** 代入 $Y=X\beta+e$：$\hat\beta-\beta=\sum X_i^3e_i/\sum X_i^4$。故
+$$\sqrt n(\hat\beta-\beta)=\frac{(1/\sqrt n)\sum X_i^3e_i}{n^{-1}\sum X_i^4}.$$
+CLT：$(1/\sqrt n)\sum X_i^3e_i\to_d N(0,E[X^6e^2])$（需 $E[X^6e^2]<\infty$）；WLLN：$n^{-1}\sum X_i^4\to_p E[X^4]$。Slutsky：
+$$\sqrt n(\hat\beta-\beta)\to_d N\Big(0,\frac{E[X^6e^2]}{(E[X^4])^2}\Big).$$
+
+> **要点：** 即使估计量"长得怪"（用 $X^3$ 加权），只要能写成 $\hat\beta-\beta=\frac{\text{CLT 项}}{\text{WLLN 项}}$，同一套 CLT+WLLN+Slutsky 就能分析。这是本章方法的普适性。
+
+### Exercise 7.20　加权准则（WLS）的渐近理论
+
+**(a)** $\hat\beta=(\sum W_iX_iX_i')^{-1}(\sum W_iX_iY_i)$。
+
+**(b)** 它估计 $\beta_W=(E[WXX'])^{-1}E[WXY]$（**加权投影**）。只需 $E[WXX']$ 可逆——**不需要** $E[WeX]=0$ 就收敛到 $\beta_W$。
+
+**(c)** $\hat\beta\to_p\beta_W$。
+
+**(d)** 若**额外**设 $E[WeX]=0$（则 $\beta_W=\beta$）：
+$$\sqrt n(\hat\beta-\beta)\to_d N(0,G^{-1}\Omega_WG^{-1}),\quad G=E[WXX'],\ \Omega_W=E[W^2XX'e^2].$$
+
+> **和本科对照：** WLS 的大样本理论——夹心形式再现（$G^{-1}\Omega_WG^{-1}$）。若 $W=1/\sigma^2(X)$（正确权重）则退化为 GLS（有效）；否则是"错权" WLS，仍一致（若 $E[WeX]=0$）但未必有效。
+
+### Exercise 7.26　权重 $e_i^{-2}$（不可行 WLS）≠ GLS
+
+**(a)** $\tilde\beta-\beta=(\sum e_i^{-2}X_iX_i')^{-1}\sum e_i^{-1}X_i$。WLLN/CLT（与 7.15 同套路）：
+$$\sqrt n(\tilde\beta-\beta)\to_d N\big(0,(E[e^{-2}XX'])^{-1}\big).$$
+（此处"面包"="肉"=$E[e^{-2}XX']$，相消。）
+
+**(b)** **对比 GLS：** 不可行 GLS 用权重 $\sigma^{-2}(X)=1/E[e^2|X]$（**条件方差**），渐近方差 $(E[\sigma^{-2}(X)XX'])^{-1}$。本题用 $e_i^{-2}$（**真误差**的倒数），与 GLS **不同**——除非 $|e_i|=\sigma(X_i)$ 几乎必然（误差无组内波动）。
+
+> **要点：** 用 $e^{-2}$（已实现的误差）加权和用 $\sigma^{-2}(X)$（条件方差）加权是两回事；后者才是 GLS（最优）。本题说明"看似自然的权重"未必达到 GLS 效率。
 
 ---
 
-## Exercise 7.26　权重 $e_i^{-2}$
+## 主题三：delta method（非线性参数）
 
-**(a)** 类 WLS：$\sqrt{n}(\tilde\beta-\beta)\to_d N(0,E[e^{-2}XX']^{-1})$ 形式（在权重外生/可积条件下）。  
-**(b)** 不可行 GLS 用 $\sigma^{-2}(X)$；此处用 $e^{-2}$ 过度/随机，极限一般 **不同于** GLS（除非 $|e|=\sigma(X)$ a.s.）。
+> 共同套路：关心 $\theta=g(\beta)$，估计 $\hat\theta=g(\hat\beta)$，渐近分布 $\sqrt n(\hat\theta-\theta)\to_d N(0,G'V_\beta G)$，$G=\nabla g(\beta)$；标准误 $\widehat{\mathrm{se}}=\sqrt{\hat G'\hat V_\beta\hat G}$。
 
----
+### Exercise 7.12　消费者剩余 $A=-\alpha^2/(2\beta)$
 
-## Exercise 7.27　截断 $|X|\le c$
+**(a)** $\hat A=-\hat\alpha^2/(2\hat\beta)$。
 
-**(a)** 等价于加权 $w=1\{|X|\le c\}$，在 $E[e\mid X]=0$ 下 $\tilde\beta\to_p\beta$。  
-**(b)** $\sqrt{n}(\tilde\beta-\beta)\to_d N(0,Q_c^{-1}\Omega_c Q_c^{-1})$，$Q_c=E[XX'1\{|X|\le c\}]$ 等。
+**(b)** delta method：$G=\nabla A=(\partial A/\partial\alpha,\partial A/\partial\beta)=(-\alpha/\beta,\ \alpha^2/(2\beta^2))$。
+$$\sqrt n(\hat A-A)\to_d N(0,G'V_\theta G),\qquad \mathrm{CI}:\ \hat A\pm z_{1-\eta/2}\sqrt{\hat G'\hat V_\theta\hat G}.$$
 
----
+> **和本科对照：** 消费者剩余 = 需求曲线下面积，是系数的非线性函数。delta method 给其标准误与 CI。
 
-## Exercise 7.28（CPS 实证）
+### Exercise 7.13　反向回归 $\theta=1/\gamma$
 
-白人男性西班牙裔；$\log(\mathrm{wage})=\beta_1\mathrm{edu}+\beta_2\mathrm{exp}+\beta_3\mathrm{exp}^2/100+\beta_4$。
+**(a)** $\hat\gamma=\sum Y_iX_i/\sum Y_i^2$（$X$ 对 $Y$ 回归）。
+**(b)** $\hat\theta=1/\hat\gamma$。
+**(c)(d)** delta method：$|d\theta/d\gamma|=1/\gamma^2=\theta^2$，故 $\mathrm{se}(\hat\theta)=|\hat\theta|^2\mathrm{se}(\hat\gamma)$。
+
+> **要点：** 倒数变换的 delta method，方差放大 $\theta^4$ 倍。
+
+### Exercise 7.14　$\theta=\beta_1\beta_2$（乘积）
+
+**(a)** $\hat\theta=\hat\beta_1\hat\beta_2$。
+**(b)** $G=\nabla\theta=(\beta_2,\beta_1,\ldots)$，$\sqrt n(\hat\theta-\theta)\to_d N(0,G'V_\beta G)$。
+**(c)** 95% CI：$\hat\theta\pm 1.96\widehat{\mathrm{se}}$。
+
+### Exercise 7.17　比较两个系数 $\theta=\beta_1-\beta_2$（需要协方差！）
+
+**题：** $\hat\beta_1=1.0,\hat\beta_2=0.8$，$s(\hat\beta_1)=s(\hat\beta_2)=0.07$。作者称"$\beta_1>\beta_2$"。
+
+**(a)** $\widehat{\mathrm{se}}(\hat\theta)=\sqrt{s_1^2+s_2^2-2\hat\rho s_1s_2}$，CI $=\hat\beta_1-\hat\beta_2\pm 1.96\,\widehat{\mathrm{se}}$。
+
+**(b)** **不能**从两个 SE 单独算出 $\hat\rho$（需要 $\hat\beta_1,\hat\beta_2$ 的协方差）。
+
+**(c)** 作者结论**无法仅凭报告信息断定**：
+- $\hat\rho=0$：$\mathrm{se}=\sqrt{2\cdot0.07^2}\approx0.099$，$z=0.2/0.099\approx2.02$（5% 显著）；
+- $\hat\rho=1$：$\mathrm{se}=|s_1-s_2|=0$（退化为确定显著）；
+- $\hat\rho=-1$：$\mathrm{se}=\sqrt{4\cdot0.07^2}=0.14$，$z\approx1.43$（不显著）。
+故结论**依赖未报告的 $\hat\rho$**，不能下定论。
+
+> **和本科对照：** 比较两个系数（如"教育回报男女是否不同"）**必须**用它们的**协方差**，不能只看各自 SE。陈强里用 `test` 或 `lincom` 命令完成。
+
+### Exercise 7.18　回归函数 $m(x)=\beta_0+\beta_1x+\beta_2x^2$ 的 CI
+
+**(a)** $\hat m(x)=\hat\beta_0+\hat\beta_1x+\hat\beta_2x^2=\tilde x'\hat\beta$，$\tilde x=(1,x,x^2)'$。
+
+**(b)** $\mathrm{var}(\hat m(x))=\tilde x'V_\beta\tilde x$（delta method 的**线性**特例，$G=\tilde x$）；CI $=\hat m(x)\pm 1.96\sqrt{\tilde x'\hat V_\beta\tilde x}$。
+
+> **要点：** 估计条件均值（回归函数）在某点的值 = 线性组合 → 方差 = $\tilde x'V\tilde x$。这是画回归线置信带的公式。
+
+### Exercise 7.28（CPS 实证）　delta method 综合应用
+
+白人男性西班牙裔；$\widehat{\log(\mathrm{wage})}=\beta_1\mathrm{edu}+\beta_2\mathrm{exp}+\beta_3\mathrm{exp}^2/100+\beta_4$。
 
 |  | 估计 | HC3 SE |
 |--|-----:|-------:|
-| education | 0.0904 | (见 nb) |
+| education | 0.0904 | （见 nb） |
 | experience | 0.0354 | |
 | exp2/100 | −0.0465 | |
 | intercept | 1.185 | |
 
-**(b)** $\theta=\dfrac{\beta_1}{\beta_2+2\beta_3\cdot 10/100}=\dfrac{\beta_1}{\beta_2+0.2\beta_3}$，$\hat\theta\approx3.47$。  
-**(c)(d)** delta 法 SE$\approx0.227$，90% CI $\approx[3.09,3.84]$。  
-**(e)** $m(12,20)\approx2.792$，95% CI$\approx[2.769,2.815]$。  
-**(f)** 预测 edu=16,exp=5：$\widehat{\log w}\approx2.80$；80% 对数区间约 $[2.06,3.53]$；工资 $[7.9,34.3]$。
+**(b)** experience=10 时"一年教育回报 / 一年经验回报"：
+$$\theta=\frac{\beta_1}{\beta_2+2\beta_3\cdot 10/100}=\frac{\beta_1}{\beta_2+0.2\beta_3},\qquad \hat\theta\approx3.47.$$
+（分母 $\partial\mathrm{exp}/\partial\mathrm{exp}=\beta_2+2\beta_3\cdot\mathrm{exp}/100$ 是经验在 exp=10 处的边际效应。）
+
+**(c)(d)** delta method：$G=\nabla\theta=(1/d,\ -\beta_1/d^2,\ -0.2\beta_1/d^2,\ 0)$（$d=\beta_2+0.2\beta_3$）。$\widehat{\mathrm{se}}\approx0.227$，90% CI $\approx[3.09,3.84]$。
+
+**(e)** $m(12,20)\approx2.792$，95% CI $\approx[2.769,2.815]$（用 $\tilde x'V\tilde x$，见 7.18）。
+
+**(f)** 样外预测（edu=16, exp=5）：$\widehat{\log w}\approx2.80$；80% 预测区间 $\approx[2.06,3.53]$（对数），工资 $\approx[7.9,34.3]$（取指数）。
+
+> **和本科对照：** delta method 是实证中算"边际效应比"、"弹性"、"回归函数在某点的值"的标准工具。陈强 `margins`/`nlcom` 命令背后就是它。
 
 ---
+
+## 主题四：预测
+
+### Exercise 7.10　点预测与预测方差
+
+**(a)** 点预测 $\widehat Y_{n+1}=x'\hat\beta$。
+
+**(b)** 预测方差 $=$ **参数不确定性** + **创新方差**：
+$$\widehat{\mathrm{var}}(Y_{n+1}-\widehat Y_{n+1})=x'\hat V_{\hat\beta}x+\hat\sigma^2.$$
+
+> **和本科对照：** 第 5 章正态预测区间的大样本版。两部分：$x'Vx$（$\hat\beta$ 抽样波动）+ $\sigma^2$（新观测自身的误差）。预测区间比置信区间宽，就宽在多了 $\sigma^2$。
+
+### Exercise 7.19　独立折半样本之差
+
+**题：** $2n$ 观测随机对半分，各做 OLS 得 $\hat\beta_1,\hat\beta_2$。
+
+**证明：** 两半独立，各 $\sqrt n(\hat\beta_j-\beta)\to_d N(0,V)$ 且相互独立。故
+$$\sqrt n(\hat\beta_1-\hat\beta_2)=\sqrt n(\hat\beta_1-\beta)-\sqrt n(\hat\beta_2-\beta)\to_d N(0,V+V)=N(0,2V).$$
+
+> **要点：** 两个**独立**估计量之差的方差 = 方差之和（$2V$）。这与 7.17 形成对比——7.17 中两估计量**相关**（同一回归的系数），需协方差；此处独立，直接相加。
+
+### Exercise 7.21　异方差已建模时的预测区间
+
+**题：** $E[e^2|X]=Z'\gamma$（$Z$ 是 $X$ 的函数）。
+
+**做法：** 估 $\hat\beta$；估 $\hat\gamma$（把 $\hat e_i^2$ 回归于 $Z_i$）。点预测 $=x'\hat\beta$。预测区间方差 $=x'\hat V_\beta x+\widehat{\sigma^2(x)}=x'\hat V_\beta x+z'\hat\gamma$（条件方差也用模型估）。
+
+> **要点：** 当异方差结构已知（$Z'\gamma$），预测区间可用更精确的条件方差 $z'\hat\gamma$，而非笼统的 $\hat\sigma^2$。
+
+### Exercise 7.22　生成回归元（generated regressor）
+
+**(a)** 第一步 $\hat\beta\to_p\beta$，故 $X'\hat\beta\to_p X'\beta$；第二步 $Z$ 对 $X'\hat\beta$ 回归**一致**得 $\gamma$（生成回归元在第一步 $\sqrt n$ 一致时通常**无害**，Pagan 定理）。
+
+**(b)** $\gamma=0$ 时：$Z=X'\beta\cdot 0+u=u$，"信号"消失，生成回归元 $X'\hat\beta$ 的**估计噪声**（$O_p(n^{-1/2})$）相对主导 → **非标准**退化极限（不再正态）。需专门分析。
+
+> **和本科对照：** "生成回归元"（用第一步估计的量做第二步回归元）在两步估计中常见。一般无害，但在弱信号（$\gamma=0$）时退化——类似"弱工具变量"问题。
+
+### Exercise 7.9　两个估计量的比较
+
+**(a)** $\hat\beta=\sum X_iY_i/\sum X_i^2$（OLS）在 $E[Xe]=0$（由 $E[e|X]=0$ 蕴含）下**一致**。$\tilde\beta=n^{-1}\sum Y_i/X_i$：需额外 $E|e/X|<\infty$ 才一致（见 7.23）。故**在题目假设 + 可积性下都一致**，但 $\tilde\beta$ 条件更强。
+
+**(b)** 同方差下 OLS 渐近有效（Gauss-Markov）；若 $\mathrm{var}(e|X)\propto X^2$，则 $\tilde\beta$（除以 $X$ 后同方差化）类估计更有效（接近 GLS）。
+
+> **要点：** OLS 不是万能最优——当误差方差结构与某变换匹配时，"非 OLS"估计量可能更有效。
+
+### Exercise 7.4　矩的数值核对（Section 7.4）
+
+$X_1,X_2\in\{-1,+1\}$，$P(\text{同号})=3/4$，$P(\text{异号})=1/4$；$E[e^2|\text{同号}]=5/4$，$E[e^2|\text{异号}]=1/4$。
+
+|  | 结果 | 计算 |
+|--|------|------|
+| (a) $E[X_1]$ | $0$ | 对称 |
+| (b) $E[X_1^2]$ | $1$ | $X_1^2\equiv1$ |
+| (c) $E[X_1X_2]$ | $1/2$ | $1\cdot(3/4)+(-1)\cdot(1/4)$ |
+| (d) $E[e^2]$ | $1$ | $(5/4)(3/4)+(1/4)(1/4)=1$（LIE） |
+| (e) $E[X_1^2e^2]$ | $1$ | $X_1^2=1$ ⇒ $=E[e^2]$ |
+| (f) $E[X_1X_2e^2]$ | $7/8$ | $(5/4)(3/4)-(1/4)(1/4)=14/16$ |
+
+> **看点：** (f) $E[X_1X_2e^2]=7/8\ne0$ 说明 $\Omega=E[XX'e^2]$ 的**非对角元非零**（异方差 + 回归元相关）。代码见 notebook。
+
+---
+
+## 附录 A：渐近理论三大结果对照
+
+| 结果 | 公式 | 工具 | 需要的矩条件 |
+|---|---|---|---|
+| 一致性 | $\hat\beta\to_p\beta$ | WLLN + CMT | 二阶矩（$E\|X\|^2<\infty$） |
+| 收敛速度 | $\hat\beta-\beta=O_p(n^{-1/2})$ | 同上 + 展开 | 二阶矩 |
+| 渐近正态 | $\sqrt n(\hat\beta-\beta)\to_d N(0,Q^{-1}\Omega Q^{-1})$ | CLT + Slutsky | **四阶矩**（$E\|X\|^4,E[e^4]<\infty$） |
+| delta method | $\sqrt n(g(\hat\beta)-g(\beta))\to_d N(0,G'V_\beta G)$ | 上面 + 一阶泰勒 | 同上 + $g$ 可微 |
+
+---
+
+## 附录 B：第 5 章精确分布 vs 第 7 章渐近分布
+
+| | 第 5 章（正态回归） | 第 7 章（渐近） |
+|---|---|---|
+| 假设 | 误差**正态** + 同方差 | 仅矩条件（不需正态） |
+| $\hat\beta$ 分布 | 精确 $N$ | 渐近 $N$（CLT） |
+| 系数检验 | 精确 $t_{n-k}$（**同方差 SE**） | 渐近 $N(0,1)$（**可用稳健 SE**） |
+| 排除性约束 | 精确 $F_{q,n-k}$ | 渐近 $\chi^2_q$（Wald/LR） |
+| 临界值 | $t$/$F$ 表 | 标准正态/卡方 |
+| 适用 | 小样本 + 误差近正态 | 大样本 + 任意分布 |
+
+**一句话：** 第 5 章"花钱（正态假定）买精确"；第 7 章"不花钱，靠 $n\to\infty$"。大样本下 $t_{n-k}\to N(0,1)$，故实践中大样本常用正态临界值 + 稳健 SE。
+
+---
+
+## 附录 C：notebook 单元对应
+
+| 习题 | notebook 内容 |
+|------|----------------|
+| 7.4 | 矩核对 code cell |
+| 7.28(a) | 工资回归 + HC3 SE code cell |
+| 7.28(b)–(d) | delta method（$\theta$）code cell |
+| 7.28(e) | 回归函数 CI code cell |
+| 7.28(f) | 预测区间 code cell |
