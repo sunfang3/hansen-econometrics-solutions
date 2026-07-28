@@ -31,6 +31,7 @@ Bruce E. Hansen《Econometrics》习题解答（按 Hansen 体系完整解题）
 | **Ch.25** | **Binary Choice**（**25.1–25.19 全文**） | **836–838** | **`.md` / `.ipynb`** |
 | **Ch.26** | **Multiple Choice**（**26.1–26.18 全文**） | **860–861** | **`.md` / `.ipynb`** |
 | **Ch.27** | **Censoring and Selection**（**27.1–27.11 全文**） | **876–878** | **`.md` / `.ipynb`** |
+| **Ch.28** | **Model Selection, Stein Shrinkage, Model Averaging**（**28.1–28.12 全文**） | **927–929** | **`.md` / `.ipynb`** |
 | Ch.29 | Machine Learning | 943 等 | `.md` / `.qmd` / `.html` |
 
 解答位于 `docs/chXX/`。
