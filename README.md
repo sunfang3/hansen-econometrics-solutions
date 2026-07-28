@@ -14,6 +14,7 @@ Bruce E. Hansen《Econometrics》习题解答（按 Hansen 体系完整解题）
 | **Ch.8** | **Restricted Estimation** | **238–240** | **`.md` / `.ipynb`** |
 | **Ch.9** | **Hypothesis Testing** | **270–276** | **`.md` / `.ipynb`** |
 | **Ch.10** | **Resampling Methods**（**10.1–10.31 全文**） | **321–325** | **`.md` / `.ipynb`** |
+| **Ch.11** | **Multivariate Regression**（**11.1–11.15 全文**） | **350–351** | **`.md` / `.ipynb`** |
 | Ch.29 | Machine Learning | 943 等 | `.md` / `.qmd` / `.html` |
 
 解答位于 `docs/chXX/`。
