@@ -20,6 +20,7 @@ Bruce E. Hansen《Econometrics》习题解答（按 Hansen 体系完整解题）
 | **Ch.14** | **Time Series**（**14.1–14.22 全文**） | **525–528** | **`.md` / `.ipynb`** |
 | **Ch.15** | **Multivariate Time Series**（**15.1–15.20 全文**） | **563–566** | **`.md` / `.ipynb`** |
 | **Ch.16** | **Non-Stationary Time Series**（**16.1–16.14 全文**） | **615–616** | **`.md` / `.ipynb`** |
+| **Ch.17** | **Panel Data**（**17.1–17.18 全文**） | **667–669** | **`.md` / `.ipynb`** |
 | Ch.29 | Machine Learning | 943 等 | `.md` / `.qmd` / `.html` |
 
 解答位于 `docs/chXX/`。
@@ -30,7 +31,7 @@ Bruce E. Hansen《Econometrics》习题解答（按 Hansen 体系完整解题）
 
 - https://users.ssc.wisc.edu/~bhansen/econometrics/
 
-常用子集：`cps09mar`、`Invest1993`、`Nerlove1963`、`MRW1992`、`DDK2011`、`AJR2001`、`Card1995`、`AK1991`、`FRED-QD`、`FRED-MD`、`Kilian2009`。
+常用子集：`cps09mar`、`Invest1993`、`Nerlove1963`、`MRW1992`、`DDK2011`、`AJR2001`、`Card1995`、`AK1991`、`FRED-QD`、`FRED-MD`、`Kilian2009`、`AB1991`。
 
 Notebook 中数据路径指向本地 `hansen/econometrics/data/...`（该目录被 `.gitignore` 忽略，需自行下载）。
 
