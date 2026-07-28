@@ -1,0 +1,853 @@
+---
+title: "Bruce Hansen《Econometrics》第 2 章习题解答"
+subtitle: "Chapter 2 Conditional Expectation and Projection"
+author: "按 Hansen 计量经济学体系整理（R / Quarto 版）"
+date: today
+lang: zh-CN
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    number-sections: true
+    number-depth: 2
+    html-math-method: mathjax
+    theme: cosmo
+    code-fold: true
+    code-tools: true
+engine: knitr
+knitr:
+  opts_chunk:
+    comment: "#>"
+    fig.path: "figures/ch02/"
+execute:
+  eval: false
+  echo: true
+  warning: false
+  message: false
+---
+
+::: {.callout-note}
+## 说明
+
+- **理论：** 来自同目录 Markdown 逐步解答。
+- **代码：** Python notebook 已融合为 **R**（`scripts/r_companions/ch02.R` 优先；否则为带注释的翻译草稿）。
+- **数据：** `hansen/econometrics/data/`（gitignore）；渲染前请确保数据已下载。
+- 默认 `execute: eval: false`。有数据时改为 `true` 或交互运行代码块。
+- 缺包时：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot"))` 等。
+:::
+
+```{r}
+#| label: setup
+root <- if (dir.exists("../../hansen")) "../.." else if (dir.exists("hansen")) "." else "../.."
+data_root <- file.path(root, "hansen", "econometrics", "data")
+companion_dir <- file.path(root, "scripts", "r_companions")
+if (file.exists(file.path(companion_dir, "_common.R"))) {
+  source(file.path(companion_dir, "_common.R"), local = FALSE)
+}
+knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+options(stringsAsFactors = FALSE)
+```
+
+# 理论解答
+
+**章节：** Chapter 2 Conditional Expectation and Projection
+**对应书稿：** PDF 第 80–81 页（印刷页 60–61），§2.34 Exercises
+**体系统一：** CEF、迭代期望、投影、条件方差（Hansen 记号）
+**数值验证：** `Hansen_Ch02_Exercises_Solutions.ipynb`（Exercise 2.4、2.16 有可运行代码）
+
+> **写给谁看：** 本注释假设你只学过李子奈《计量经济学》或陈强《计量经济学及 Stata 应用》的本科部分，
+> 对概率论的记忆停留在"期望、方差、条件期望 $E(Y|X)$"，对矩阵记号略熟但不算顺手。
+> Hansen 第 2 章和国内本科教材**最大的差别**是：它几乎不谈 OLS 估计量、不谈 $\hat\beta$，
+> 而是先在**总体（population）**层面把"我们要估计的那个东西到底是什么"讲清楚。
+> 所以读懂本章的关键，是把脑子里"$Y=X\beta+\varepsilon$，$E(\varepsilon|X)=0$，OLS 求 $\hat\beta$"的快捷心智模型，
+> 换成"先有条件期望函数 CEF，再有最佳线性预测 BLP，最后 Ch.3 才用样本去估计它"。
+
+---
+
+## 0. 读题前必看：本章到底在讲什么
+
+国内本科教材（李子奈、陈强）通常一上来就写回归模型
+
+$$Y=\beta_0+\beta_1 X_1+\cdots+\beta_k X_k+\varepsilon,\qquad E(\varepsilon\mid X)=0,$$
+
+然后直接讨论 OLS 的性质。这套写法快，但把好几个**不同强度**的假设混在了一起。Hansen 第 2 章做的事情是把这些概念拆开、排队：
+
+1. **条件期望函数 CEF：** $m(X)=E[Y\mid X]$。它是"已知 $X$ 时，对 $Y$ 的最好猜测"——而且在**所有** $X$ 的函数里，它的均方误差最小（Theorem 2.7）。这是总体对象，跟样本、跟"线性"都无关。
+2. **CEF 误差：** $e=Y-m(X)$。**由定义**就有 $E[e\mid X]=0$（不是假设！）。这叫**均值独立**（mean independence）。
+3. **最佳线性预测 BLP：** $P(Y\mid X)=X'\beta$，其中 $\beta=(E[XX'])^{-1}E[XY]$。它是"所有**线性**函数里均方误差最小的那个"。即使 CEF 不是线性的，BLP 依然存在，它是对 CEF 最好的线性近似。
+4. **到第 3 章才出现 OLS：** $\hat\beta=(X'X)^{-1}X'Y$，它就是把上面 BLP 公式里的总体期望 $E[\cdot]$ 换成样本均值 $\frac1n\sum_i$。
+
+> **一句话心智模型：** 第 2 章讲的是"靶心"（总体上我们要估计的 $\beta$ 到底是什么），第 3 章才讲"怎么用箭（样本）去射靶心"。国内教材直接讲射箭，所以你脑子里没有"靶心"这个概念。本章习题就是反复练"靶心长什么样"。
+
+**本章习题反复考的核心对立**（务必记住，是 2.10–2.14 的灵魂）：
+
+| 性质 | 含义 | 谁满足 |
+|---|---|---|
+| $E[e\mid X]=0$ | **强**：$e$ 与 $X$ 的**任何**函数 $h(X)$ 都不相关 | CEF 误差（定理 2.4） |
+| $E[Xe]=0$ | **弱**：$e$ 只与 $X$ 本身（及常数项）不相关 | BLP/投影误差（必然成立） |
+
+由"强"能推出"弱"（令 $h(X)=X$ 即可），但**反过来不行**。2.10–2.14 全在考这一点。
+
+---
+
+## 1. 记号与概念速查（对照李子奈/陈强）
+
+| Hansen 记号 | 中文/本科说法 | 一句话解释 |
+|---|---|---|
+| $m(X)=E[Y\mid X]$ | 条件期望（函数） | 给定 $X$ 时 $Y$ 的均值，是 $X$ 的函数 |
+| $e=Y-m(X)$ | CEF 误差 / 扰动项 | $Y$ 减去其条件均值；注意是**随机变量**，Hansen 用拉丁字母 |
+| $E[e\mid X]=0$ | 零条件均值假定 | 李子奈里的"基本假定"之一；Hansen 强调这是 CEF 的**定义推论** |
+| $P(Y\mid X)=X'\beta$ | 最佳线性预测 BLP | 总体上的总体回归线；$\beta$ 是**总体**参数 |
+| $\beta=(E[XX'])^{-1}E[XY]$ | 线性投影系数 | BLP 的显式解；把 $E[\cdot]$ 换成样本均值就是 OLS |
+| $E[Xe]=0$ | 投影正交性 | BLP 误差与回归元正交（必然成立），比 $E[e\mid X]=0$ 弱 |
+| $\sigma^2(X)=E[e^2\mid X]$ | 条件方差 / 异方差函数 | 误差波动随 $X$ 变化的函数；若为常数则"同方差" |
+| $\sigma^2=E[e^2]$ | 无条件误差方差 | 条件方差的平均值；同方差时等于 $\sigma^2(X)$ |
+| LIE / Theorem 2.1–2.2 | 迭代期望定律 | $E[E[Y\mid X]]=E[Y]$；"信息集小的那个赢" |
+
+**两个最常用的"计算技巧"（几乎每题都用）：**
+
+- **条件期望定理（Theorem 2.3）：** 当你以 $X$ 为条件时，$X$ 的任何已知函数都可以"当作常数提出来"：
+  $$E[g(X)\,Y\mid X]=g(X)\,E[Y\mid X],\qquad E[g(X)\,Y]=E\big[g(X)\,E[Y\mid X]\big].$$
+  口诀：**"条件里的 $X$ 能提出来"**。这是把 $E[YX]$ 转成 $E[X\,E[Y\mid X]]$ 的关键。
+- **迭代期望（LIE, Theorem 2.2）：**
+  $$E\big[E[Y\mid X_1,X_2]\mid X_1\big]=E[Y\mid X_1].$$
+  口诀：**"信息集小的那个赢"**——把外层条件里没有的变量（$X_2$）平均掉，就得到对更小信息集的条件期望。
+
+---
+
+## 2. 预备记号（Hansen 体系）
+
+条件期望（CEF）$m(X)=E[Y\mid X]$，CEF 误差 $e=Y-m(X)$ 满足 $E[e\mid X]=0$。
+最佳线性预测（投影）$P(Y\mid X)=X'\beta$，其中
+$$\beta=\bigl(E[XX']\bigr)^{-1}E[XY],$$
+投影误差满足 $E[Xe]=0$（不必 $E[e\mid X]=0$）。
+
+> 这里 $X$ 默认**包含常数项**（即第一个分量是 1），所以 $E[Xe]=0$ 已经隐含了 $E[e]=0$。
+
+---
+
+## Exercise 2.1　反复使用迭代期望
+
+**求** $E\bigl[E\bigl[E[Y\mid X_1,X_2,X_3]\mid X_1,X_2\bigr]\mid X_1\bigr]$。
+
+**考点：** 迭代期望定律（LIE）的反复套用。这是全章最常用的工具，必须练熟。
+
+**直观理解：** $E[Y\mid X_1,X_2,X_3]$ 是"知道全部三个变量"时的预测；当我们对它再求"只以 $X_1,X_2$ 为条件"的期望时，等于把 $X_3$ 带来的**额外信息平均掉**，于是退化成 $E[Y\mid X_1,X_2]$；再退化一层，就只剩 $E[Y\mid X_1]$。
+
+**解答：** 由 Theorem 2.2（"信息集小的赢"）逐层作用：
+\begin{align*}
+E\bigl[E[Y\mid X_1,X_2,X_3]\mid X_1,X_2\bigr]
+&=E[Y\mid X_1,X_2] && \text{（外层信息集 }\{X_1,X_2\}\text{ 小，}X_3\text{ 被平均掉）},\\[2pt]
+E\bigl[E[Y\mid X_1,X_2]\mid X_1\bigr]
+&=E[Y\mid X_1] && \text{（再丢掉 }X_2\text{）}.
+\end{align*}
+因此
+$$
+E\bigl[E\bigl[E[Y\mid X_1,X_2,X_3]\mid X_1,X_2\bigr]\mid X_1\bigr]=E[Y\mid X_1].
+$$
+
+> **和本科教材对照：** 李子奈里偶尔出现的"用迭代期望证明 $E(\hat\varepsilon)=0$"用的就是 Theorem 2.1（最简形式 $E[E[Y\mid X]]=E[Y]$）。这里是"嵌套两层"的版本，规则完全一样：**条件变量越嵌套越往外剥，剥到只剩最外层的条件变量为止**。
+
+---
+
+## Exercise 2.2　把 $E[YX]$ 用 $X$ 的矩表出
+
+**题：** 若 $E[Y\mid X]=a+bX$，用 $X$ 的矩表示 $E[YX]$。
+
+**考点：** 条件期望定理（"条件里的 $X$ 能提出来"）+ LIE。这是本章**第二个必须练熟**的恒等式。
+
+**关键技巧（务必记住）：** 想算 $E[YX]$，先**塞进一个条件期望**再用 LIE 拆开：
+$$E[YX]\xRightarrow{\;\text{LIE}\;}E\big[E[YX\mid X]\big]\xRightarrow{\;X\text{ 提出去}\;}E\big[X\,E[Y\mid X]\big].$$
+之所以能把 $X$ 提出去，是因为"以 $X$ 为条件"意味着 $X$ 已经**已知**（可视作常数），于是它（及其函数）可自由进出条件期望（Theorem 2.3）。
+
+**解答：**
+$$
+E[YX]=E\bigl[E[YX\mid X]\bigr]=E\bigl[X\,E[Y\mid X]\bigr]
+=E\bigl[X(a+bX)\bigr]=a\,E[X]+b\,E[X^2].
+$$
+
+> **为什么有用：** 这个恒等式 $E[XY]=E[X\,E[Y\mid X]]$ 把"两个随机变量乘积的期望"降成"一个随机变量乘以条件期望再求期望"，后面 2.3、2.19 反复用到。
+> **和本科对照：** 若 $Y=\beta_0+\beta_1 X+\varepsilon$ 且 $E(\varepsilon\mid X)=0$，则 $E[X\varepsilon]=E[X\,E[\varepsilon\mid X]]=0$——这正是李子奈里"解释变量与扰动项不相关"的严格证明。
+
+---
+
+## Exercise 2.3　证明 Theorem 2.4.4（$E[e\mid X]=0\Rightarrow E[h(X)e]=0$）
+
+**题：** 用迭代期望证明：对任意使 $E|h(X)e|<\infty$ 的函数 $h$，有 $E[h(X)e]=0$。
+
+**考点：** 这是本章**最重要**的一个结论。它说明"$E[e\mid X]=0$"比"$E[Xe]=0$"强在**哪里**：它不仅让 $e$ 跟 $X$ 不相关，还让 $e$ 跟 $X$ 的**任何函数**（$X^2$、$\sin X$、$1\{X>0\}$……）都不相关。
+
+**证明（两步走：先 LIE，再"提 $h(X)$"）：**
+$$
+E[h(X)e]\xRightarrow{\;\text{LIE}\;}E\bigl[E[h(X)e\mid X]\bigr]
+\xRightarrow{\;h(X)\text{ 提出去}\;}E\bigl[h(X)\,E[e\mid X]\bigr]
+=E\bigl[h(X)\cdot 0\bigr]=0.
+$$
+第二步用了 Theorem 2.3（以 $X$ 为条件时 $h(X)$ 已知，可提出去）；最后用了 $E[e\mid X]=0$。□
+
+> **和本科对照：** 李子奈/陈强说"$E(\varepsilon\mid X)=0$ 蕴含 $\varepsilon$ 与 $X$ 不相关"，Hansen 把它推广为"$\varepsilon$ 与 $X$ 的**任何函数**都不相关"。这看起来只是小推广，但正是它区分了 2.10（True）和 2.11（False）：取 $h(X)=X^2$ 即可。
+
+---
+
+## Exercise 2.4　离散联合分布：手算条件矩
+
+**题：** $(Y,X)$ 只取 0/1，联合分布为
+
+| | $X=0$ | $X=1$ |
+|---|---:|---:|
+| $Y=0$ | 0.1 | 0.2 |
+| $Y=1$ | 0.4 | 0.3 |
+
+求 $X=0,1$ 时的 $E[Y\mid X]$、$E[Y^2\mid X]$、$\mathrm{var}[Y\mid X]$。
+
+**考点：** 从联合分布表算条件期望与条件方差。这是把抽象符号落实成数字的练习，建议自己拿草稿纸算一遍。
+
+**解题套路（三步）：**
+1. **边际 $P(X)$：** 把每一列加起来。
+2. **条件 $P(Y\mid X=x)=P(Y,X=x)/P(X=x)$。**
+3. **条件期望/方差按定义算。**
+
+**关键观察：** 因为 $Y\in\{0,1\}$，所以 $Y^2=Y$（$0^2=0$，$1^2=1$）。于是 $E[Y^2\mid X]=E[Y\mid X]$。这种"0/1 变量等于自己的平方"的技巧在计数数据、虚拟变量里到处都是。
+
+**计算：**
+
+- 边际：$P(X=0)=0.1+0.4=0.5$；$P(X=1)=0.2+0.3=0.5$。
+- 条件（$X=0$）：$P(Y=1\mid X=0)=0.4/0.5=0.8$；故 $E[Y\mid X=0]=0.8$。
+- 条件（$X=1$）：$P(Y=1\mid X=1)=0.3/0.5=0.6$；故 $E[Y\mid X=1]=0.6$。
+- 因 $Y^2=Y$：$E[Y^2\mid X]=E[Y\mid X]$。
+- 条件方差（伯努利方差 $p(1-p)$）：
+  - $\mathrm{var}[Y\mid X=0]=0.8\times0.2=0.16$；
+  - $\mathrm{var}[Y\mid X=1]=0.6\times0.4=0.24$。
+
+| $X$ | $E[Y\mid X]$ | $E[Y^2\mid X]$ | $\mathrm{var}[Y\mid X]$ |
+|:---:|:------------:|:--------------:|:----------------------:|
+| 0 | 0.8 | 0.8 | 0.16 |
+| 1 | 0.6 | 0.6 | 0.24 |
+
+> **看点：** 两个条件方差不同（0.16 vs 0.24）——这就是**异方差**的雏形（条件方差随 $X$ 变化）。它直接对应 2.8（Poisson）、2.22（剔除变量诱发异方差）的讨论。代码见 notebook 对应 cell。
+
+---
+
+## Exercise 2.5　$\sigma^2(X)$ 是 $e^2$ 的最佳预测
+
+**题：** 证明条件方差 $\sigma^2(X)=E[e^2\mid X]$ 是"对平方误差 $e^2$ 的最佳预测"。
+
+**考点：** Theorem 2.7（CEF 是最小均方误差预测器）的**换元**应用——把被预测对象从 $Y$ 换成 $e^2$。
+
+**分步：**
+
+**(a) 写出预测 $e^2$ 的均方误差。** 预测量是某个 $X$ 的函数 $h(X)$，其均方误差为
+$$\mathrm{MSE}(h)=E\bigl[(e^2-h(X))^2\bigr].$$
+
+**(b) "预测 $e^2$"是什么意思？** 我们**能观察到 $X$**（也知道模型），但**观察不到误差 $e$ 本身**（更别说 $e^2$）。"预测 $e^2$"就是：给定 $X$，猜一个"误差平方会有多大"的数。直觉上，$\sigma^2(X)$ 刻画的正是"在 $X$ 处误差的**典型幅度**"，所以它理应是 $e^2$ 的好猜测。
+
+**(c) 为什么 $\sigma^2(X)$ 最优？** 把 $e^2$ 当作新的"被解释变量"，$X$ 仍是条件变量。它的条件期望正是
+$$E[e^2\mid X]=\sigma^2(X).$$
+而 Theorem 2.7 告诉我们：**任何随机变量的条件期望，都是它在"所有 $X$ 的函数"里的最小均方误差预测**。所以 $h(X)=\sigma^2(X)$ 使 $\mathrm{MSE}(h)$ 最小。□
+
+> **和本科对照：** 李子奈里"$\sigma^2$"是一个常数（同方差假定）。Hansen 这里强调：即便允许 $\sigma^2$ 随 $X$ 变（异方差），它的"函数形式"$\sigma^2(X)$ 仍然是 $e^2$ 的最佳预测——这是后面稳健标准误、以及条件异方差建模的总体出发点。
+
+---
+
+## Exercise 2.6　方差分解 $\mathrm{var}[Y]=\mathrm{var}[m(X)]+\sigma^2$
+
+**题：** 用 $Y=m(X)+e$ 证明 $\mathrm{var}[Y]=\mathrm{var}[m(X)]+\sigma^2$。
+
+**考点：** "和的方差 = 方差之和（当协方差为 0）"。关键是要先证 $\mathrm{cov}(m(X),e)=0$。
+
+**证明：**
+
+**第 1 步：证 $m(X)$ 与 $e$ 不相关。** 用 Ex 2.3 的结论（取 $h(X)=m(X)$）：
+$$E[m(X)\,e]=0\quad\Longrightarrow\quad \mathrm{cov}(m(X),e)=E[m(X)e]-E[m(X)]\underbrace{E[e]}_{=0}=0.$$
+
+**第 2 步：方差分解。** 因协方差为 0，
+$$\mathrm{var}[Y]=\mathrm{var}[m(X)+e]=\mathrm{var}[m(X)]+\mathrm{var}[e]+2\underbrace{\mathrm{cov}(m(X),e)}_{=0}=\mathrm{var}[m(X)]+\sigma^2.$$
+（这里用了 $\mathrm{var}[e]=E[e^2]=\sigma^2$，见 §2.10。）□
+
+> **直观/本科对照：** 总波动 = "被 $X$ 解释掉的波动"（条件均值的方差）+ "纯噪声的平均波动"。这正是李子奈里**判定系数 $R^2$** 的总体版本：
+> $$\frac{\mathrm{var}[m(X)]}{\mathrm{var}[Y]}=1-\frac{\sigma^2}{\mathrm{var}[Y]}$$
+> 就是总体 $R^2$。Hansen 在总体上把它写成了**恒等式**（不依赖线性假定），而本科教材是在**样本**上用 TSS=ESS+RSS 近似。
+
+---
+
+## Exercise 2.7　条件方差的另一写法
+
+**题：** 证明 $\sigma^2(X)=E[Y^2\mid X]-(E[Y\mid X])^2$。
+
+**考点：** 条件版地套用"方差 = 二阶矩 − 均值平方"这一初等公式。
+
+**证明：** 记 $m(X)=E[Y\mid X]$（给定 $X$ 它是"已知数"，可提出条件期望）。展开定义：
+\begin{align*}
+\sigma^2(X)=\mathrm{var}[Y\mid X]
+&=E\bigl[(Y-m(X))^2\mid X\bigr]\\
+&=E\bigl[Y^2-2m(X)Y+m(X)^2\mid X\bigr]\\
+&=E[Y^2\mid X]-2m(X)\,E[Y\mid X]+m(X)^2\\
+&=E[Y^2\mid X]-2m(X)^2+m(X)^2\\
+&=E[Y^2\mid X]-m(X)^2.
+\end{align*}
+即 $\sigma^2(X)=E[Y^2\mid X]-(E[Y\mid X])^2$。□
+
+> **说明：** 也可从 CEF 误差角度证：$\sigma^2(X)=E[e^2\mid X]=E[(Y-m(X))^2\mid X]$，展开后同上。两种证法殊途同归。这题就是把本科里"$\mathrm{Var}(X)=E[X^2]-(EX)^2$"搬到条件版。
+
+---
+
+## Exercise 2.8　Poisson 回归：CEF 线性但异方差
+
+**题：** $Y\mid X=x\sim\mathrm{Poisson}(x'\beta)$。求 $E[Y\mid X]$、$\mathrm{var}[Y\mid X]$。这是否支持线性回归模型 $Y=X'\beta+e$？
+
+**考点：** 一个"CEF 恰好是线性"的现实例子，但它**异方差**——说明"线性 + 零条件均值"与"同方差"是两件事，不要混。
+
+**提示回顾：** Poisson($\lambda$) 的均值 = 方差 = $\lambda$。这里参数是 $\lambda=x'\beta$。
+
+**解答：**
+$$E[Y\mid X]=X'\beta,\qquad \mathrm{var}[Y\mid X]=X'\beta.$$
+于是 CEF **恰好**是线性的：$m(X)=X'\beta$。把 $e=Y-X'\beta$，则 $E[e\mid X]=0$。所以**可以**写成
+$$Y=X'\beta+e,\qquad E[e\mid X]=0.$$
+即"零条件均值的线性模型"是成立的（这正好满足李子奈的基本假定）。
+
+**但是**条件方差 $\mathrm{var}[e\mid X]=X'\beta$ **依赖于 $X$**（除非 $X'\beta$ 恒为常数），所以**古典同方差假定不成立**——这是典型的**异方差**。
+
+> **和本科对照：** 李子奈把"线性、零均值、同方差、无自相关"打包成"基本假定"。Hansen 此题刻意把它们**拆开**：Poisson 满足前两条（线性 + 零均值），却破坏第三条（同方差）。这预示了后面为什么要单独讨论"稳健标准误"和"加权最小二乘"。
+
+---
+
+## Exercise 2.9　把 CEF 写成饱和虚拟变量回归
+
+**题：** $X_1\in\{0,1\}$（二值），$X_2\in\{A,B,C\}$（三分类）。把 $E[Y\mid X_1,X_2]$ 写成线性回归。
+
+**考点：** **饱和模型**（saturated model）——当回归元全是离散的、且把所有交互项都放进去时，CEF 恰好可写成线性的（无近似误差）。这正是陈强/李子奈里"虚拟变量 + 交互项"的总体版。
+
+**思路：** $X_1$ 有 2 个取值、$X_2$ 有 3 个取值，组合出 $2\times3=6$ 个"格子"，每个格子有自己的条件均值 $\mu_{j,k}$。CEF 共有 **6 个独立的值**，所以需要 **6 个参数**来精确表示。
+
+**构造（基准 = $(X_1,X_2)=(0,A)$ 这一格）：**
+- 截距 $\beta_0$：基准格的均值 $\mu_{0,A}$。
+- $X_1$：从基准格"把 $X_1$ 从 0 变 1"的效应（$A$ 类内部）。
+- 虚拟变量 $1\{X_2=B\}$、$1\{X_2=C\}$：**只放 2 个**（不放 $A$，避免虚拟变量陷阱 / 完全共线性）。它们分别刻画"从 $A$ 换到 $B$/$C$ 且 $X_1=0$"的效应。
+- 交互项 $X_1\,1\{X_2=B\}$、$X_1\,1\{X_2=C\}$：允许 $X_1$ 的效应**随 $X_2$ 类别不同而不同**。
+
+合起来（共 $1+1+2+2=6$ 个参数）：
+\begin{align*}
+E[Y\mid X_1,X_2]
+&=\beta_0+\beta_1 X_1+\beta_2 1\{X_2=B\}+\beta_3 1\{X_2=C\}\\
+&\quad+\beta_4 X_1 1\{X_2=B\}+\beta_5 X_1 1\{X_2=C\}.
+\end{align*}
+
+每个系数都是"某格均值 $-$ 基准格均值"的差，例如 $\beta_0+\beta_1+\beta_2+\beta_4=\mu_{1,B}$。
+
+> **和本科对照：** 这就是李子奈/陈强讲的**带交互项的虚拟变量回归**。Hansen 强调：当 $X$ 离散且**包含全部交互**（饱和）时，CEF **严格线性**于这些虚拟变量——这是少数"线性模型无设定误差"的情形。若漏掉交互项，就是在强行施加"$X_1$ 的效应在各 $X_2$ 类别下相同"的限制。
+
+---
+
+## Exercise 2.10–2.14（True/False）——本章的灵魂
+
+> 这五题反复考一件事：**"$E[e\mid X]=0$（强）"与"$E[Xe]=0$（弱）"的差别**，以及**均值独立 ≠ 独立**。
+> 做法建议：先判断，再给**反例**或**引用哪条定理**。下面每题都给出可复算的例子。
+
+### 2.10　$E[e\mid X]=0\Rightarrow E[X^2 e]=0$？—— **True**
+
+由 Ex 2.3（Theorem 2.4.4）取 $h(X)=X^2$：因 $E[e\mid X]=0$，故 $E[X^2 e]=0$。
+**直觉：** 零条件均值不仅消灭 $e$ 与 $X$ 的相关，也消灭 $e$ 与 $X^2$（及任何 $X$ 的函数）的相关。这是 CEF 误差的"强"性质。
+
+### 2.11　$E[Xe]=0\Rightarrow E[X^2 e]=0$？—— **False**
+
+$E[Xe]=0$ 只保证"线性不相关"，挡不住"与 $X^2$ 相关"。
+
+**反例（建议背下来，2.13 还要用）：** 取 $X\sim N(0,1)$，令 $e=X^2-1$。则
+- $E[Xe]=E[X(X^2-1)]=\underbrace{E[X^3]}_{=0}-\underbrace{E[X]}_{=0}=0$（标准正态的奇数阶矩为 0）；
+- 但 $E[X^2 e]=E[X^2(X^2-1)]=\underbrace{E[X^4]}_{=3}-\underbrace{E[X^2]}_{=1}=2\ne0$。
+
+故 $E[Xe]=0$ 成立，而 $E[X^2 e]\ne0$。证伪。
+
+### 2.12　$E[e\mid X]=0\Rightarrow e$ 与 $X$ 独立？—— **False**
+
+**均值独立 ≠ 独立。** 独立要求**整个条件分布** $F(e\mid X)$ 不依赖 $X$；均值独立只钉住了**一阶矩**。
+
+**反例（教材 §2.8 给的）：** 设 $X,u$ 独立同分布 $N(0,1)$，令 $e=Xu$。则
+$$E[e\mid X]=E[Xu\mid X]=X\,E[u\mid X]=X\cdot0=0$$
+（因 $u\perp X$，$E[u\mid X]=E[u]=0$），所以**均值独立**。但给定 $X=x$ 时 $e=xu\sim N(0,x^2)$，**方差随 $x$ 变**，分布依赖 $X$，故**不独立**。
+
+### 2.13　$E[Xe]=0\Rightarrow E[e\mid X]=0$？—— **False**
+
+这是 2.11 的"换方向"。$E[Xe]=0$（线性正交）**推不出**零条件均值。
+
+**反例（复用 2.11）：** 同样取 $X\sim N(0,1)$，$e=X^2-1$。已证 $E[Xe]=0$；但
+$$E[e\mid X]=E[X^2-1\mid X]=X^2-1\ne0$$
+（它随 $X$ 变化）。故不成立。
+（更一般的说法：BLP/投影误差**总是**满足 $E[Xe]=0$，但只要 CEF 非线性，$E[e\mid X]\ne0$ 就会发生。）
+
+### 2.14　$E[e\mid X]=0$ 且 $E[e^2\mid X]=\sigma^2$（常数）$\Rightarrow e\perp X$？—— **False**
+
+即便**零条件均值 + 同方差**都满足，只要**高阶矩**（偏度、峰度……）还依赖 $X$，就不独立。
+
+**反例：** 取 $X\in\{0,1\}$ 等概率。规定条件分布：
+- $X=0$ 时：$e=\pm1$ 各以概率 $1/2$（均值 0、方差 1、二点分布）；
+- $X=1$ 时：$e\sim N(0,1)$（均值 0、方差 1、正态）。
+
+两边的条件均值都是 0、条件方差都是 1（**同方差**），但条件分布**不同**（二点 vs 正态）→ 不独立。
+
+**总表：**
+
+| 题 | 答案 | 理由 |
+|:--:|:----:|------|
+| 2.10 | **True** | Thm 2.4.4，$h(x)=x^2$ |
+| 2.11 | **False** | $E[Xe]=0\not\Rightarrow E[X^2e]=0$（反例 $e=X^2-1$） |
+| 2.12 | **False** | 均值独立 $\ne$ 独立（反例 $e=Xu$） |
+| 2.13 | **False** | 投影正交 $\ne$ CEF 正交（反例 $e=X^2-1$） |
+| 2.14 | **False** | 同方差+均值独立仍可有高阶依赖（条件分布不同） |
+
+> **和本科对照（重要）：** 这组题告诉你，李子奈/陈强里那些"打包的基本假定"其实有强弱之分：
+> "$E(\varepsilon\mid X)=0$"（零条件均值，强）$\Rightarrow$ "$\mathrm{Cov}(X,\varepsilon)=0$"（弱）；
+> 而 "$\varepsilon\perp X$（独立）" 又比零条件均值更强。
+> 不要把"残差与 $X$ 不相关"（OLS 机械保证）误当成"模型设定正确（$E[e\mid X]=0$）"——这正是 2.13 的教训，也是后面 Ramsey RESET 检验的思想来源。
+
+---
+
+## Exercise 2.15　只有截距的 BLP：$\alpha=E[Y]$
+
+**题：** 截距模型 $Y=\alpha+e$，$\alpha$ 为 BLP。证明 $\alpha=E[Y]$。
+
+**考点：** BLP 在"没有回归元"时的退化情形——最佳常数预测就是无条件均值。
+
+**证明：** 最小化均方误差 $S(\alpha)=E[(Y-\alpha)^2]$。对 $\alpha$ 求导（一阶条件）：
+$$\frac{dS}{d\alpha}=-2\,E[Y-\alpha]=0\quad\Longrightarrow\quad E[Y]=\alpha.$$
+（二阶条件 $d^2S/d\alpha^2=2>0$，确为最小值。）□
+
+> **直观/本科对照：** 用**一个常数**去预测 $Y$、使均方误差最小的那个常数，就是 $Y$ 的平均值。这正是李子奈里"$\bar y$ 使 $\sum(y_i-c)^2$ 最小"的**总体**版本。这也说明：BLP 公式 $\beta=(E[XX'])^{-1}E[XY]$ 在 $X\equiv1$ 时退化为 $\beta=E[Y]$（此时 $E[XX']=E[1]=1$，$E[XY]=E[Y]$）。
+
+---
+
+## Exercise 2.16　连续密度：手算 BLP 与 CEF，并比较
+
+**题：** $X,Y$ 联合密度 $f(x,y)=\tfrac32(x^2+y^2)$，$0\le x,y\le1$。求 BLP $Y=\alpha+\beta X+e$ 的系数，以及 CEF $m(x)=E[Y\mid X=x]$。两者是否不同？
+
+**考点：** 一个"BLP ≠ CEF"的具体连续例子。要求会**算双重积分**求矩、会**算条件密度**求 CEF。这是本章计算量最大的一题，建议跟着步骤在草稿纸上过一遍（代码见 notebook）。
+
+**第 0 步：验证密度归一。**
+$\int_0^1\!\!\int_0^1\tfrac32(x^2+y^2)\,dy\,dx=\tfrac32\big(\tfrac13+\tfrac13\big)=\tfrac32\cdot\tfrac23=1.$ ✓
+
+**第 1 步：算各阶矩（关键技巧——先对 $y$ 积出内层）。**
+
+注意到内层积分 $\int_0^1(x^2+y^2)\,dy=x^2+\tfrac13$ 是 $x$ 的函数，反复用到：
+
+- $E[X]=\tfrac32\int_0^1 x(x^2+\tfrac13)\,dx=\tfrac32\big[\tfrac14+\tfrac16\big]=\tfrac32\cdot\tfrac{5}{12}=\tfrac58.$
+  由 $x,y$ 对称，$E[Y]=\tfrac58$。
+- $E[X^2]=\tfrac32\int_0^1 x^2(x^2+\tfrac13)\,dx=\tfrac32\big[\tfrac15+\tfrac19\big]=\tfrac32\cdot\tfrac{14}{45}=\tfrac{7}{15}.$
+- $E[XY]=\tfrac32\int_0^1\!\!\int_0^1 xy(x^2+y^2)\,dy\,dx.$
+  内层 $\int_0^1(x^3y+xy^3)\,dy=\tfrac{x^3}{2}+\tfrac{x}{4}$；
+  再积分 $\int_0^1(\tfrac{x^3}{2}+\tfrac{x}{4})\,dx=\tfrac18+\tfrac18=\tfrac14$；
+  故 $E[XY]=\tfrac32\cdot\tfrac14=\tfrac38.$
+
+**第 2 步：BLP 系数。** 用一元 BLP 公式 $\beta=\mathrm{cov}(X,Y)/\mathrm{var}(X)$，$\alpha=E[Y]-\beta E[X]$：
+- $\mathrm{var}(X)=E[X^2]-(E[X])^2=\tfrac{7}{15}-\big(\tfrac58\big)^2=\tfrac{73}{960}$；
+- $\mathrm{cov}(X,Y)=E[XY]-E[X]E[Y]=\tfrac38-\big(\tfrac58\big)^2=-\tfrac{1}{64}$；
+- $\beta=\dfrac{-1/64}{73/960}=-\dfrac{15}{73}\approx-0.205$；
+- $\alpha=\tfrac58-(-\tfrac{15}{73})\cdot\tfrac58=\tfrac{55}{73}\approx0.753.$
+
+即 $\boxed{\alpha=\tfrac{55}{73},\ \beta=-\tfrac{15}{73}}$。
+
+**第 3 步：CEF。** 先求 $X$ 的边际密度与条件密度：
+$$f_X(x)=\int_0^1\tfrac32(x^2+y^2)\,dy=\tfrac32\Big(x^2+\tfrac13\Big),\qquad f(y\mid x)=\frac{f(x,y)}{f_X(x)}.$$
+于是
+$$m(x)=E[Y\mid X=x]=\int_0^1 y\,f(y\mid x)\,dy=\frac{\tfrac32\int_0^1 y(x^2+y^2)\,dy}{\tfrac32(x^2+\tfrac13)}=\frac{\tfrac12 x^2+\tfrac14}{x^2+\tfrac13}.$$
+（分子：$\int_0^1(x^2y+y^3)\,dy=\tfrac{x^2}{2}+\tfrac14$。）
+
+**第 4 步：比较。** $m(x)=\dfrac{\tfrac12 x^2+\tfrac14}{x^2+\tfrac13}$ 是 $x$ 的**有理函数**，不是仿射函数 $a+bx$。验算两点：
+- $m(0)=\dfrac{1/4}{1/3}=\tfrac34=0.75$；
+- $m(1)=\dfrac{3/4}{4/3}=\tfrac{9}{16}=0.5625$.
+
+若 CEF 是线性的，应有 $m(1)=m(0)+\text{斜率}$；但 BLP 是 $0.753-0.205x$，在 $x=1$ 处给 $0.548$，与 $m(1)=0.5625$ 不同。**故 BLP 与 CEF 不同**：BLP 只是对 CEF 的最佳**线性**近似，CEF 本身是弯曲的。
+
+> **和本科对照：** 李子奈默认"总体回归线 = 条件期望"。本题恰恰说明：当 CEF 非线性时，"最佳线性预测"只是**近似**，两者并不相等。这就是 Hansen 全书反复强调的"线性是近似，不是假设"。
+
+---
+
+## Exercise 2.17　矩条件唯一确定均值与方差
+
+**题：** $g(x,m,s)=\begin{pmatrix}x-m\\(x-m)^2-s\end{pmatrix}$。证明 $E[g(X,m,s)]=0$ 当且仅当 $m=\mu=E[X]$，$s=\sigma^2=\mathrm{var}[X]$。
+
+**考点：** 最朴素的**矩方法**（method of moments）——"两个方程解两个未知数"。它是第 13 章 GMM 的最小种子。
+
+**证明：** $E[g(X,m,s)]=0$ 是两个分量同时为 0：
+
+- 第一分量 $E[X-m]=0\Rightarrow E[X]=m\Rightarrow m=\mu$；
+- 第二分量 $E[(X-m)^2-s]=0$。代入 $m=\mu$：$E[(X-\mu)^2]=s\Rightarrow s=\sigma^2$.
+
+反之，$m=\mu,s=\sigma^2$ 显然使两分量为 0。故"当且仅当"成立。□
+
+> **和本科对照：** 把 $E[\cdot]$ 换成样本均值 $\tfrac1n\sum_i$，这两个方程的解正是**样本均值** $\bar X$ 和**样本方差**——这就是矩估计。Hansen 想说明：均值、方差这些"老朋友"，本质上都是某个矩条件的解。
+
+---
+
+## Exercise 2.18　完全共线性：$X_3$ 是 $X_2$ 的线性函数
+
+**题：** $X=(1,X_2,X_3)$，$X_3=\alpha_1+\alpha_2 X_2$。
+**(a)** 证 $Q_{XX}=E[XX']$ 不可逆；**(b)** 用线性变换写出 BLP。
+
+**考点：** **完全多重共线性**（perfect multicollinearity）在**总体**层面的体现，以及"剔除冗余回归元"的处理。即李子奈/陈强里"完全共线性使 $X'X$ 不可逆"的总体版。
+
+**(a) 证 $Q_{XX}$ 奇异：** 由 $X_3=\alpha_1+\alpha_2 X_2$ 得
+$$\alpha_1\cdot1+\alpha_2 X_2-1\cdot X_3=0\quad\text{a.s.},$$
+即存在非零向量 $c=(-\alpha_1,-\alpha_2,1)'$ 使 $X'c=0$（几乎必然）。于是
+$$Q_{XX}\,c=E[XX'c]=E[X\underbrace{(X'c)}_{=0}]=0,$$
+说明 $Q_{XX}$ 有非零零化向量、**不可逆**。此时 $\beta=(E[XX'])^{-1}E[XY]$ 无定义。
+
+**(b) 有效回归元为 $(1,X_2)$：** 既然 $X_3$ 没带来任何新信息（它完全由 $(1,X_2)$ 决定），真正的 BLP 只需两个回归元：
+$$\begin{pmatrix}\gamma_0\\\gamma_1\end{pmatrix}
+=\begin{pmatrix}1&E[X_2]\\E[X_2]&E[X_2^2]\end{pmatrix}^{-1}
+\begin{pmatrix}E[Y]\\E[X_2Y]\end{pmatrix}.$$
+回到原 $X=(1,X_2,X_3)$ 上，系数**不唯一**：因为 $X_3$ 落在 $(1,X_2)$ 的生成空间里，给 $X_3$ 的系数任取一个值都能配出同样的预测（这正是"不可识别"）。
+
+> **和本科对照：** 这就是陈强强调的——遇到完全共线性，Stata 会自动**剔除**一个变量。总体层面也是一样：$Q_{XX}$ 奇异 ⇔ 存在精确线性关系 ⇔ 剔除冗余变量后回归不变。第 3 章的 FWL 定理会更系统地处理"剔除"。
+
+---
+
+## Exercise 2.19　BLP 也是"对 CEF 的最佳线性近似"
+
+**题：** 证 $d(\beta)=E[(m(X)-X'\beta)^2]$ 的最小点为 $\beta=(E[XX'])^{-1}E[Xm(X)]=(E[XX'])^{-1}E[XY]$。
+
+**考点：** 说明 BLP 有**两种等价的定义**——既是最小化"对 $Y$ 的"均方误差，也是最小化"对 CEF 的"均方误差。后者更清楚地说明：BLP 是对 CEF 的最佳线性近似。
+
+**证明：** $d(\beta)$ 是 $\beta$ 的二次型。对 $\beta$ 求导（一阶条件）：
+$$0=\frac{\partial d}{\partial\beta}=-2\,E\big[X(m(X)-X'\beta)\big]\quad\Longrightarrow\quad E[XX']\beta=E[Xm(X)].$$
+故 $\beta=(E[XX'])^{-1}E[Xm(X)]$（即书中 (2.47)）。
+
+再用 LIE 把 $E[Xm(X)]$ 换成 $E[XY]$：由条件期望定理（Ex 2.2 的恒等式），
+$$E[Xm(X)]=E\big[X\,E[Y\mid X]\big]=E[E[XY\mid X]]=E[XY],$$
+故 $\beta=(E[XX'])^{-1}E[XY]$（即 (2.48) = (2.22)）。□
+
+> **为什么漂亮：** "对 $Y$ 的最佳线性预测"和"对 CEF $m(X)$ 的最佳线性预测"是**同一个** $\beta$。因为 CEF 本身已经把 $Y$ 中"可由 $X$ 解释"的部分提净了，线性近似到 CEF 上和近似到 $Y$ 上没区别。
+
+---
+
+## Exercise 2.20　CEF 的"特征式"定义在有密度时与初等定义一致
+
+**题：** 有联合密度时，验证 (2.57) 与 (2.6) 一致：对任意可测集 $\mathcal{X}$，
+$$E[1\{X\in\mathcal{X}\}Y]=E[1\{X\in\mathcal{X}\}m(X)].$$
+
+**考点：** Hansen 用 (2.57) 作为 CEF 的**通用定义**（不依赖密度，对离散/混合变量也成立）。本题验证：当**有**联合密度时，它与大家熟悉的"条件密度"定义 (2.6) 吻合。
+
+**证明：** 把左边按联合密度展开，关键是**先对 $y$ 积出内层**（得到条件期望）：
+\begin{align*}
+E[1\{X\in\mathcal{X}\}Y]
+&=\int_{\mathcal{X}}\!\!\int_{\mathbb{R}} y\,f(x,y)\,dy\,dx\\
+&=\int_{\mathcal{X}}\!\left[\int_{\mathbb{R}} y\,\frac{f(x,y)}{f_X(x)}\,dy\right]f_X(x)\,dx\\
+&=\int_{\mathcal{X}} m(x)\,f_X(x)\,dx\\
+&=E[1\{X\in\mathcal{X}\}m(X)].
+\end{align*}
+其实这也就是 Ex 2.3（Theorem 2.4.4）取 $h(X)=1\{X\in\mathcal{X}\}$ 的特例：$E[1\{X\in\mathcal{X}\}Y]=E[1\{X\in\mathcal{X}\}E[Y\mid X]]$。□
+
+> **和本科对照：** 本科只学过"有密度时 $E[Y|X=x]=\int y f(y|x)dy$"。Hansen 的 (2.57) 是更一般的写法——它说的是："在 $X$ 落在任意区域 $\mathcal{X}$ 内的条件下，$Y$ 的平均 = $m(X)$ 在该区域的平均"。这个刻画不要求密度存在，所以能统一处理连续、离散、混合变量。
+
+---
+
+## Exercise 2.21　遗漏变量偏差（总体版）
+
+**题：** 短回归 $Y=X\gamma_1+e$；长回归 $Y=X\beta_1+X_2\beta_2+u$。
+**(a)** 何时 $\gamma_1=\beta_1$？**(b)** 若长回归换成 $Y=X\theta_1+X_3\theta_2+v$，何时 $\gamma_1=\theta_1$？
+
+**考点：** **遗漏变量偏差（OVB）**在总体层面的矩阵公式。这是陈强/李子奈核心内容"$\hat\beta$ 的偏差 = 被遗漏变量对 $Y$ 的效应 $\times$ 它与 $X$ 的相关"的**总体**版本。
+
+**记号说明：** 这里的 $e,u,v$ 都是各自回归的**投影误差**，满足与各自回归元正交（$E[Xe]=0$，$E[Xu]=E[X_2u]=0$），但**不必** $E[\cdot\mid X]=0$。
+
+**(a) 推导偏差公式。** 把长回归代入短回归的矩 $E[XY]$：
+$$E[XY]=E\big[X(X\beta_1+X_2\beta_2+u)\big]=E[XX']\beta_1+E[XX_2]\beta_2+\underbrace{E[Xu]}_{=0}.$$
+而 $\gamma_1=(E[XX'])^{-1}E[XY]$，两边乘 $(E[XX'])^{-1}$ 得
+$$\boxed{\ \gamma_1=\beta_1+(E[XX'])^{-1}E[XX_2]\beta_2\ }.$$
+偏差项 $(E[XX'])^{-1}E[XX_2]\beta_2$ 正是"被遗漏的 $X_2$ 通过与 $X$ 的相关 $E[XX_2]$ 传导、再乘它对 $Y$ 的效应 $\beta_2$"。因 $E[XX']$ 可逆，故
+$$\gamma_1=\beta_1\iff E[XX_2]\beta_2=0.$$
+满足这一条件的两种典型情形（与本科教材完全一致）：
+- $\beta_2=0$：被遗漏变量对 $Y$ **无效应**；
+- $E[XX_2]=0$：被遗漏变量与保留的 $X$ **不相关**。
+
+**(b)** 把 $X_2$ 换成 $X_3$，条件变为 $E[XX_3]\theta_2=0$。它与 (a) 中的条件**一般不同**，因为 $X_2\ne X_3$：是否产生偏差取决于"具体漏掉了哪个变量"。
+
+> **和本科对照：** 一元情形下，偏差公式退化为 $\gamma_1-\beta_1=\dfrac{\mathrm{Cov}(X,X_2)}{\mathrm{Var}(X)}\beta_2$——这正是李子奈/陈强里 OVB 的经典公式。Hansen 只是把 $\mathrm{Cov}/\mathrm{Var}$ 换成了矩阵 $(E[XX'])^{-1}E[XX_2]$。
+
+---
+
+## Exercise 2.22　剔除变量会不会"诱发"异方差？
+
+**题：** 同方差长回归 $Y=X_1'\beta_1+X_2'\beta_2+e$，$E[e\mid X_1,X_2]=0$，$E[e^2\mid X_1,X_2]=\sigma^2$（同方差），$E[X_2\mid X_1]=\Gamma X_1$，$\Gamma\ne0$。关心 $\beta_1$。问：剔除 $X_2$ 后，**诱导出的方程误差**是同方差还是异方差？
+
+**考点：** OVB（2.21）之外的**第二个后果**——模型缩减会**破坏同方差性**，从而影响标准误与推断。这是个容易被忽略的细腻结论。
+
+**第 1 步：写出 $X_2$ 在 $X_1$ 上的线性投影。** 由 $E[X_2\mid X_1]=\Gamma X_1$，
+$$X_2=\Gamma X_1+v,\qquad E[v\mid X_1]=0.$$
+（$v$ 是这个投影的误差；注意 $v$ 是 $(X_1,X_2)$ 的函数。）
+
+**第 2 步：把长回归改写。** 代入：
+$$Y=X_1'\beta_1+(\Gamma X_1+v)'\beta_2+e=X_1'(\beta_1+\Gamma'\beta_2)+\underbrace{(v'\beta_2+e)}_{=:u}.$$
+可见剔除 $X_2$ 后，新系数是 $\beta_1+\Gamma'\beta_2$（这就是 2.21 的 OVB），新误差 $u=v'\beta_2+e$。
+
+**第 3 步：算 $E[u^2\mid X_1]$。**
+$$E[u^2\mid X_1]=E[(v'\beta_2)^2\mid X_1]+2\,E[v'\beta_2\,e\mid X_1]+E[e^2\mid X_1].$$
+逐项：
+- $E[e^2\mid X_1]=E\big[E[e^2\mid X_1,X_2]\mid X_1\big]=E[\sigma^2\mid X_1]=\sigma^2$（用 LIE + 同方差）；
+- 交叉项：因 $v$ 是 $(X_1,X_2)$ 的函数、且 $E[e\mid X_1,X_2]=0$，故 $E[v'\beta_2\,e\mid X_1,X_2]=v'\beta_2\cdot0=0$，再取条件期望仍为 $0$；
+- 剩下 $E[(v'\beta_2)^2\mid X_1]$：这是 $v'\beta_2$ 的**条件二阶矩**，**一般依赖 $X_1$**（投影误差 $v$ 的波动可随 $X_1$ 变）。
+
+**结论：**
+$$E[u^2\mid X_1]=\sigma^2+E[(v'\beta_2)^2\mid X_1]\ \text{一般依赖 }X_1\ \Rightarrow\ \textbf{诱发异方差}.$$
+只有当 $E[(v'\beta_2)^2\mid X_1]$ 与 $X_1$ 无关（如 $\beta_2=0$，或 $v'\beta_2$ 的条件二阶矩为常数）时才保持同方差——属于特殊结构，并非通例。
+
+> **和本科对照：** 李子奈/陈强常说"遗漏变量会导致系数估计有偏"。本题提醒：**此外还会破坏同方差**，使得通常的标准误公式失效——这正是后面要用**稳健标准误**（heteroskedasticity-robust）的动机之一。Hansen 的总体视角让我们看清：**同方差性不是"假设出来"的，它会在模型变换（如剔除变量）下丢失**。
+
+---
+
+## 计算题代码
+
+Exercise 2.4（离散条件矩）与 Exercise 2.16（连续密度 BLP/CEF）的可运行代码见 `Hansen_Ch02_Exercises_Solutions.ipynb` 对应 cell。
+
+---
+
+## 附录：本章与全书/本科体系的衔接
+
+- **总体 vs 样本：** 第 2 章只谈**总体**对象（CEF、BLP）；第 3 章 OLS 是它们的**样本**模拟（把 $E[\cdot]$ 换成 $\tfrac1n\sum$）；第 4 章起讨论抽样波动与推断。
+- **本章主旋律（务必带走）：**
+  1. $E[e\mid X]=0$（CEF 误差，**强**）$\Rightarrow$ $E[h(X)e]=0$（任意函数），故 $\Rightarrow E[Xe]=0$（**弱**）；反向皆不成立（2.10–2.14）。
+  2. 均值独立 $\ne$ 独立；同方差 $\ne$ 独立。
+  3. 线性是**近似**：BLP 是对 CEF 的最佳线性近似，CEF 非线性时两者不同（2.16）。
+  4. 模型变换（剔除变量）既改变系数（OVB，2.21）又可能破坏同方差（2.22）。
+- **与李子奈/陈强的对照要点：** 国内教材把"线性 + 零均值 + 同方差 + 无自相关"打包；Hansen 把它们**逐条拆开、分清强弱**。这种拆分正是后续"稳健推断"、"工具变量"、"GMM"的基石——因为很多结论只需其中较弱的条件即可成立。
+
+
+# 实证与数值代码（来自 notebook，R 版）
+
+## Hansen《Econometrics》第 2 章习题解答
+
+**Chapter 2 Conditional Expectation and Projection**
+
+对应书稿 PDF 第 80–81 页（印刷页 60–61），§2.34 Exercises。
+
+完整推导与**面向初学者的详细注释**见同目录 `Hansen_Ch02_Exercises_Solutions.md`（强烈建议先读它的 §0、§1 概念铺垫）。本 notebook 只做 **Exercise 2.4、2.16** 的数值验证，并汇总其余题目答案。
+
+> **写给只学过李子奈/陈强的同学：** 本章几乎不谈 OLS 估计量，而是在**总体**层面把"要估计的东西"讲清楚。记住两个计算技巧——**迭代期望**（"信息集小的赢"）与**条件期望定理**（"条件里的 $X$ 能提出来"），绝大多数证明题都用得上。
+
+### Exercise 2.1–2.3（迭代期望与条件期望定理）
+
+**核心技巧（反复用）：**
+$$E[YX]\xRightarrow{\text{LIE}}E\big[E[YX\mid X]\big]\xRightarrow{X\text{ 提出来}}E\big[X\,E[Y\mid X]\big].$$
+
+**2.1** 反复套迭代期望（"信息集小的赢"），逐层剥掉 $X_3$、再 $X_2$：
+$$E[E[E[Y\mid X_1,X_2,X_3]\mid X_1,X_2]\mid X_1]=E[Y\mid X_1].$$
+
+**2.2** 若 $E[Y\mid X]=a+bX$，把 $X$ 提出来再代入：
+$$E[YX]=E[X\,E[Y\mid X]]=E[X(a+bX)]=aE[X]+bE[X^2].$$
+
+**2.3** 证 Theorem 2.4.4（$E[e\mid X]=0\Rightarrow E[h(X)e]=0$）：
+$$E[h(X)e]=E[E[h(X)e\mid X]]=E[h(X)\underbrace{E[e\mid X]}_{=0}]=0.$$
+意义：零条件均值不仅消灭 $e$ 与 $X$ 的相关，也消灭 $e$ 与 $X$ **任何函数**（含 $X^2$）的相关——这是区分 2.10(True) 与 2.11(False) 的关键。
+
+### Exercise 2.4（离散联合分布手算条件矩）
+
+| | $X=0$ | $X=1$ |
+|--|------:|------:|
+| $Y=0$ | 0.1 | 0.2 |
+| $Y=1$ | 0.4 | 0.3 |
+
+**三步法：** ① 边际 $P(X)=$ 列和；② 条件 $P(Y\mid X=x)=P(Y,X=x)/P(X=x)$；③ 按定义算矩。
+
+**关键观察：** $Y\in\{0,1\}\Rightarrow Y^2=Y$（$0^2=0,1^2=1$），故 $E[Y^2\mid X]=E[Y\mid X]$，条件方差即伯努利方差 $p(1-p)$。
+
+- $P(X=0)=P(X=1)=0.5$；
+- $E[Y\mid X=0]=0.4/0.5=0.8$，$\mathrm{var}=0.8\times0.2=0.16$；
+- $E[Y\mid X=1]=0.3/0.5=0.6$，$\mathrm{var}=0.6\times0.4=0.24$。
+
+两条件方差不同 → **异方差**雏形（呼应 2.8、2.22）。下方代码数值复核。
+
+```{r}
+#| label: nb-cell-01
+# 原 Python notebook 代码（保留备查）→ R 对照草稿
+# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
+
+# import numpy as np
+# import pandas as pd
+
+# joint P(Y,X): rows Y=0,1; cols X=0,1
+# PY: P = np.array([[0.1, 0.2],
+# PY:               [0.4, 0.3]])
+# PY: assert np.isclose(P.sum(), 1.0)
+
+# PY: px = P.sum(axis=0)
+# PY: print("P(X) =", px)
+
+# PY: rows = []
+# PY: for x in [0, 1]:
+# PY:     py_x = P[:, x] / px[x]
+# PY:     ey = float(py_x[1])           # E[Y|X] since Y in {0,1}
+# PY:     ey2 = ey                      # Y^2 = Y
+# PY:     var = ey2 - ey**2
+# PY:     rows.append({"X": x, "E[Y|X]": ey, "E[Y^2|X]": ey2, "Var[Y|X]": var})
+# PY:     print(f"X={x}: E[Y|X]={ey:.4f}, E[Y^2|X]={ey2:.4f}, Var={var:.4f}")
+
+# PY: pd.DataFrame(rows)
+
+# --- R 惯用写法提示 ---
+# read_dta: haven::read_dta(file.path(data_root, ...))
+# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
+# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
+# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
+```
+
+### Exercise 2.5–2.9 要点
+
+- **2.5** 把被预测对象从 $Y$ 换成 $e^2$：其条件期望 $E[e^2\mid X]=\sigma^2(X)$ 由 Theorem 2.7（CEF 是最小均方误差预测）即为 $e^2$ 的最佳预测。
+- **2.6** 先证 $\mathrm{cov}(m(X),e)=E[m(X)e]=0$（用 2.3），再得 $\mathrm{var}(Y)=\mathrm{var}(m(X))+\sigma^2$。即总体 $R^2=1-\sigma^2/\mathrm{var}(Y)$。
+- **2.7** 条件版"方差 = 二阶矩 − 均值平方"：$\sigma^2(X)=E[Y^2\mid X]-(E[Y\mid X])^2$。
+- **2.8** Poisson：$E[Y\mid X]=\mathrm{Var}[Y\mid X]=X'\beta$；CEF 恰好线性（满足零条件均值），但条件方差随 $X$ 变 → **异方差**（古典同方差不成立）。
+- **2.9** 饱和模型：$2\times3=6$ 格需 6 参数。截距 $+X_1$ + 两个类别虚拟（留 $A$ 作基准、避免虚拟变量陷阱）+ 两个交互项。
+
+### Exercise 2.10–2.14 True/False（本章灵魂：$E[e\mid X]=0$ 强于 $E[Xe]=0$）
+
+| 题 | 答案 | 理由与反例 |
+|:--:|:----:|------|
+| 2.10 | **True** | $E[e\mid X]=0\Rightarrow E[X^2e]=0$（Thm 2.4.4，取 $h(x)=x^2$） |
+| 2.11 | **False** | 反例：$X\sim N(0,1)$，$e=X^2-1$。$E[Xe]=E[X^3]-E[X]=0$；但 $E[X^2e]=E[X^4]-E[X^2]=3-1=2\ne0$ |
+| 2.12 | **False** | 均值独立 $\ne$ 独立。反例 $e=Xu$，$X,u\stackrel{iid}{\sim}N(0,1)$：$E[e\mid X]=0$ 但 $e\mid X=x\sim N(0,x^2)$ 方差随 $x$ 变 |
+| 2.13 | **False** | 投影正交推不出零条件均值。复用 2.11：$e=X^2-1$ 时 $E[Xe]=0$ 但 $E[e\mid X]=X^2-1\ne0$ |
+| 2.14 | **False** | 同方差+均值独立仍不独立。反例：$X\in\{0,1\}$ 等概率，$e\mid X=0$ 取 $\pm1$（二点）、$e\mid X=1\sim N(0,1)$；两边均值 0、方差 1（同方差），但条件分布不同 → 不独立 |
+
+**口诀：** 强（$E[e\mid X]=0$）$\Rightarrow$ 弱（$E[Xe]=0$）；均值独立 $\ne$ 独立；同方差 $\ne$ 独立。不要把"残差与 $X$ 不相关"（OLS 机械保证）当成"模型设定正确"。
+
+### Exercise 2.15–2.16（BLP 与 CEF）
+
+**2.15** 只有截距的 BLP：最小化 $E[(Y-\alpha)^2]$，FOC 得 $\alpha=E[Y]$（最佳常数预测 = 无条件均值，总体版"$\bar y$ 最小化平方偏差"）。
+
+**2.16** $f(x,y)=\frac{3}{2}(x^2+y^2)$，$0\le x,y\le1$。
+
+**BLP**（先积出内层 $\int_0^1(x^2+y^2)dy=x^2+\tfrac13$）：
+- $E[X]=E[Y]=\tfrac58$，$E[X^2]=\tfrac{7}{15}$，$E[XY]=\tfrac38$；
+- $\mathrm{var}(X)=\tfrac{73}{960}$，$\mathrm{cov}=-\tfrac{1}{64}$；
+- $\boxed{\beta=-\tfrac{15}{73}\approx-0.205,\quad \alpha=\tfrac{55}{73}\approx0.753}$.
+
+**CEF**：$f_X(x)=\tfrac32(x^2+\tfrac13)$，故
+$$m(x)=E[Y\mid X=x]=\frac{\tfrac12 x^2+\tfrac14}{x^2+\tfrac13}.$$
+$m(0)=0.75$、$m(1)=0.5625$，是有理函数（非线性）→ **BLP ≠ CEF**（BLP 只是对 CEF 的最佳线性近似）。下方代码数值复核。
+
+```{r}
+#| label: nb-cell-02
+# 原 Python notebook 代码（保留备查）→ R 对照草稿
+# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
+
+# from scipy import integrate
+
+# PY: def f(y, x):
+# PY:     return 1.5 * (x**2 + y**2)
+
+# PY: I, _ = integrate.dblquad(lambda y, x: f(y, x), 0, 1, 0, 1)
+# PY: print("integral of density =", I)
+
+# PY: EX, _ = integrate.dblquad(lambda y, x: x * f(y, x), 0, 1, 0, 1)
+# PY: EY, _ = integrate.dblquad(lambda y, x: y * f(y, x), 0, 1, 0, 1)
+# PY: EX2, _ = integrate.dblquad(lambda y, x: (x**2) * f(y, x), 0, 1, 0, 1)
+# PY: EXY, _ = integrate.dblquad(lambda y, x: x * y * f(y, x), 0, 1, 0, 1)
+# PY: print(f"E[X]={EX:.6f}, E[Y]={EY:.6f}, E[X^2]={EX2:.6f}, E[XY]={EXY:.6f}")
+
+# PY: varX = EX2 - EX**2
+# PY: cov = EXY - EX * EY
+# PY: beta = cov / varX
+# PY: alpha = EY - beta * EX
+# PY: print(f"BLP: alpha={alpha:.6f}, beta={beta:.6f}")
+# PY: print(f"exact: beta=-15/73={-15/73:.6f}, alpha=55/73={55/73:.6f}")
+
+# PY: def m(x):
+# PY:     fx = 1.5 * (x**2 + 1.0/3.0)
+# PY:     num = 1.5 * (0.5 * x**2 + 0.25)
+# PY:     return num / fx
+
+# PY: for x in [0.0, 0.5, 1.0]:
+# PY:     print(f"x={x}: m(x)={m(x):.6f}, BLP={alpha + beta*x:.6f}")
+
+# PY: print("CEF is not affine in x => different from BLP")
+
+# --- R 惯用写法提示 ---
+# read_dta: haven::read_dta(file.path(data_root, ...))
+# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
+# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
+# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
+```
+
+### Exercise 2.17–2.22 要点
+
+- **2.17** 两个矩方程解两个未知数（矩方法雏形）：第一分量 $\Rightarrow m=\mu$；第二分量 $\Rightarrow s=\sigma^2$。换成样本均值即样本均值/样本方差。
+- **2.18** $X_3=\alpha_1+\alpha_2X_2$ ⇒ 存在非零 $c$ 使 $X'c=0$ a.s. ⇒ $Q_{XX}$ 奇异（**完全共线性**，总体版）；有效回归元为 $(1,X_2)$，原 $X$ 上系数不唯一。
+- **2.19** $d(\beta)=E[(m(X)-X'\beta)^2]$ 的 FOC 得 $\beta=(E[XX'])^{-1}E[Xm(X)]$；再用 LIE 得 $E[Xm(X)]=E[XY]$。说明 BLP 既是"对 $Y$"也是"对 CEF"的最佳线性近似。
+- **2.20** 有密度时 $E[1\{X\in\mathcal{X}\}Y]=\int_{\mathcal{X}}m(x)f_X(x)dx=E[1\{X\in\mathcal{X}\}m(X)]$，即 (2.57) 与 (2.6) 一致（实为 2.3 取 $h=1\{X\in\mathcal{X}\}$）。
+- **2.21** 总体 OVB：$\gamma_1=\beta_1+(E[XX'])^{-1}E[XX_2]\beta_2$；故 $\gamma_1=\beta_1$ iff $E[XX_2]\beta_2=0$（漏掉变量无效应，或与 $X$ 不相关）。换成 $X_3$ 条件一般不同。
+- **2.22** 剔除 $X_2$：新误差 $u=v'\beta_2+e$，$E[u^2\mid X_1]=\sigma^2+E[(v'\beta_2)^2\mid X_1]$ 一般依赖 $X_1$ ⇒ **诱发异方差**（除特殊结构外）。提醒：模型缩减不仅改变系数（OVB），还会破坏同方差 ⇒ 稳健标准误的动机之一。
+
+### 理论结论的蒙特卡洛验证（无需外部数据）
+
+以下单元格用数值积分 / 大样本模拟核对 ch02 的关键理论结论，可独立运行（不依赖教材数据集）。
+
+```{r}
+#| label: nb-cell-03
+# 原 Python notebook 代码（保留备查）→ R 对照草稿
+# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
+
+# import numpy as np
+# from scipy import integrate
+
+# ---- Ex 2.16: 联合密度 f(x,y)=1.5(x^2+y^2) 的 BLP 与 CEF ----
+# PY: def f(y, x):
+# PY:     return 1.5 * (x**2 + y**2)
+
+# PY: I, _ = integrate.dblquad(f, 0, 1, 0, 1)                                 # 密度积分应为 1
+# PY: EX, _ = integrate.dblquad(lambda y, x: x * f(y, x), 0, 1, 0, 1)
+# PY: EY, _ = integrate.dblquad(lambda y, x: y * f(y, x), 0, 1, 0, 1)
+# PY: EX2, _ = integrate.dblquad(lambda y, x: x**2 * f(y, x), 0, 1, 0, 1)
+# PY: EXY, _ = integrate.dblquad(lambda y, x: x * y * f(y, x), 0, 1, 0, 1)
+# PY: varX, cov = EX2 - EX**2, EXY - EX * EY
+# PY: beta = cov / varX                                                # BLP 斜率（先算 beta）
+# PY: alpha = EY - beta * EX                                           # BLP 截距（再用 beta 算 alpha）
+# PY: print(f"[2.16] 积分={I:.4f}(应1)  E[X]={EX:.4f}(5/8={5/8})  E[X^2]={EX2:.4f}(7/15={7/15})")
+# PY: print(f"       beta={beta:.6f}(-15/73={-15/73:.6f})  alpha={alpha:.6f}(55/73={55/73:.6f})")
+
+# PY: def m(x):                                                               # CEF m(x)=E[Y|X=x]
+# PY:     return 1.5 * (0.5 * x**2 + 0.25) / (1.5 * (x**2 + 1/3))
+
+# PY: print(f"       m(0)={m(0):.4f}(0.75)  m(1)={m(1):.4f}(0.5625)  BLP(1)={alpha+beta*1:.4f} ≠ m(1) => BLP≠CEF")
+
+# ---- Ex 2.4: 0/1 联合分布的条件矩（伯努利 p(1-p)）----
+# PY: P = np.array([[0.1, 0.2], [0.4, 0.3]])
+# PY: px = P.sum(axis=0)
+# PY: for x in [0, 1]:
+# PY:     p1 = P[1, x] / px[x]
+# PY:     print(f"[2.4] X={x}: E[Y|X]={p1}, Var={p1*(1-p1):.2f}")
+
+# ---- Ex 2.11 / 2.13 反例: X~N(0,1), e=X^2-1（投影正交推不出零条件均值）----
+# PY: rng = np.random.default_rng(1)
+# PY: X = rng.standard_normal(10_000_000)
+# PY: e = X**2 - 1
+# PY: print(f"[2.11/2.13] E[Xe]={np.mean(X*e):.4f}(~0)  但 E[X^2 e]={np.mean(X**2*e):.4f}(应=2)")
+
+# ---- Ex 2.12 反例: e=Xu，X,u iid N(0,1)（均值独立 ≠ 独立）----
+# PY: u = rng.standard_normal(10_000_000)
+# PY: ee = X * u
+# PY: print(f"[2.12] E[e]={np.mean(ee):.4f}(~0)  方差随|X|增大: |X|<.5 var={np.var(ee[np.abs(X)<0.5]):.3f}, |X|>2 var={np.var(ee[np.abs(X)>2]):.3f}")
+
+# --- R 惯用写法提示 ---
+# read_dta: haven::read_dta(file.path(data_root, ...))
+# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
+# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
+# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
+```
+
+
+# 依赖包
+
+```{r}
+#| label: install-pkgs
+#| eval: false
+pkgs <- c(
+  "haven", "readxl", "data.table", "sandwich", "lmtest", "AER",
+  "quantreg", "boot", "MASS", "Matrix", "nnet", "ggplot2", "knitr"
+)
+# 章节扩展：Ch14–16 vars/urca；Ch17 plm；Ch19 np；Ch26 mlogit
+miss <- setdiff(pkgs, rownames(installed.packages()))
+if (length(miss)) install.packages(miss, repos = "https://cloud.r-project.org")
+```
+
+---
+*第 2 章 · R/Quarto · md + ipynb 融合*

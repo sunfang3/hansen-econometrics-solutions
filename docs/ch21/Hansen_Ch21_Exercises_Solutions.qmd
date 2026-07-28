@@ -1,0 +1,380 @@
+---
+title: "Bruce Hansen《Econometrics》第 21 章习题解答"
+subtitle: "Chapter 21 Regression Discontinuity"
+author: "按 Hansen 计量经济学体系整理（R / Quarto 版）"
+date: today
+lang: zh-CN
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    number-sections: true
+    number-depth: 2
+    html-math-method: mathjax
+    theme: cosmo
+    code-fold: true
+    code-tools: true
+engine: knitr
+knitr:
+  opts_chunk:
+    comment: "#>"
+    fig.path: "figures/ch21/"
+execute:
+  eval: false
+  echo: true
+  warning: false
+  message: false
+---
+
+::: {.callout-note}
+## 说明
+
+- **理论：** 来自同目录 Markdown 逐步解答。
+- **代码：** Python notebook 已融合为 **R**（`scripts/r_companions/ch21.R` 优先；否则为带注释的翻译草稿）。
+- **数据：** `hansen/econometrics/data/`（gitignore）；渲染前请确保数据已下载。
+- 默认 `execute: eval: false`。有数据时改为 `true` 或交互运行代码块。
+- 缺包时：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot"))` 等。
+:::
+
+```{r}
+#| label: setup
+root <- if (dir.exists("../../hansen")) "../.." else if (dir.exists("hansen")) "." else "../.."
+data_root <- file.path(root, "hansen", "econometrics", "data")
+companion_dir <- file.path(root, "scripts", "r_companions")
+if (file.exists(file.path(companion_dir, "_common.R"))) {
+  source(file.path(companion_dir, "_common.R"), local = FALSE)
+}
+knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+options(stringsAsFactors = FALSE)
+```
+
+# 理论解答
+
+**章节：** Chapter 21 Regression Discontinuity  
+**书稿：** PDF 第 771 页（印刷页 751），§21.12 Exercises（**21.1–21.9 全部**）  
+
+**阅读提示（`AGENTS.md`）：** 默认读者熟悉 OLS 与“处理效应”直觉，但不默认掌握 sharp/fuzzy RDD、局部线性边界估计、cutoff 局部 ATE。下文补齐每一步“为什么”。
+
+**本科搭桥：**  
+- RDD ≈ 在政策门槛 $c$ 两侧各做一条回归，看 $Y$ 是否“跳一下”；  
+- 在门槛附近，谁恰好过线/不过线 **近似随机**，跳跃量 ≈ 该门槛处的平均处理效应（ATE）；  
+- 这与全局 OLS 的“处理组减对照组”不同：只用 **$X$ 靠近 $c$** 的观测，且允许 $m(x)$ 在两侧有不同斜率。
+
+**记号：** 运行变量 $X$，cutoff $c$，处理 $D=1\{X\ge c\}$（标准设定）。  
+$m(x)=\mathbb{E}[Y\mid X=x]$，$m_d(x)=\mathbb{E}[Y_d\mid X=x]$，条件 ATE $\theta=\theta(c)=m_1(c)-m_0(c)$。
+
+---
+
+## Exercise 21.1　处理规则改为 $D=1\{X\le c\}$
+
+### 1. 题意
+
+原设定：过线（$X\ge c$）才处理。  
+现改为：不过线（$X\le c$）才处理。估计 $\theta$ 有何不同？
+
+### 2. 识别（对照 Theorem 21.1）
+
+在连续性假设下仍有
+$$
+\theta=m_1(c)-m_0(c).
+$$
+但现在：
+
+- 左侧 $X\le c$ 为 **处理组**，$m(c-)=m_1(c)$；  
+- 右侧 $X>c$ 为 **对照组**，$m(c+)=m_0(c)$。
+
+故
+$$
+m(c+)-m(c-)=m_0(c)-m_1(c)=-\theta.
+$$
+
+### 3. 估计上的操作差异
+
+1. 仍在 $c$ 两侧分别做局部线性（或等价矩形窗回归）；  
+2. 算出 $\hat m(c+)-\hat m(c-)$ 后，**处理效应应取反号**，或直接定义为  
+   $\hat\theta=\hat m_{\text{treated side}}-\hat m_{\text{control side}}$；  
+3. 软件若默认 $D=1\{X\ge c\}$，需改虚拟变量定义或手动改符号。
+
+### 4. 结论
+
+**识别逻辑相同，估计流程几乎相同，只是哪一侧算处理组变了**，从而跳跃的符号解释要反过来。SE 构造不变（两侧方差相加）。
+
+---
+
+## Exercise 21.2　区间处理 $D=1\{c_1\le X\le c_2\}$
+
+### 1. 设定
+
+$c_1,c_2$ 都在 $X$ 支撑内部：仅中间一段接受处理，两侧都不处理。
+
+### 2. 可识别的对象
+
+在 $m_0,m_1$ 连续的假设下：
+
+| 位置 | 跳跃 | 识别的效应 |
+|------|------|------------|
+| $x=c_1$ | 从无处理进入处理 | $\theta(c_1)=m_1(c_1)-m_0(c_1)$ |
+| $x=c_2$ | 从处理退出到无处理 | $\theta(c_2)=m_1(c_2)-m_0(c_2)$ |
+
+更精确：
+
+- 在 $c_1$：$\hat\theta(c_1)=\hat m(c_1+)-\hat m(c_1-)$（右为处理）；  
+- 在 $c_2$：处理在左，故 $\hat\theta(c_2)=\hat m(c_2-)-\hat m(c_2+)$。
+
+### 3. 不能识别什么
+
+- **远离** $\{c_1,c_2\}$ 的 $\theta(x)$（外推）；  
+- 区间内部“平均处理效应”（除非再加同质性等强假设）；  
+- 两个门槛效应不必相等。
+
+### 4. 回扣
+
+这是 **两个 sharp RDD** 叠在一起，识别的是 **进门槛** 与 **出门槛** 两处的局部 ATE。
+
+---
+
+## Exercise 21.3　推导 (21.1)
+
+### 1. 目标
+
+证明：在 $D=1\{X\ge c\}$ 下，
+$$
+m(x)=m_0(x)\,1\{x<c\}+m_1(x)\,1\{x\ge c\}. \tag{21.1}
+$$
+
+### 2. 步骤
+
+**观测结果**（潜在结果框架）：
+$$
+Y=Y_0(1-D)+Y_1 D=
+\begin{cases}
+Y_0,& X<c,\\
+Y_1,& X\ge c.
+\end{cases}
+$$
+
+**取条件期望**（对 $X=x$）：
+
+- 若 $x<c$：$D=0$ a.s.，故  
+  $m(x)=\mathbb{E}[Y\mid X=x]=\mathbb{E}[Y_0\mid X=x]=m_0(x)$。  
+- 若 $x\ge c$：$D=1$ a.s.，故  
+  $m(x)=\mathbb{E}[Y_1\mid X=x]=m_1(x)$。
+
+合并即 (21.1)。
+
+### 3. 与 Theorem 21.1 的衔接
+
+若 $m_0,m_1$ 在 $c$ 连续，则 $m(c-)=m_0(c)$，$m(c+)=m_1(c)$，故  
+$\theta=m(c+)-m(c-)$。  
+**(21.1) 是把“观测到的条件均值”写成两侧潜在结果均值的拼贴。**
+
+---
+
+## Exercise 21.4　为何 (21.4) 在 $|X-c|\le h$ 上 = 矩形核局部线性
+
+### 1. 方程 (21.4)
+
+在子样本 $|X_i-c|\le h$ 上 OLS：
+$$
+Y=\beta_0+\beta_1 X+\beta_3(X-c)D+\theta D+e,\qquad D=1\{X\ge c\}.
+$$
+
+### 2. 与“两侧各拟合一条直线”的关系
+
+令 $U=X-c$。则
+
+- 左侧 $D=0$：$Y=\beta_0+\beta_1(c+U)+e=(\beta_0+\beta_1 c)+\beta_1 U+e$；  
+- 右侧 $D=1$：$Y=\beta_0+\beta_1(c+U)+\beta_3 U+\theta+e$  
+  $=(\beta_0+\beta_1 c+\theta)+(\beta_1+\beta_3)U+e$。
+
+因此：
+
+- 左截距（在 $U=0$ 即 $x=c$）：$m(c-)=\beta_0+\beta_1 c$；  
+- 右截距：$m(c+)=\beta_0+\beta_1 c+\theta$；  
+- **$\theta=m(c+)-m(c-)$**，正是 RDD 的条件 ATE。
+
+### 3. 为何叫“矩形核局部线性”
+
+局部线性用权 $K((X-c)/h)$。  
+**矩形核**（未归一化）：$K(u)=\frac12 1\{|u|\le 1\}$，即 **只保留 $|X-c|\le h$ 且权重相同**。  
+
+在该窗内做线性回归、并允许左右截距/斜率不同，恰为 (21.4) 的参数化。  
+故 (21.4) **不是** 全局回归，而是 **带宽 $h$ 的矩形核 RDD-LL 的便捷写法**。
+
+---
+
+## 实证共用设定（21.5–21.9）
+
+| 项目 | 选择 | 理由 |
+|------|------|------|
+| 数据 | `LM2007`，$n=2783$ 县 | Ludwig–Miller Head Start；Cattaneo 等整理 |
+| 运行变量 $X$ | `povrate60`（1960 贫困率 %） | 决定谁获得写申请资助 |
+| Cutoff $c$ | $59.1984$（文中约 59.2%） | 约 300 个最穷县的门槛 |
+| 基线结果 $Y$ | `mort_age59_related_postHS` | 5–9 岁、与 HS 相关死因、1973–83 |
+| 矩形核 (21.5) | 子样本 $|X-c|\le h$，回归 (21.4) | 与正文一致 |
+| 基线 LL (Table 21.1) | **标准化三角核** + $h=8$ | 正文 Figure 21.1 / Table 21.1 |
+| SE | HC（矩形）；两侧边界 LL 的 sandwich 再合成 | 稳健于异方差 |
+
+**实现细节：** 标准化三角核（Table 19.1）支撑 $|u|<\sqrt{6}$，权  
+$K(u)=\frac{1}{\sqrt{6}}\big(1-\frac{|u|}{\sqrt{6}}\big)_+$。  
+$h=8$ 时复现 Table 21.1：$\hat\theta\approx-1.51$，se$\approx0.71$。
+
+---
+
+## Exercise 21.5　矩形核回归 (21.5)，$h\in\{13.8,7,20\}$
+
+### 设定
+
+$Y=$ `mort_age59_related_postHS`，$X=$ `povrate60`，回归 (21.4)，HC se。
+
+### 结果
+
+| $h$ | $\hat\theta$ | se | 窗内 $n$ |
+|----:|-------------:|---:|---------:|
+| **13.8** | **−1.57** | **0.74** | 751 |
+| 7 | −1.86 | 1.07 | 427 |
+| 20 | −1.30 | 0.61 | 1059 |
+
+### 与正文 (21.5) 对照
+
+正文印刷：$\hat\theta=-2.20$（1.06），$n=482$。  
+当前 `LM2007` 提取在 $h=13.8$ 下 $n=751$，点估计 **−1.57**。  
+差异来自 **公开复制包样本/清理与印刷示例不完全一致**（描述文件亦写 abridged）。  
+
+补充：在本数据上，**矩形窗 $h=8$ 的两侧 OLS** 给出 $\hat\theta\approx-2.20$（se$\approx0.97$），与印刷点估计一致——说明印刷例可能对应略窄有效窗或不同提取；**定性不变：显著为负**。
+
+### 解释
+
+- 贫困率刚过门槛的县，HS 相关儿童死亡率 **更低**（资助 + Head Start 扩张）。  
+- $h$ 越小，点估计更负、se 更大（方差–偏差权衡）。  
+- 本科对比：这不是“穷县 vs 富县”的全局差，而是 **门槛附近** 的局部对比。
+
+---
+
+## Exercise 21.6　基线 RDD（Table 21.1），$h\in\{8,4,12\}$
+
+### 方法
+
+标准化三角核局部线性，左右分别估 $m(c\pm)$，  
+$\hat\theta=\hat m(c+)-\hat m(c-)$，  
+$\mathrm{se}=\sqrt{\mathrm{se}_+^2+\mathrm{se}_-^2}$。
+
+### 结果（$Y=$ 同 21.5）
+
+| $h$ | $\hat\theta$ | se | 备注 |
+|----:|-------------:|---:|------|
+| **8** | **−1.51** | **0.71** | **复现 Table 21.1 基线** |
+| 4 | −2.10 | 1.01 | 更噪、更负 |
+| 12 | −1.25 | 0.57 | 更平滑、效应略小 |
+
+### 解释
+
+- 基线：门槛处死亡率下降约 **1.5/10 万**，约相当于未处理侧水平的一半（文中约 3.3→效应近 50%）。  
+- $t\approx-1.51/0.71\approx-2.1$，$p$ 约 3%，与正文一致。  
+- 带宽稳健性：符号始终为负；幅度随 $h$ 变化——**非线性真实存在时结果随 $h$ 变是正常的**，关键看 se 是否仍支持“非零跳跃”。
+
+---
+
+## Exercise 21.7　安慰剂：伤害死亡 `mort_age59_injury_postHS`
+
+Head Start 目标不是降低意外伤害死亡；若 RDD 只抓住 **目标死因**，伤害死亡应 **无类似负跳跃**。
+
+| 方法 | $h$ | $\hat\theta$ | se |
+|------|----:|-------------:|---:|
+| LL 三角 | 8 | **1.62** | 2.56 |
+| 矩形 | 13.8 | 2.42 | 2.72 |
+
+### 结论
+
+点估计 **为正、se 很大**，不能拒绝零效应。  
+与基线（HS 相关死因显著为负）对照，支持：**跳跃并非任意死亡率指标的伪影**，而与项目目标一致（Ludwig–Miller 安慰剂逻辑）。
+
+---
+
+## Exercise 21.8　安慰剂：25+ 岁 `mort_age25plus_related_postHS`
+
+项目针对学龄前儿童；成年组不应出现同类长期收益（同一“HS 相关”死因编码）。
+
+| 方法 | $h$ | $\hat\theta$ | se |
+|------|----:|-------------:|---:|
+| LL 三角 | 8 | **4.48** | 4.32 |
+| 矩形 | 13.8 | 4.57 | 4.58 |
+
+### 结论
+
+效应 **不显著**（se 大于点估计），且符号与儿童组相反。  
+进一步说明儿童组负跳跃 **不是** 全县卫生趋势在 59% 贫困率处的机械断裂。
+
+---
+
+## Exercise 21.9　安慰剂：项目前 1959–64 `mort_age59_related_preHS`
+
+若跳跃由 **1965 年政策** 引起，则 **政策前** 同期年龄、同类死因不应在同一 cutoff 有处理效应（预趋势 / 伪断点检验）。
+
+| 方法 | $h$ | $\hat\theta$ | se |
+|------|----:|-------------:|---:|
+| LL 三角 | 8 | −1.90 | 1.65 |
+| 矩形 | 13.8 | −1.58 | 1.83 |
+
+### 结论
+
+点估计可为负，但 **se 大，常规水平不显著**（与基线 postHS 的精确性对比鲜明）。  
+不支持“门槛处本来就有永久性死亡差异”的简单混淆；与 post 期显著效应合在一起，更符合 **政策后效应** 叙事。  
+（若预期待完全为零，此处轻度负向不显著可视为噪声或残余差异；稳健性仍依赖多指标对照 21.7–21.8。）
+
+---
+
+## 小结
+
+| 题 | 要点 |
+|:--:|------|
+| 21.1 | $D=1\{X\le c\}$：流程同，处理侧对调，跳跃符号解释相反 |
+| 21.2 | 区间处理：识别 $\theta(c_1)$ 与 $\theta(c_2)$ 两处局部 ATE |
+| 21.3 | $Y=Y_0 1\{X<c\}+Y_1 1\{X\ge c\}$ → 取 $\mathbb{E}[\,\cdot\mid X]$ 得 (21.1) |
+| 21.4 | 窗内 (21.4) = 矩形核 + 左右不同截距/斜率的 LL |
+| 21.5–21.6 | Head Start：儿童 HS 相关死亡 **显著下降**；Table 21.1 可复现 |
+| 21.7–21.9 | 伤害、成年、政策前：**无** 同等清晰的负跳跃 → 支持设计 |
+
+代码与复现：`docs/ch21/Hansen_Ch21_Exercises_Solutions.ipynb`。
+
+
+# 实证与数值代码（R companion）
+
+手写/精译 R 脚本：`scripts/r_companions/ch21.R`。
+
+```{r}
+#| label: companion-main
+source(file.path(root, "scripts", "r_companions", "ch21.R"))
+```
+
+
+## Notebook 结构说明
+
+#### 载入数据
+
+#### 21.5 矩形核 (21.4)，h = 13.8, 7, 20
+
+#### 21.6 基线 LL（标准化三角核），h = 8, 4, 12
+
+$h=8$ 应接近 Table 21.1 的 $-1.51\ (0.71)$。
+
+#### 21.7–21.9 安慰剂结果变量
+
+
+# 依赖包
+
+```{r}
+#| label: install-pkgs
+#| eval: false
+pkgs <- c(
+  "haven", "readxl", "data.table", "sandwich", "lmtest", "AER",
+  "quantreg", "boot", "MASS", "Matrix", "nnet", "ggplot2", "knitr"
+)
+# 章节扩展：Ch14–16 vars/urca；Ch17 plm；Ch19 np；Ch26 mlogit
+miss <- setdiff(pkgs, rownames(installed.packages()))
+if (length(miss)) install.packages(miss, repos = "https://cloud.r-project.org")
+```
+
+---
+*第 21 章 · R/Quarto · md + ipynb 融合*

@@ -1,0 +1,619 @@
+---
+title: "Bruce Hansen《Econometrics》第 4 章习题解答"
+subtitle: "Chapter 4 Least Squares Regression"
+author: "按 Hansen 计量经济学体系整理（R / Quarto 版）"
+date: today
+lang: zh-CN
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    number-sections: true
+    number-depth: 2
+    html-math-method: mathjax
+    theme: cosmo
+    code-fold: true
+    code-tools: true
+engine: knitr
+knitr:
+  opts_chunk:
+    comment: "#>"
+    fig.path: "figures/ch04/"
+execute:
+  eval: false
+  echo: true
+  warning: false
+  message: false
+---
+
+::: {.callout-note}
+## 说明
+
+- **理论：** 来自同目录 Markdown 逐步解答。
+- **代码：** Python notebook 已融合为 **R**（`scripts/r_companions/ch04.R` 优先；否则为带注释的翻译草稿）。
+- **数据：** `hansen/econometrics/data/`（gitignore）；渲染前请确保数据已下载。
+- 默认 `execute: eval: false`。有数据时改为 `true` 或交互运行代码块。
+- 缺包时：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot"))` 等。
+:::
+
+```{r}
+#| label: setup
+root <- if (dir.exists("../../hansen")) "../.." else if (dir.exists("hansen")) "." else "../.."
+data_root <- file.path(root, "hansen", "econometrics", "data")
+companion_dir <- file.path(root, "scripts", "r_companions")
+if (file.exists(file.path(companion_dir, "_common.R"))) {
+  source(file.path(companion_dir, "_common.R"), local = FALSE)
+}
+knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+options(stringsAsFactors = FALSE)
+```
+
+# 理论解答
+
+**章节：** Chapter 4 Least Squares Regression
+**书稿页码：** PDF 第 152–156 页（印刷页 132–136），§4.27 Exercises
+**记号：** $Y=X\beta+e$，$E[e\mid X]=0$，$\Omega=E[ee'\mid X]$，$\hat\beta=(X'X)^{-1}X'Y$
+**数值验证：** `Hansen_Ch04_Exercises_Solutions.ipynb`（Exercise 4.24–4.26 有可运行代码）
+
+> **写给谁看：** 假设你学过李子奈/陈强，知道"OLS 无偏、高斯-马尔可夫假定、同方差、$s^2(X'X)^{-1}$ 标准误、稳健标准误、GLS/WLS"，但把这些概念之间的**逻辑关系**和**强弱层次**理得不够清。
+> Hansen 第 4 章做的事情：把第 3 章那个"作为代数对象"的 $\hat\beta$，升级成"作为**随机变量**"的 $\hat\beta$——研究它的**条件期望（无偏性）**、**条件方差（精度）**、**效率（Gauss-Markov / GLS）**，以及**如何用样本估计这个方差（标准误）**。本章的"纲"是一个公式：**夹心方差（sandwich）**。
+
+---
+
+## 0. 读题前必看：本章到底在讲什么
+
+**承上启下：** 第 3 章是纯**代数**（不涉及概率），结论如 $X'\hat e=0$ 对任何数据都成立。第 4 章开始引入**概率假设**——把 $Y$ 看作随机变量、$e$ 看作随机误差，研究 $\hat\beta$ 的**抽样分布**。
+
+**核心假设（从第 2 章继承）：**
+- **零条件均值** $E[e\mid X]=0$：保证 $\hat\beta$ **无偏**（只需这一条！）。
+- **条件方差** $\Omega=E[ee'\mid X]$：决定 $\hat\beta$ 的**精度**（方差）。这是本章主角。
+
+**一个统一的图景——夹心方差（务必记住，贯穿全章）：**
+$$\boxed{\ \hat\beta-\beta=(X'X)^{-1}X'e\ \Rightarrow\ \mathrm{var}(\hat\beta\mid X)=\underbrace{(X'X)^{-1}}_{\text{面包 bread}}\underbrace{X'\Omega X}_{\text{肉 meat}}\underbrace{(X'X)^{-1}}_{\text{面包 bread}}\ }$$
+
+- **无偏性** $E[\hat\beta|X]=\beta$ 只依赖 $E[e|X]=0$（把 $X'e$ 的期望算成 $X'\cdot0$）。
+- **方差** 的"肉" $X'\Omega X=\sum_i X_iX_i'\sigma_i^2$（$\sigma_i^2=E[e_i^2|X_i]$ 是第 $i$ 个观测的条件方差）。
+- **同方差** $\sigma_i^2\equiv\sigma^2$ 时，肉 $=\sigma^2 X'X$，和一个面包相消，方差退化为漂亮的 $\sigma^2(X'X)^{-1}$（李子奈的经典公式）。
+- **异方差** 时肉不能消，必须老老实实估计 $\sum X_iX_i'\sigma_i^2$——这就是稳健标准误（HC0–HC3）的全部学问。
+
+**本章所有方差估计器，差别只在"怎么估肉"：**
+
+| 估计器 | 肉里第 $i$ 项的权重 | 性质 |
+|---|---|---|
+| 同方差 (4.30) | 用 $s^2$ 统一替代 | 简单；异方差下**错** |
+| HC0 (White) | $\hat e_i^2$（直接套残差平方） | 一致；小样本略偏小 |
+| HC1 | HC0 $\times\frac{n}{n-k}$ | 自由度修正（Stata 默认 robust） |
+| HC2 | $\hat e_i^2/(1-h_{ii})$ | 同方差下**无偏** |
+| HC3 | $\hat e_i^2/(1-h_{ii})^2$ | **保守**（偏大，小样本稳） |
+
+> **和本科对照：** 李子奈主要讲同方差公式 $s^2(X'X)^{-1}$；陈强强调稳健标准误 `robust`（即 HC1）。Hansen 把 HC0–HC3 排成一队，讲清谁无偏、谁保守——这是本章对陈强内容的"补全"。
+
+---
+
+## 1. 记号与概念速查（对照李子奈/陈强）
+
+| Hansen 记号 | 中文/本科说法 | 一句话解释 |
+|---|---|---|
+| $E[e\mid X]=0$ | 零条件均值假定 | $\hat\beta$ 无偏的**唯一**前提 |
+| $\Omega=E[ee'\mid X]$ | 条件协方差矩阵 | $n\times n$；决定 $\hat\beta$ 精度 |
+| $D=\mathrm{diag}(\sigma_1^2,\dots,\sigma_n^2)$ | 异方差矩阵（i.i.d. 下） | $\Omega$ 的对角特例（观测间不相关） |
+| $\sigma_i^2=E[e_i^2\mid X_i]$ | 条件方差函数 | 随 $X_i$ 变即"异方差" |
+| $\mathrm{var}(\hat\beta\mid X)$ | OLS 的条件方差 | 夹心公式 (4.16) |
+| $s^2(X'X)^{-1}$ | 经典/同方差方差估计 | 李子奈默认；异方差下有偏 |
+| HC0–HC3 | 稳健/异方差一致方差估计 | 陈强 `robust`；只换"肉"的估计 |
+| GLS $\tilde\beta=(X'\Omega^{-1}X)^{-1}X'\Omega^{-1}Y$ | 广义最小二乘 | $\Omega$ 已知时的 BLUE |
+| WLS | 加权最小二乘 | 可行 GLS：用估计的 $\sigma_i^2$ 作权重 |
+| 聚类方差 (4.47) | cluster-robust SE | 组内相关时用（Liang–Zeger） |
+
+**三个最常用的"计算工具"：**
+
+1. **基本分解** $\hat\beta-\beta=(X'X)^{-1}X'e$（代入 $Y=X\beta+e$）。一切关于 $\hat\beta$ 的矩都从这里出发。
+2. **线性估计量的方差**：若 $\hat\beta=A'Y$（$A$ 是 $X$ 的函数），则 $\mathrm{var}(\hat\beta|X)=A'E[ee'|X]A=A'\Omega A$（条件期望下 $A$ 可当常数）。
+3. **二次型的期望**：对随机向量 $e$ 与矩阵 $Q$，$E[e'Qe|X]=\mathrm{tr}(Q\,\Omega)$（$\Omega=E[ee'|X]$）。算残差平方和的期望时反复用。
+
+---
+
+## 2. 预备记号
+
+模型 $Y=X\beta+e$，$E[e\mid X]=0$，$\Omega=E[ee'\mid X]$。OLS：$\hat\beta=(X'X)^{-1}X'Y$。
+基本分解：$\hat\beta-\beta=(X'X)^{-1}X'e$。
+夹心方差：$\mathrm{var}(\hat\beta\mid X)=(X'X)^{-1}X'\Omega X(X'X)^{-1}$（(4.16)）。
+
+---
+
+## Exercise 4.1　$k$ 阶矩的估计、无偏、方差
+
+**题：** $\mu_k=E[Y^k]$。(a) 构造估计量；(b) 证无偏；(c) 算方差，需什么假设；(d) 估方差。
+
+**考点：** 矩方法的最朴素例子，建立"估计量—无偏—方差—估方差"的完整链条。
+
+**(a)** 样本类似物（把 $E[\cdot]$ 换成 $\frac1n\sum$）：$\hat\mu_k=\frac1n\sum_{i=1}^n Y_i^k$。
+
+**(b)** 无偏（i.i.d.）：$E[\hat\mu_k]=\frac1n\sum_i E[Y_i^k]=\frac1n\cdot n\mu_k=\mu_k$。
+
+**(c)** 方差：$\mathrm{var}(\hat\mu_k)=\mathrm{var}\big(\frac1n\sum Y_i^k\big)=\frac1{n^2}\sum_i\mathrm{var}(Y_i^k)=\frac1n\mathrm{var}(Y^k)$（独立 → 方差相加）。
+**需要 $E|Y|^{2k}<\infty$**（2k 阶矩存在），因为 $\mathrm{var}(Y^k)=E[Y^{2k}]-(E[Y^k])^2$ 要用到 $Y^{2k}$。
+
+**(d)** 把 $\mathrm{var}(Y^k)$ 换成样本方差：$\widehat{\mathrm{var}}(\hat\mu_k)=\frac1n s_k^2$，$s_k^2=\frac1n\sum_i(Y_i^k-\hat\mu_k)^2$（或除 $n-1$ 的无偏版）。
+
+> **和本科对照：** "$k=1$" 就是样本均值 $\bar Y$，"$k=2$" 就是二阶矩。要点：**估 $k$ 阶矩的方差需要 $2k$ 阶矩存在**——这是后面"估 $\hat\beta$ 的方差需要误差四阶矩"的伏笔。
+
+---
+
+## Exercise 4.2　偏度 = 三阶中心矩
+
+**题：** $E[(Y-\mu)^3]$？何时为 0？
+
+**考点：** 偏度（skewness），衡量分布不对称性。
+
+**解答：** $E[(Y-\mu)^3]=\mu_3$（三阶中心矩，即偏度）。**当 $Y$ 的分布关于均值 $\mu$ 对称时为 0**（正态、均匀、$t$ 分布等对称分布偏度为 0；右偏分布 $\mu_3>0$，左偏 $\mu_3<0$）。
+
+> **铺垫：** 这是为 4.12、4.13（样本均值/OLS 的**三阶矩**）做准备。注意方差是二阶中心矩（$k=2$），偏度是三阶（$k=3$）。
+
+---
+
+## Exercise 4.3　随机变量 vs 参数；样本矩 vs 总体矩
+
+**考点：** 概念澄清——"什么是随机的、什么是固定的"。
+
+**解答：**
+- $Y$ 是**随机变量/观测**（每次抽样取不同值）；$\mu=E[Y]$ 是**总体参数**（固定的未知常数，不随样本变）。
+- $\frac1n\sum X_iX_i'$ 是**样本二阶矩**（随机的，是估计量）；$E[X_iX_i']$ 是**总体二阶矩**（固定的真值）。前者是后者的矩估计。
+
+> **和本科对照：** 这是李子奈反复强调的"**参数 vs 估计量**"区分。$\beta$ 是参数（固定），$\hat\beta$ 是估计量（随机）。本章一切"无偏/方差"都是对**随机**的 $\hat\beta$ 说的。
+
+---
+
+## Exercise 4.4　$\sum X_i^2\hat e_i=0$ 是否成立？—— **False**
+
+**题：** $Y=X\beta+e$（$X\in\mathbb R$），$E[e|X]=0$，$\hat e_i$ 为 OLS 残差。$\sum X_i^2\hat e_i=0$？
+
+**考点：** 正规方程只保证 $\sum X_i\hat e_i=0$，**不**保证与 $X$ 的**函数**正交。这是 Ch2 Ex 2.11、Ch3 Ex 3.25 的**样本版**呼应。
+
+**答案：False。** 正规方程 $X'\hat e=0$ 给出 $\sum X_i\hat e_i=0$（以及含截距时 $\sum\hat e_i=0$），但 $\sum X_i^2\hat e_i$ 一般 $\ne0$——除非 $X_i^2$ 也作为回归元放入模型（如多项式回归），或特殊退化情形。
+
+> **三章呼应（重要）：**
+> - Ch2 总体：$E[Xe]=0\not\Rightarrow E[X^2e]=0$（Ex 2.11）；
+> - Ch3 样本：$\sum X_i\hat e_i=0$ 但 $\sum X_i^2\hat e_i\ne0$（Ex 3.25 数值验证）；
+> - 本章重申：OLS 的正交性只到回归元本身，不到回归元的函数。这正是后面 Ramsey RESET 设定检验的出发点。
+
+---
+
+## Exercise 4.5　证明夹心公式 (4.15)(4.16)
+
+**考点：** **本章最重要的推导**。一切关于 $\hat\beta$ 的统计性质都从基本分解出发。
+
+**证明：**
+
+**第 1 步：基本分解。** 代入 $Y=X\beta+e$：
+$$\hat\beta=(X'X)^{-1}X'Y=(X'X)^{-1}X'(X\beta+e)=\underbrace{(X'X)^{-1}X'X}_{=I}\beta+(X'X)^{-1}X'e=\beta+(X'X)^{-1}X'e.$$
+
+**第 2 步：无偏 (4.15)。** 条件期望下 $(X'X)^{-1}X'$ 是"已知矩阵"（条件于 $X$）：
+$$E[\hat\beta\mid X]=\beta+(X'X)^{-1}X'\underbrace{E[e\mid X]}_{=0}=\beta.\qquad\checkmark$$
+
+**第 3 步：夹心方差 (4.16)。** 用"线性估计量方差"工具（$\hat\beta-\beta=(X'X)^{-1}X'e$，系数矩阵 $A'=(X'X)^{-1}X'$）：
+$$\mathrm{var}(\hat\beta\mid X)=A'E[ee'\mid X]A=(X'X)^{-1}X'\Omega X(X'X)^{-1}.\qquad\checkmark$$
+
+> **和本科对照：** 李子奈直接给"同方差下 $\mathrm{var}(\hat\beta)=\sigma^2(X'X)^{-1}$"。这里先推出**一般**的夹心形式，同方差只是 $\Omega=\sigma^2 I$ 的特例（肉 $=\sigma^2X'X$，消掉一个面包）。**理解夹心 = 理解稳健标准误为什么长那样。**
+
+---
+
+## Exercise 4.6　证明广义 Gauss–Markov 定理（Theorem 4.6）
+
+**考点：** 在 $\Omega$ 已知（可能非球形）时，GLS 是**最佳线性无偏**（BLUE）。证明用的是经典的"$A=B+D$、交叉项消失、剩余半正定"手法（和 Ch3 Ex 3.10 同构）。
+
+**设定：** 线性估计量 $\tilde\beta=AY$，无偏 $\Rightarrow E[AY|X]=AX\beta=\beta$ 对所有 $\beta$ 成立 $\Rightarrow AX=I_k$。方差 $\mathrm{var}(\tilde\beta|X)=A\Omega A'$。
+
+**证明：** 定义 GLS 矩阵 $B=(X'\Omega^{-1}X)^{-1}X'\Omega^{-1}$（注意 $BX=I_k$）。把 $A$ 拆成 $A=B+D$，则 $DX=AX-BX=I_k-I_k=0$。于是
+$$A\Omega A'=(B+D)\Omega(B+D)'=\underbrace{B\Omega B'}_{\text{GLS 方差}}+\underbrace{B\Omega D'}_{=0}+\underbrace{D\Omega B'}_{=0}+D\Omega D'.$$
+**交叉项为 0**：$B\Omega D'=(X'\Omega^{-1}X)^{-1}X'\underbrace{\Omega^{-1}\Omega}_{=I}D'=(X'\Omega^{-1}X)^{-1}\underbrace{X'D'}_{=(DX)'=0}=0$。
+又 $D\Omega D'\ge0$（$\Omega$ 半正定），故
+$$A\Omega A'=B\Omega B'+D\Omega D'\ge B\Omega B'.$$
+而 $B\Omega B'=(X'\Omega^{-1}X)^{-1}X'\Omega^{-1}\Omega\Omega^{-1}X(X'\Omega^{-1}X)^{-1}=(X'\Omega^{-1}X)^{-1}$。故任何线性无偏估计量的方差 $\ge(X'\Omega^{-1}X)^{-1}$。□
+
+> **和本科对照：** 这就是高斯-马尔可夫定理的**广义版**。$\Omega=\sigma^2I$（同方差、不相关）时，下界 $=\sigma^2(X'X)^{-1}$ 恰为 OLS 方差，故 **OLS 是 BLUE**（经典 GM）；$\Omega$ 非球形时，达到下界的是 **GLS**。要点："效率"是相对的——取决于你对 $\Omega$ 知道多少。
+
+---
+
+## Exercise 4.7　GLS 估计量的性质（$\Omega=c^2\Sigma$）
+
+**题：** GLS $\tilde\beta=(X'\Sigma^{-1}X)^{-1}X'\Sigma^{-1}Y$，残差 $\tilde e=Y-X\tilde\beta$，$\tilde c^2=\frac1{n-k}\tilde e'\Sigma^{-1}\tilde e$。
+
+**考点：** 把 GLS 的无偏、方差、残差、尺度估计完整走一遍（平行于 OLS 的 $s^2$）。关键是 GLS = "把模型用 $\Sigma^{-1/2}$ 预乘后做 OLS"。
+
+**(a)(b)** 代入 $Y=X\beta+e$：$\tilde\beta-\beta=(X'\Sigma^{-1}X)^{-1}X'\Sigma^{-1}e$。故
+$$E[\tilde\beta|X]=\beta\quad\checkmark,\qquad \mathrm{var}(\tilde\beta|X)=c^2(X'\Sigma^{-1}X)^{-1}\quad\checkmark$$
+（用了 $E[ee'|X]=c^2\Sigma$；方差推导同 Ex 4.5，"面包"$=(X'\Sigma^{-1}X)^{-1}$，"肉"$=X'\Sigma^{-1}(c^2\Sigma)\Sigma^{-1}X=c^2X'\Sigma^{-1}X$，相消。）
+
+**(c)** $\tilde e=M_1e$，其中 $M_1=I-X(X'\Sigma^{-1}X)^{-1}X'\Sigma^{-1}$。证：$\tilde e=Y-X\tilde\beta=e-X(\tilde\beta-\beta)=e-X(X'\Sigma^{-1}X)^{-1}X'\Sigma^{-1}e=M_1e$。
+
+**(d)** 矩阵代数（展开 $M_1'\Sigma^{-1}M_1$）：
+$$M_1'\Sigma^{-1}M_1=\Sigma^{-1}-\Sigma^{-1}X(X'\Sigma^{-1}X)^{-1}X'\Sigma^{-1}.$$
+
+**(e)** 用二次型期望 $E[e'Qe|X]=\mathrm{tr}(Q\,c^2\Sigma)$，其中 $Q=M_1'\Sigma^{-1}M_1$：
+$$E[\tilde e'\Sigma^{-1}\tilde e|X]=c^2\,\mathrm{tr}(M_1'\Sigma^{-1}M_1\Sigma)=c^2\,\mathrm{tr}\big(I-X(X'\Sigma^{-1}X)^{-1}X'\Sigma^{-1}\big)=c^2\big(n-\underbrace{\mathrm{tr}(I_k)}_{=k}\big)=c^2(n-k).$$
+故 $E[\tilde c^2|X]=\frac1{n-k}\cdot c^2(n-k)=c^2$。无偏。
+
+**(f)** 合理——它是 GLS 残差尺度的无偏估计，平行于 OLS 的 $s^2=\frac1{n-k}\sum\hat e_i^2$。
+
+> **和本科对照：** GLS 的几何直观——预乘 $\Sigma^{-1/2}$ 把"椭圆"误差（异方差/相关）拉成"圆球"（同方差、独立），然后做普通 OLS。$n-k$ 自由度再次出现（GLS 零化矩阵的迹）。
+
+---
+
+## Exercise 4.8　WLS 权重 $w_i=X_{ji}^{-2}$
+
+**题：** WLS $\tilde\beta_{\text{wls}}=(X'WX)^{-1}X'WY$，$W=\mathrm{diag}(w_i)$，$w_i=X_{ji}^{-2}$。(a) 何时是好估计？(b) 何时优于 OLS？
+
+**考点：** 可行 GLS（FGLS）的直觉——当误差方差与某回归元有关时，用其倒数作权重。
+
+**(a)** 当 $\mathrm{var}(e_i|X)\propto X_{ji}^2$（误差方差正比于回归元 $X_j$ 的平方）时，$w_i=1/X_{ji}^2$ 使加权后的误差方差近似常数 → 接近 GLS（BLUE）。典型场景：误差波动随某"规模"变量（收入、企业规模、人口）增大。
+
+**(b)** 大 $|X_j|$ 的观测噪声大时，WLS **降权**它们、加权小 $|X_j|$ 的观测，能提高效率（方差更小）。但若权重设错（真实异方差结构不是 $\propto X_j^2$），WLS 反而可能**差于** OLS。
+
+> **和本科对照：** 陈强的 WLS / FGLS。直觉：把每个观测除以自己的标准差 $\sigma_i$，方差就"被拉平"（同方差化），再 OLS。$w_i=1/X_{ji}^2$ 即假设 $\sigma_i\propto|X_{ji}|$。
+
+---
+
+## Exercise 4.9　证明 (4.27)：杠杆修正的 $\bar\sigma^2$ 同方差下无偏
+
+**考点：** $\hat\sigma^2=\frac1n\sum\hat e_i^2$ 在同方差下**偏小**（偏 $(n-k)/n$ 倍）；用杠杆值修正后无偏。
+
+**铺垫：** 同方差下 $E[\hat e_i^2|X]=\sigma^2(1-h_{ii})$（残差方差被"压低"了 $1-h_{ii}$ 倍，因为拟合"吃掉"了一部分波动）。
+
+**证明：** 定义标准化残差 $e_i^{\text{std}}=(1-h_{ii})^{-1/2}\hat e_i$，则 $E[(e_i^{\text{std}})^2|X]=(1-h_{ii})^{-1}\sigma^2(1-h_{ii})=\sigma^2$。于是
+$$\bar\sigma^2=\frac1n\sum_{i=1}^n\frac{\hat e_i^2}{1-h_{ii}}\quad\Rightarrow\quad E[\bar\sigma^2|X]=\frac1n\sum_i\sigma^2=\sigma^2.\quad\checkmark$$
+
+> **和本科对照：** $\hat\sigma^2=\frac1n\sum\hat e_i^2$ 偏小；本科常见的 $s^2=\frac1{n-k}\sum\hat e_i^2$ 用自由度修正（整体放大），无偏；而 $\bar\sigma^2$ 用**逐个杠杆值**修正，也无偏。后者是 HC2 的原型（见 4.11）。
+
+---
+
+## Exercise 4.10　证明 (4.35)：$\hat V_{\mathrm{HC0}}\le\hat V_{\mathrm{HC2}}\le\hat V_{\mathrm{HC3}}$
+
+**考点：** 四个稳健方差估计器的**大小排序**——来自肉里权重的单调性。
+
+**证明：** 所有稳健估计器都是夹心形式 $(X'X)^{-1}(\text{肉})(X'X)^{-1}$，差别只在肉里每项的权重 $c_i$：
+
+| | $c_i$ |
+|---|---|
+| HC0 | $1$ |
+| HC2 | $(1-h_{ii})^{-1}$ |
+| HC3 | $(1-h_{ii})^{-2}$ |
+
+由 Theorem 3.6，$0\le h_{ii}<1$（只要不满秩拟合），故 $0<1-h_{ii}\le1$，从而
+$$1\ \le\ (1-h_{ii})^{-1}\ \le\ (1-h_{ii})^{-2}.$$
+所以肉的差 $\mathrm{meat}_{HC3}-\mathrm{meat}_{HC2}=\sum_i X_iX_i'\hat e_i^2\big[(1-h_{ii})^{-2}-(1-h_{ii})^{-1}\big]$ 是半正定（每项非负权重的加权和），同理 $\mathrm{meat}_{HC2}-\mathrm{meat}_{HC0}\ge0$。左右各乘同一面包 $(X'X)^{-1}$，保持半序：
+$$\hat V_{\mathrm{HC0}}\ \le\ \hat V_{\mathrm{HC2}}\ \le\ \hat V_{\mathrm{HC3}}.\qquad\checkmark$$
+
+> **实践含义：** HC3 的标准误**最大**（最保守），HC0 最小。小样本下 HC3 更稳健（少低估），所以常被推荐。陈强 `robust` 默认给 HC1（介于 HC0 和 HC2 之间）。
+
+---
+
+## Exercise 4.11　证明 (4.36)：HC2 同方差下无偏
+
+**考点：** 为什么单独挑出 HC2——它在同方差下**条件无偏**。
+
+**证明：** 同方差下 $E[\hat e_i^2|X]=\sigma^2(1-h_{ii})$（见 4.9 铺垫），故 HC2 权重恰好抵消：
+$$E\Big[\frac{\hat e_i^2}{1-h_{ii}}\Big|X\Big]=\sigma^2.$$
+于是肉的期望 $E[\sum X_iX_i'\frac{\hat e_i^2}{1-h_{ii}}|X]=\sigma^2\sum X_iX_i'=\sigma^2X'X$。代入夹心：
+$$E[\hat V_{\mathrm{HC2}}|X]=(X'X)^{-1}(\sigma^2X'X)(X'X)^{-1}=\sigma^2(X'X)^{-1}=V_{\hat\beta}.\qquad\checkmark$$
+
+> **对照小结：** HC2 同方差下无偏；HC1 是 HC0 的自由度整体修正（近似无偏）；HC3 系统偏大（保守）。这就是 Hansen 推荐 HC2/HC3 的原因。
+
+---
+
+## Exercise 4.12　样本均值的三阶矩
+
+**题：** $\bar Y=\frac1n\sum Y_i$，求 $E[(\bar Y-\mu)^3]$。
+
+**考点：** 矩展开 + 独立性使交叉项消失。是 4.13（OLS 三阶矩）的热身。
+
+**证明：** $\bar Y-\mu=\frac1n\sum_i(Y_i-\mu)$。展开立方：
+$$E[(\bar Y-\mu)^3]=\frac1{n^3}\sum_{i,j,k}E[(Y_i-\mu)(Y_j-\mu)(Y_k-\mu)].$$
+**独立性**让交叉项消失：只要 $i,j,k$ 中有两个不同，期望就能拆开成因子的乘积，而 $E[Y_i-\mu]=0$ 会把整项变 0。**只有 $i=j=k$ 时**（三个都是同一观测）才不为零：
+$$E[(\bar Y-\mu)^3]=\frac1{n^3}\sum_i E[(Y_i-\mu)^3]=\frac1{n^3}\cdot n\mu_3=\frac{\mu_3}{n^2}.$$
+
+> **要点：** 均值的偏度按 $\boxed{1/n^2}$ 衰减（比方差的 $1/n$ 衰减更快）。这是"中心极限定理让分布趋近对称（正态）"的矩体现。
+
+---
+
+## Exercise 4.13　OLS 斜率的三阶矩（条件于 $X$）
+
+**题：** 一元回归 $Y=X\beta+e$，$\sigma_i^2=E[e_i^2|X_i]$，$\mu_{3i}=E[e_i^3|X_i]$。求 $E[(\hat\beta-\beta)^3|X]$。
+
+**证明：** $\hat\beta-\beta=(\sum X_i^2)^{-1}\sum X_ie_i$。记 $S=\sum X_i^2$。
+$$E[(\hat\beta-\beta)^3|X]=\frac1{S^3}E\Big[\big(\sum_i X_ie_i\big)^3\Big|X\Big]=\frac1{S^3}\sum_{i,j,k}X_iX_jX_kE[e_ie_je_k|X].$$
+误差**条件独立**（i.i.d.）下，只有 $i=j=k$ 存活：$=\frac1{S^3}\sum_i X_i^3E[e_i^3|X_i]=\frac1{S^3}\sum_i X_i^3\mu_{3i}$。故
+$$E[(\hat\beta-\beta)^3|X]=\frac{\sum_i X_i^3\mu_{3i}}{\big(\sum_i X_i^2\big)^3}.$$
+
+> **和本科对照：** 4.12 的回归版。若同分布（$\mu_{3i}\equiv\mu_3$）且 $X$ 行为良好，量级也是 $O(1/n^2)$。说明 OLS 估计量的分布**偏度很小**、近似对称——为第 7 章渐近正态埋伏笔。
+
+---
+
+## Exercise 4.14　$\theta=\beta^2$：非线性参数的"plug-in"估计
+
+**题：** 一元 i.i.d.，关心 $\theta=\beta^2$，$\hat\theta=\hat\beta^2$。
+
+**考点：** 估计非线性函数 $g(\beta)$ 时，直接代入 $\hat\theta=g(\hat\beta)$ 一般**有偏**（Jensen 不等式方向）。
+
+**(a)** 用 $E[\hat\beta^2|X]=\beta^2+\mathrm{var}(\hat\beta|X)$（方差 = 二阶矩 − 均值平方）：
+$$E[\hat\theta|X]=E[\hat\beta^2|X]=\beta^2+V_{\hat\beta}=\theta+V_{\hat\beta}.$$
+故 $\hat\theta$ **有偏、偏大**（向上偏 $V_{\hat\beta}>0$）。直观：平方放大了 $\hat\beta$ 的波动。
+
+**(b)** 偏差修正：减去方差估计 $\hat\theta^*=\hat\beta^2-\hat V_{\hat\beta}$。
+
+**(c)** 要让 $\hat\theta^*$ 无偏，需 $\hat V_{\hat\beta}$ 对 $V_{\hat\beta}$ **条件无偏**（同方差下用 HC2 或 $s^2/\sum X_i^2$）。但即便如此，严格无偏还需更高阶矩/正态等条件（因 $E[\hat\beta^2]=\beta^2+V_{\hat\beta}$ 精确成立，只要 $E[\hat V]=V_{\hat\beta}$ 即可；该等式在同方差 + HC2 下成立）。
+
+> **和本科对照：** 估计 $\beta$ 的非线性函数（如弹性、边际效应的变换），"plug-in" 法小样本有偏。大样本下偏误消失（一致性），渐近分布用 **delta method**（第 7 章）处理。
+
+---
+
+## Exercise 4.15　正交设计 $n^{-1}X'X=I_k$
+
+**题：** i.i.d.，线性 CEF，$n^{-1}X'X=I_k$（回归元样本正交归一）。
+
+**(a)** $X'X=nI\Rightarrow\hat\beta-\beta=(X'X)^{-1}X'e=\frac1nX'e$。条件方差 $\mathrm{var}(\hat\beta|X)=\frac1{n^2}X'\Omega X$。**无条件** $V_{\hat\beta}=\mathrm{var}(\hat\beta)=E[\mathrm{var}(\hat\beta|X)]+\mathrm{var}(E[\hat\beta|X])=\frac1{n^2}E[X'\Omega X]$。
+
+**(b)** 一般**相关**。即便 $X$ 正交（$X'X$ 对角），$\Omega$ 若非对角（异方差让 $\sum X_{ji}X_{\ell i}\sigma_i^2$ 非零），$\hat\beta_j,\hat\beta_\ell$ 仍相关。
+
+**(c)** 充分条件：$\Omega=\sigma^2 I$（同方差 + 不相关）。此时 $V_{\hat\beta}=\frac{\sigma^2}{n}I$（对角）⇒ 分量不相关。
+
+> **要点：** 系数之间的相关性来自两个源头——回归元相关（$X'X$ 非对角）或异方差/误差相关（$\Omega$ 非对角）。正交设计 + 同方差才能让各 $\hat\beta_j$ 互不相关。
+
+---
+
+## Exercise 4.16　因变量的测量误差
+
+**题：** 真实 $Y^*=X'\beta+e$（同方差），观察到 $Y=Y^*+u$，$E[u|X]=0$，$E[u^2|X]=\sigma_u^2(X)$，$e\perp u$。
+
+**(a)** $Y=X'\beta+(e+u)$。合成误差 $e+u$，$E[e+u|X]=0+0=0$。CEF 仍线性、斜率仍 $\beta$。测量误差只是把误差从 $e$ 变成 $e+u$。
+
+**(b)** OLS 仍**无偏、一致**（零条件均值未破坏）；但**效率下降**——误差方差变大：$\mathrm{var}(e+u|X)=\sigma^2+\sigma_u^2(X)>\sigma^2$。
+
+**(c)** 稳健 SE 仍有效（基于合成误差 $e+u$，自动包含了 $u$ 的波动）。同方差公式中的 $\sigma^2$ 应换成 $\sigma^2+E[\sigma_u^2(X)]$（变大了）。
+
+> **和本科对照（重要区分）：** 陈强强调——**因变量**测量误差（本题）是"良性的"：不偏，只增大方差。但**自变量**测量误差（$X$ 有误）会导致**衰减偏差（attenuation bias）**，系数向 0 偏，性质严重得多。本题正是"好"的那一种。
+
+---
+
+## Exercise 4.17　$E[Y|X]=\sqrt{\gamma+\theta X}$，朋友建议回归 $Y^2$ 于 $X$
+
+**考点：** 变换因变量（$Y\to Y^2$）会改变误差结构、引入异方差，可能无法识别参数。这是个"看似聪明实则出错"的反例。
+
+**(a)** 设 $u=Y-\sqrt{\gamma+\theta X}$，则 $E[u|X]=0$（由 (4.62) 的 CEF 定义直接得到）。
+
+**(b)** 用 $Y=\sqrt{\gamma+\theta X}+u$ 算 $E[Y^2|X]$：
+$$Y^2=(\gamma+\theta X)+2u\sqrt{\gamma+\theta X}+u^2\ \Rightarrow\ E[Y^2|X]=\gamma+\theta X+E[u^2|X].$$
+所以朋友建议的方程 $Y^2=\alpha+\beta X+e$ 中，斜率 $\beta=\theta$ 看似对，但误差 $e$ 满足 $E[e|X]=E[u^2|X]-\alpha+\cdots$，**一般不为 0**（因为 $E[u^2|X]$ 随 $X$ 变）。即 $Y^2$ 对 $X$ 的回归**设定错误**（零条件均值不成立）。
+
+**(c)** 能否还原 $(\gamma,\theta)$？斜率 $\theta=\beta$ 可识别；但**截距** $\gamma$ 与 $E[u^2|X]$（$u$ 的条件方差）**混淆**——除非 $E[u^2|X]$ 是常数（$u$ 同方差），否则无法把 $\gamma$ 分离出来。一般**不能**恢复 $(\gamma,\theta)$，需额外假设。
+
+**(d)** **不合理**（除非愿意强加 $u$ 同方差、且只关心 $\theta$）。
+
+> **教训：** 对因变量做非线性变换（$Y^2$、$\log Y$、$1/Y$）不是"白做的"——它会改变误差的均值结构（CEF）和方差结构。要么变换后 CEF 仍线性、误差零均值，否则估计的就是另一个模型。
+
+---
+
+## Exercise 4.18　短回归的 $s^2$ 高估 $\sigma^2$
+
+**题：** 真模型 $Y=X_1\beta_1+X_2\beta_2+e$（同方差 $E[e^2|X]=\sigma^2$）。短回归 $Y=X_1\hat\beta_1+\hat e$，$s^2=\frac1{n-k_1}\sum\hat e_i^2$。求 $E[s^2|X]$。
+
+**考点：** 遗漏变量的**第二个后果**（第一个是系数 OVB，见 Ch2 Ex 2.21）——残差吸收了遗漏变量的解释力，使 $s^2$ **偏大**。
+
+**证明：** 短回归零化矩阵 $M_1=I-X_1(X_1'X_1)^{-1}X_1'$。残差
+$$\hat e=M_1Y=M_1(X_1\beta_1+X_2\beta_2+e)=M_1X_2\beta_2+M_1e\quad(\text{因 }M_1X_1=0).$$
+平方和 $\hat e'\hat e=(M_1X_2\beta_2+M_1e)'(M_1X_2\beta_2+M_1e)$，展开取条件期望（用 $E[e|X]=0$ 消交叉项，$E[e'M_1e|X]=\sigma^2\mathrm{tr}(M_1)=\sigma^2(n-k_1)$）：
+$$E[\hat e'\hat e|X]=\beta_2'X_2'M_1X_2\beta_2+\sigma^2(n-k_1).$$
+故
+$$\boxed{\ E[s^2|X]=\sigma^2+\frac{\beta_2'X_2'M_1X_2\beta_2}{n-k_1}\ }.$$
+第二项是半正定二次形式 $\ge0$，故 $s^2$ **高估** $\sigma^2$。相等当且仅当 $\beta_2=0$（$X_2$ 无效应）或 $M_1X_2=0$（$X_2$ 已在 $X_1$ 的张成中，无新增信息）。
+
+> **和本科对照：** 遗漏变量既使系数有偏（OVB），又使误差方差估计偏大（残差"背锅"了被遗漏变量的波动）。这与 Ch2 Ex 2.22（剔除变量诱发异方差）是同一现象的不同侧面——**模型设定错误会污染方差估计**，进而影响标准误和推断。
+
+---
+
+## Exercise 4.19　变量线性变换下的方差矩阵
+
+**题：** $X^*=XC$（$C$ 满秩），$\hat V$ 是 $\hat\beta$ 的渐近协方差估计。求 $\hat V^*$。
+
+**考点：** Ch3 Ex 3.2（系数变换 $\hat\beta^*=C^{-1}\hat\beta$）的**方差版**。
+
+**证明：** 由 $\hat\beta^*=C^{-1}\hat\beta$，协方差按线性变换法则：
+$$\hat V^*=\widehat{\mathrm{var}}(\hat\beta^*)=\widehat{\mathrm{var}}(C^{-1}\hat\beta)=C^{-1}\hat V(C^{-1})'=C^{-1}\hat V C^{-1'}.$$
+
+> **和本科对照：** 改变变量单位（如 $X$ 从"年"换"学期"）时，系数和其标准误都要做相应的线性变换。这就是 delta method 在线性变换下的特例。
+
+---
+
+## Exercise 4.20　OLS 与 GLS 的协方差
+
+**题：** $\Omega$ 已知。$\hat\beta-\beta=(X'X)^{-1}X'e$，$\tilde\beta-\beta=(X'\Omega^{-1}X)^{-1}X'\Omega^{-1}e$。求 $\mathrm{cov}(\hat\beta,\tilde\beta|X)$ 和 $\mathrm{var}(\hat\beta-\tilde\beta|X)$。
+
+**考点：** 一个漂亮的结果——$\mathrm{cov}(\hat\beta,\tilde\beta)=\mathrm{var}(\tilde\beta)$，说明 GLS 是 OLS 的"投影"。
+
+**证明：**
+$$\mathrm{cov}(\hat\beta,\tilde\beta|X)=(X'X)^{-1}X'\underbrace{E[ee'|X]}_{=\Omega}\Omega^{-1}X(X'\Omega^{-1}X)^{-1}=(X'X)^{-1}\underbrace{X'X}_{X'\Omega^{-1}\Omega X\text{ 不对，直接 }X'X}(X'\Omega^{-1}X)^{-1}.$$
+仔细写：$X'\Omega\Omega^{-1}X=X'X$，故
+$$\mathrm{cov}(\hat\beta,\tilde\beta|X)=(X'X)^{-1}X'X(X'\Omega^{-1}X)^{-1}=(X'\Omega^{-1}X)^{-1}=\mathrm{var}(\tilde\beta|X).\quad\checkmark$$
+再算 $\mathrm{var}(\hat\beta-\tilde\beta|X)=\mathrm{var}(\hat\beta)+\mathrm{var}(\tilde\beta)-2\mathrm{cov}(\hat\beta,\tilde\beta)=\mathrm{var}(\hat\beta)+\mathrm{var}(\tilde\beta)-2\mathrm{var}(\tilde\beta)=\mathrm{var}(\hat\beta)-\mathrm{var}(\tilde\beta)$。
+（≥0，与 GLS 比 OLS 更有效一致。）
+
+> **直观：** $\mathrm{cov}(\hat\beta,\tilde\beta)=\mathrm{var}(\tilde\beta)$ 意味着 GLS 估计量"完全解释"了它与 OLS 的共享部分——这是**投影**的标志（类比：$Y$ 对其投影 $\hat Y$ 的协方差 = $\hat Y$ 的方差，Ch3 的正交分解）。GLS 把 OLS "投影"到效率更高的方向。
+
+---
+
+## Exercise 4.21　$R^2$：OLS 与 GLS 谁的更大？
+
+**考点：** $R^2$ 用**未加权** SSE，而 GLS 最小化**加权** SSE——目标不同，无定论。
+
+**解答：** $\hat R^2=1-\hat e'\hat e/(Y^*'Y^*)$，$\tilde R^2=1-\tilde e'\tilde e/(Y^*'Y^*)$（分母相同）。OLS 最小化未加权 SSE $\hat e'\hat e$，所以 $\hat e'\hat e\le\tilde e'\tilde e$，从而 **$\hat R^2\ge\tilde R^2$**（OLS 的未加权 $R^2$ 更大）。但**这并不意味着 OLS 更好**——GLS 优化的是加权目标（效率），$R^2$ 不是评判 GLS 的正确指标。
+
+> **和本科对照：** 不能用 $R^2$ 比较加权/未加权回归的优劣。GLS 的目标是"方差最小"（效率），不是"未加权拟合最好"。
+
+---
+
+## Exercise 4.22　i.i.d. 是否蕴含同方差？—— **不同意**
+
+**考点：** 区分两个正交的概念——"同分布"（关于 $i$）与"条件方差不随 $X$ 变"（关于 $X$）。
+
+**解答：不同意。**
+- **i.i.d.** 说的是不同观测 $(Y_i,X_i)$ 服从**相同的边缘分布**（$i=1,\dots,n$ 同分布、相互独立）；
+- **同方差** 说的是条件方差 $\sigma^2(X_i)=E[e_i^2|X_i]$ **不随 $X_i$ 取值变化**。
+
+两者毫无蕴含关系：i.i.d. 完全允许 $\sigma^2(X)$ 是 $X$ 的函数（**条件异方差**）——只要这个函数形式对所有 $i$ 一样即可。
+
+**反例**：$Y_i=X_i\beta+e_i$，$(Y_i,X_i)$ i.i.d.，但 $e_i|X_i\sim N(0, X_i^2)$（方差 $=X_i^2$ 随 $X$ 变）。这是 i.i.d. 但**异方差**。
+
+> **和本科对照（重要）：** 这是陈强反复强调的——"**独立同分布 ≠ 同方差**"。i.i.d. 是抽样假设（Assumption 4.1），同方差是误差假设（Assumption 4.3），二者独立。混淆它们是初学者最常犯的错误之一。
+
+---
+
+## Exercise 4.23　岭回归的有偏性
+
+**题：** $\hat\beta_{\text{ridge}}=(X'X+\lambda I)^{-1}X'Y$，$\lambda>0$。求 $E[\hat\beta|X]$，是否有偏？
+
+**考点：** 以偏差换方差的典型——岭回归（L2 正则），机器学习的入口。
+
+**证明：** 代入 $Y=X\beta+e$：
+$$E[\hat\beta|X]=(X'X+\lambda I)^{-1}X'X\beta.$$
+因 $(X'X+\lambda I)^{-1}X'X=(X'X+\lambda I)^{-1}(X'X+\lambda I-\lambda I)=I-\lambda(X'X+\lambda I)^{-1}\ne I$（当 $\lambda>0$），故
+$$E[\hat\beta|X]=\beta-\lambda(X'X+\lambda I)^{-1}\beta\ne\beta.$$
+**有偏**（向 0 收缩，shrinkage）。
+
+> **和本科对照：** 岭回归/Lasso 以**引入偏差**换取**方差降低**，在预测（而非推断）任务中往往更准。这是第 29 章（机器学习）的伏笔。要点：OLS 无偏但可能方差大；正则化有偏但方差小——偏差-方差权衡（bias-variance tradeoff）。
+
+---
+
+## Exercise 4.24（续 3.24）　多种标准误比较
+
+**样本：** 亚裔单身男性、experience$<45$，$n=267$。
+
+|  | education | experience | exp2/100 | intercept |
+|--|----------:|----------:|---------:|----------:|
+| $\hat\beta$ | 0.1443 | 0.0426 | −0.0951 | 0.5309 |
+| SE 同方差 | 0.0116 | 0.0122 | 0.0349 | 0.1898 |
+| HC0 | 0.0117 | 0.0124 | 0.0338 | 0.2001 |
+| HC1 | 0.0118 | 0.0125 | 0.0341 | 0.2016 |
+| HC2 | 0.0119 | 0.0126 | 0.0346 | 0.2027 |
+| HC3 | 0.0121 | 0.0128 | 0.0354 | 0.2054 |
+
+**看点：** HC 族按 HC0<HC1<HC2<HC3 递增（与 4.10 一致）；同方差 SE 与 HC 有可见差别（尤其截距），说明存在一定异方差。
+
+> **和本科对照：** 陈强 `reg y x, robust` 默认给 HC1。本例中各方法接近（说明异方差不严重），但截距栏差别较大（~0.19 vs ~0.20）。报告稳健 SE 是现代实证的"标配"。
+
+---
+
+## Exercise 4.25（续 3.26）　HC3 标准误
+
+**样本：** 白人男性西班牙裔，$n=4230$。HC3 SE（节选）：education 0.0029、experience 0.0028、married 0.0250、South 0.0297 等（见 notebook 全表）。
+
+> 大样本下各 HC 方法差别很小；HC3 给出略保守的推断。
+
+---
+
+## Exercise 4.26（DDK2011）　聚类标准误
+
+**设定：** $Y=$ 标准化 `totalscore`；回归 tracking, age, girl, etpteacher, percentile；学校聚类（schoolid）。
+
+|  | $\hat\beta$ | robust SE | cluster SE | cluster/robust |
+|--|------------:|----------:|-----------:|---------------:|
+| tracking | 0.173 | 0.024 | **0.076** | **3.16** |
+| age | −0.041 | 0.009 | 0.013 | 1.56 |
+| girl | 0.081 | 0.024 | 0.028 | 1.18 |
+| etpteacher | 0.180 | 0.024 | 0.037 | 1.57 |
+| percentile | 0.017 | 0.0004 | 0.0007 | 1.69 |
+
+**(a)** **tracking** 的 SE 聚类后膨胀最多（3.16 倍），**girl** 相对最少（1.18 倍）。原因：tracking 是**学校层面（聚类层面）**的干预，同校学生处理状态相同、成绩相关，普通稳健 SE 严重低估其方差；girl 是个体层面变量，组内相关性弱。
+
+**(b)** 仅 tracking 回归：$\hat\gamma\approx0.138$（书 (4.41)/(4.55)）；加入个体控制后 $\approx0.173$（略升）。
+
+> **和本科对照（重要）：** 这就是**聚类稳健标准误**（cluster-robust SE, Liang–Zeger 1986；陈强 `reg y x, cluster(schoolid)`）。当干预在组层面、组内有相关（如同一学校的学生成绩相关）时，普通稳健 SE 会**严重低估**真实方差（本题 tracking 高估了 ~10 倍方差、~3 倍 SE），导致 $t$ 值虚高、假阳性。聚类 SE 把每个聚类当成一个"超级观测"来算 meat，纠正这种低估。
+> **判定口诀：** 干预变量在哪个层面（个体 vs 组），那个变量的 SE 就最需要聚类修正。
+
+---
+
+## 附录 A：夹心方差与方差估计器总表
+
+**夹心方差（核心）：** $\mathrm{var}(\hat\beta|X)=(X'X)^{-1}\,\underbrace{X'\Omega X}_{\text{肉}}\,(X'X)^{-1}$，肉 $=\sum_i X_iX_i'\sigma_i^2$。
+
+| 估计器 | 肉的估计 | 同方差下 | 异方差下 |
+|---|---|---|---|
+| 同方差 (4.30) | $s^2X'X$，$s^2=\frac{\sum\hat e_i^2}{n-k}$ | 无偏 | **有偏（错）** |
+| HC0 | $\sum X_iX_i'\hat e_i^2$ | 略偏小 | 一致 |
+| HC1 | $\frac{n}{n-k}\sum X_iX_i'\hat e_i^2$ | 近似无偏 | 一致（Stata 默认） |
+| HC2 | $\sum X_iX_i'\hat e_i^2/(1-h_{ii})$ | **无偏** | 一致 |
+| HC3 | $\sum X_iX_i'\hat e_i^2/(1-h_{ii})^2$ | 偏大（保守） | 一致 |
+
+**排序：** $\hat V_{\text{hom}}$ 无定论；$\hat V_{\mathrm{HC0}}\le\hat V_{\mathrm{HC1}}\le\hat V_{\mathrm{HC2}}\le\hat V_{\mathrm{HC3}}$（后三者由 4.10 保证 HC0≤HC2≤HC3，HC1 介于 HC0、HC2 之间）。
+
+---
+
+## 附录 B：聚类方差（Liang–Zeger）
+
+模型在聚类 $g=1,\dots,G$ 内允许误差相关、聚类间独立。方差公式
+$$\mathrm{var}(\hat\beta|X)=(X'X)^{-1}\Big(\sum_{g=1}^G X_g'e_ge_g'X_g\Big)(X'X)^{-1},$$
+即把每个聚类 $g$ 的 $X_g'e_g$（$k\times1$）做外积再相加，作为"肉"。直观：每个聚类贡献一个"秩-1"块，反映组内相关。当干预在聚类层面、组内正相关 $\rho>0$、组大小 $N$ 时，方差比常规公式大约膨胀 $\rho N$ 倍（书 (4.48)）。
+
+---
+
+## 附录 C：notebook 单元对应
+
+| 习题 | notebook 内容 |
+|------|----------------|
+| 4.1–4.23 | Markdown 摘要（详见本 .md） |
+| 4.24 | 方程 (3.49) 的同方差 + HC0–HC3 SE code cell |
+| 4.25 | 白人男性西班牙裔回归的 HC3 SE code cell |
+| 4.26 | DDK2011 tracking 回归 + robust/cluster SE code cell |
+
+
+# 实证与数值代码（R companion）
+
+手写/精译 R 脚本：`scripts/r_companions/ch04.R`。
+
+```{r}
+#| label: companion-main
+source(file.path(root, "scripts", "r_companions", "ch04.R"))
+```
+
+
+## Notebook 结构说明
+
+#### 公共函数：OLS + HC0–HC3（夹心方差）
+
+下面函数对同一组 $(\hat\beta,\hat e,h_{ii})$ 计算**五种**方差估计，差别只在"肉"$\sum X_iX_i'\hat e_i^2\,c_i$ 的权重 $c_i$：
+
+- **同方差**：$s^2(X'X)^{-1}$，$s^2=\sum\hat e_i^2/(n-k)$（李子奈默认）。
+- **HC0**：$c_i=1$（White，原始稳健 SE）。
+- **HC1**：HC0 $\times n/(n-k)$（Stata `robust` 默认）。
+- **HC2**：$c_i=(1-h_{ii})^{-1}$（同方差下无偏）。
+- **HC3**：$c_i=(1-h_{ii})^{-2}$（保守，SE 最大）。
+
+由 Ex 4.10，应有 $\mathrm{SE}_{HC0}\le\mathrm{SE}_{HC1}\le\mathrm{SE}_{HC2}\le\mathrm{SE}_{HC3}$。
+
+#### Exercise 4.24：方程 (3.49) 多种 SE
+
+#### Exercise 4.25：白人男性西班牙裔，HC3
+
+#### Exercise 4.26：DDK2011 tracking + 聚类 SE
+
+#### 理论结论的蒙特卡洛验证（无需外部数据）
+
+以下单元格核对 ch04 的夹心方差、HC0–HC3 排序、GLS 有效性、OLS/GLS 协方差、短回归 $s^2$ 偏差。可独立运行。
+
+
+# 依赖包
+
+```{r}
+#| label: install-pkgs
+#| eval: false
+pkgs <- c(
+  "haven", "readxl", "data.table", "sandwich", "lmtest", "AER",
+  "quantreg", "boot", "MASS", "Matrix", "nnet", "ggplot2", "knitr"
+)
+# 章节扩展：Ch14–16 vars/urca；Ch17 plm；Ch19 np；Ch26 mlogit
+miss <- setdiff(pkgs, rownames(installed.packages()))
+if (length(miss)) install.packages(miss, repos = "https://cloud.r-project.org")
+```
+
+---
+*第 4 章 · R/Quarto · md + ipynb 融合*

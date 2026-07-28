@@ -1,0 +1,905 @@
+---
+title: "Bruce Hansen《Econometrics》第 20 章习题解答"
+subtitle: "Chapter 20 Series Regression"
+author: "按 Hansen 计量经济学体系整理（R / Quarto 版）"
+date: today
+lang: zh-CN
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    number-sections: true
+    number-depth: 2
+    html-math-method: mathjax
+    theme: cosmo
+    code-fold: true
+    code-tools: true
+engine: knitr
+knitr:
+  opts_chunk:
+    comment: "#>"
+    fig.path: "figures/ch20/"
+execute:
+  eval: false
+  echo: true
+  warning: false
+  message: false
+---
+
+::: {.callout-note}
+## 说明
+
+- **理论：** 来自同目录 Markdown 逐步解答。
+- **代码：** Python notebook 已融合为 **R**（`scripts/r_companions/ch20.R` 优先；否则为带注释的翻译草稿）。
+- **数据：** `hansen/econometrics/data/`（gitignore）；渲染前请确保数据已下载。
+- 默认 `execute: eval: false`。有数据时改为 `true` 或交互运行代码块。
+- 缺包时：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot"))` 等。
+:::
+
+```{r}
+#| label: setup
+root <- if (dir.exists("../../hansen")) "../.." else if (dir.exists("hansen")) "." else "../.."
+data_root <- file.path(root, "hansen", "econometrics", "data")
+companion_dir <- file.path(root, "scripts", "r_companions")
+if (file.exists(file.path(companion_dir, "_common.R"))) {
+  source(file.path(companion_dir, "_common.R"), local = FALSE)
+}
+knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+options(stringsAsFactors = FALSE)
+```
+
+# 理论解答
+
+**章节：** Chapter 20 Series Regression  
+**书稿：** PDF 第 755–758 页（印刷页 735–738），§20.32 Exercises（**20.1–20.18 全部**）  
+
+**阅读提示（`AGENTS.md`）：** 默认读者熟悉 OLS / 多项式回归入门，但不默认掌握样条基、级数逼近误差 $r_K$、Theorem 20.8 的渐近、NPIV。每步尽量写清“在算什么、为什么合法”。
+
+**本科搭桥：**  
+- 级数回归 = 把未知 $m(x)$ 换成一组基函数 $\tau_j(x)$ 的**线性组合**，再用 OLS 估系数；  
+- 样条 = **分段多项式**，在节点处对接并保持一定光滑；  
+- CV/AIC 选“用多少段/多高阶”≈ 核回归里选带宽。
+
+---
+
+## Exercise 20.1　线性样条的边际效应
+
+### 1. 题意
+
+给定
+$$
+\hat Y=-1+2X+5(X-1)\,1\{X\ge1\}-3(X-2)\,1\{X\ge2\}+e,
+$$
+求 $X=3$ 处 $X$ 对 $Y$ 的**估计边际效应**（即 $\partial m/\partial x$ 的估计）。
+
+### 2. 分段斜率
+
+线性样条在每段内是直线，斜率 = 基础斜率 + 跨过节点后的斜率改变量。
+
+| 区间 | 指示函数 | 斜率 |
+|------|----------|------|
+| $X<1$ | 全 0 | $2$ |
+| $1\le X<2$ | 仅第一项 | $2+5=7$ |
+| $X\ge2$ | 两项都开 | $2+5-3=\mathbf{4}$ |
+
+### 3. 在 $X=3$
+
+$3>2$，落在最后一段：
+$$
+\widehat{\mathrm{ME}}(3)=4.
+$$
+
+**回扣：** 边际效应不是常数 2；过节点后斜率逐段调整。$X=3$ 时两个节点都已“激活”。
+
+---
+
+## Exercise 20.2　线性样条单调不减的系数约束
+
+### 1. 模型
+
+$$
+m_K(x)=\beta_0+\beta_1 x+\beta_2(x-\tau_1)_++\beta_3(x-\tau_2)_++\beta_4(x-\tau_3)_+,
+$$
+其中 $(x-\tau)_+=(x-\tau)1\{x\ge\tau\}$，$\tau_1<\tau_2<\tau_3$。
+
+### 2. 导数（斜率）
+
+在区间 $(\tau_{j-1},\tau_j)$ 上（令 $\tau_0=-\infty,\tau_4=+\infty$）：
+$$
+m_K'(x)=\beta_1+\sum_{k:\tau_k\le x}\beta_{1+k}.
+$$
+即：
+- $x<\tau_1$：$m'=\beta_1$  
+- $\tau_1\le x<\tau_2$：$m'=\beta_1+\beta_2$  
+- $\tau_2\le x<\tau_3$：$m'=\beta_1+\beta_2+\beta_3$  
+- $x\ge\tau_3$：$m'=\beta_1+\beta_2+\beta_3+\beta_4$
+
+### 3. 处处 $m'\ge0$
+
+需**每一段斜率**非负：
+\begin{align*}
+\beta_1&\ge0,\\
+\beta_1+\beta_2&\ge0,\\
+\beta_1+\beta_2+\beta_3&\ge0,\\
+\beta_1+\beta_2+\beta_3+\beta_4&\ge0.
+\end{align*}
+
+**说明：** 不能只要求每个 $\beta_j\ge0$；后面的 $\beta_j$ 可为负，只要**累计斜率**仍 ≥0。
+
+---
+
+## Exercise 20.3　线性样条为凹函数的约束
+
+### 1. 凹的含义
+
+连续函数凹 $\Leftrightarrow$ 斜率**非增**（二阶分布导数非正）。  
+线性样条在段内 $m''=0$，曲率只来自节点处的**斜率跳跃** $\beta_2,\beta_3,\beta_4$。
+
+### 2. 斜率非增
+
+$$
+\beta_1+\beta_2\le\beta_1,\quad
+\beta_1+\beta_2+\beta_3\le\beta_1+\beta_2,\quad
+\ldots
+$$
+即
+$$
+\beta_2\le0,\quad \beta_3\le0,\quad \beta_4\le0.
+$$
+
+**直觉：** 每个节点只能“把斜率往下扳”，不能往上扳。
+
+---
+
+## Exercise 20.4　二次样条凹性约束
+
+### 1. 标准二次样条（正文 §20.5）
+
+（题面 “$\beta_2 x^3$” 按 **quadratic spline** 标准式理解为 $\beta_2 x^2$；否则不是二次样条。）
+$$
+m_K(x)=\beta_0+\beta_1 x+\beta_2 x^2
++\sum_{k=1}^3\beta_{2+k}(x-\tau_k)_+^2.
+$$
+
+### 2. 二阶导
+
+段内：
+$$
+m_K''(x)=2\beta_2+2\sum_{k:\tau_k\le x}\beta_{2+k}.
+$$
+令 $s_0=\beta_2$，$s_j=\beta_2+\sum_{k=1}^j\beta_{2+k}$（$j=1,2,3$）。
+
+### 3. 凹 $\Leftrightarrow m''\le0$ 处处
+
+$$
+\beta_2\le0,\quad
+\beta_2+\beta_3\le0,\quad
+\beta_2+\beta_3+\beta_4\le0,\quad
+\beta_2+\beta_3+\beta_4+\beta_5\le0.
+$$
+（即 $\beta_2\le0$ 且每个节点后累计二阶导系数仍 ≤0。）
+
+---
+
+## Exercise 20.5　节点必须在 $X$ 的样本支撑内
+
+### 1. 若 $\tau>\max_i X_i$
+
+对所有样本点 $X_i\le\max X<\tau$，故 $(X_i-\tau)_+=0$。  
+该基函数在样本上**恒为 0**，系数 $\beta$ **不可识别**（设计矩阵奇异或该列全零）。
+
+### 2. 若 $\tau<\min_i X_i$
+
+对所有 $i$，$(X_i-\tau)_+=X_i-\tau$，与截距、$X$ **完全共线**（线性样条时），或与低阶多项式列共线。OLS 无法分离 $\beta$。
+
+### 3. 结论
+
+节点必须落在**数据实际覆盖**的区间内，样条段才在样本中被“看到”。实务常按分位数或均匀网格放节点。
+
+---
+
+## Exercise 20.6　多项式导数估计
+
+### (a) 估计量
+
+$$
+\hat m_K(x)=\sum_{j=0}^p\hat\beta_j x^j
+\quad\Rightarrow\quad
+\hat m_K'(x)=\sum_{j=1}^p j\,\hat\beta_j\,x^{j-1}.
+$$
+
+### (b) 是否对 $\hat\beta$ 线性？
+
+**是。** 可写 $\hat m_K'(x)=a_K(x)'\hat\beta_K$，其中
+$$
+a_K(x)=\big(0,\;1,\;2x,\;3x^2,\;\ldots,\;p\,x^{p-1}\big)'.
+$$
+
+### (c) 渐近分布（Theorem 20.8）
+
+Theorem 20.8：对线性泛函 $\theta=a(m)$，在 Assumption 20.2 下
+$$
+\frac{\sqrt{n}\big(\hat\theta_K-\theta+a(r_K)\big)}{V_K^{1/2}}\to_d N(0,1),
+$$
+$V_K=a_K'Q_K^{-1}\Omega_K Q_K^{-1}a_K$。
+
+此处 $\theta=m'(x)$，$a(r_K)=r_K'(x)$（逼近误差的导数）。  
+故
+$$
+\sqrt{n}\big(\hat m_K'(x)-m'(x)+r_K'(x)\big)\Big/\sqrt{V_K(x)}\to_d N(0,1),
+$$
+$V_K(x)=a_K(x)'Q_K^{-1}\Omega_K Q_K^{-1}a_K(x)$。
+
+若再 $n\delta_K^{*2}\to0$（undersmooth），偏差 $r_K'$ 可忽略，得无偏中心的正态极限。
+
+### (d) SE 与置信区间
+
+1. 估 $\hat Q_n=n^{-1}X'X$，$\hat\Omega$ 可用 HC 或同方差 $\hat\sigma^2\hat Q$；  
+2. $\widehat{\mathrm{se}}=\sqrt{a_K(x)'\widehat{\mathrm{Var}}(\hat\beta)\,a_K(x)}$  
+   （有限样本常用 $\widehat{\mathrm{Var}}(\hat\beta)=(X'X)^{-1}\hat\Omega(X'X)^{-1}$ 三明治）；  
+3. 近似 $95\%$ 点态区间：$\hat m_K'(x)\pm1.96\,\widehat{\mathrm{se}}$。  
+
+**注意：** 边界 $x$ 处 $\zeta_K(x)$ 大，SE 会膨胀（正文讨论）。
+
+---
+
+## Exercise 20.7　缩放 $Y$ 或 $X$ 对 CV$(K)$ 的影响
+
+记 $\mathrm{CV}(K)=n^{-1}\sum_i \tilde e_i(K)^2$（leave-one-out 预测误差平方）。
+
+### 缩放 $Y^*=cY$
+
+预测误差同乘 $c$，$\mathrm{CV}^*(K)=c^2\mathrm{CV}(K)$。  
+**$K$ 的排序不变**，最小化的 $K$ **不变**。
+
+### 缩放 $X^*=cX$（多项式）
+
+$x^j$ 变成 $(c x)^j=c^j x^j$，若**不同时**重标基函数，设计矩阵病态变化，一般 **CV 曲线与最优 $K$ 都会变**。  
+若先把 $X$ 仿射变换到 $[0,1]$ 再取幂（本题实证做法），则“尺度”已标准化，乘常数等价于重选仿射，**最优 $K$ 在正确重标后应理解为对标准化 $X$ 而言**。
+
+**实务：** 多项式务必先把 $X$ 映到有界区间；比较 $K$ 时固定同一标准化。
+
+---
+
+## Exercise 20.8　NPIV 近似误差 $e_K$
+
+结构式 $Y=m(X)+e$，$\mathbb{E}[e\mid Z]=0$。级数近似 $m(x)\approx X_K(x)'\beta_K$ 得 (20.35)：
+$$
+Y=X_K'\beta_K+e_K,\qquad e_K=e+r_K(X).
+$$
+
+### (a) $\mathbb{E}[e_K\mid Z]=0$？
+
+**一般不成立。**  
+$\mathbb{E}[e\mid Z]=0$，但 $r_K(X)=m(X)-X_K'\beta_K$ 是 $X$ 的函数，$X$ 内生时 $\mathbb{E}[r_K(X)\mid Z]$ 通常 **非零**（除非逼近误差恰好与 $Z$ 正交）。
+
+### (b) $L=K$ 时能否选 $\beta_K$ 使 $\mathbb{E}[Z_K e_K]=0$？
+
+**可以（恰好识别矩）。**  
+取 $K$ 维工具 $Z_K$，定义投影型系数使
+$$
+\mathbb{E}[Z_K(Y-X_K'\beta_K)]=0
+$$
+（当 $\mathbb{E}[Z_K X_K']$ 满秩时唯一）。这是 **IV 投影系数**，一般 **不是** 使 $\mathbb{E}[e_K\mid Z]=0$ 的结构参数，但满足 $K$ 个无条件矩。
+
+### (c) $L>K$ 时 $\mathbb{E}[Z_L e_K]=0$？
+
+**一般不能对任意 $\beta_K$ 同时成立**（过度识别）。  
+GMM/2SLS 最小化二次型，使 $L$ 个样本矩 **尽可能接近 0**，总体在真 $m$ 的最佳 $K$ 维逼近下，矩误差随逼近改进而变小，但有限 $K$ 时 $\mathbb{E}[Z_L e_K]\ne0$ 是常态。
+
+---
+
+## Exercise 20.9–20.10　cps09mar：log wage 对 experience 的多项式
+
+### 设定
+
+- 全样本；$Y=\log(\mathrm{earnings}/(\mathrm{hours}\cdot\mathrm{week}))$；  
+- $X=\mathrm{experience}=\mathrm{age}-\mathrm{education}-6$；  
+- **先**把 experience 线性变换到 $[0,1]$ 再取幂（改善 $X'X$ 条件数，§20.4）；  
+- 6 阶多项式；SE 用同方差 OLS 公式作点态带（大 $n$ 下形状可靠）。
+
+### 20.9 结果要点（$n\approx5.07\times10^4$）
+
+| experience | $\hat m_6$ | se（约） |
+|-----------:|-----------:|---------:|
+| 10 | 2.91 | 0.006 |
+| 20 | 3.04 | 0.005 |
+| 40 | 2.93 | 0.008 |
+| 高经验（样本极少） | 急剧下行 | **se 爆炸** |
+
+**解释：**  
+- 经典 Mincer：先升后缓；峰值大约在 15–25 年经验附近。  
+- **experience>65：** 观测极少（全样本仅个位数级），高阶多项式在边界 **龙格现象 / 杠杆极大**（$\zeta_K(x)$ 大）。曲线下行 **不可信**，反映外推失败而非真实工资崩溃。  
+- 本科注意：多项式阶数高 ≠ 处处可靠；边界要看 se 与有效样本。
+
+### 20.10 CV / AIC 选阶 $p=1,\ldots,8$
+
+本实现（LOOCV 与 AIC）均随 $p$ 缓降，**最小在 $p=8$**（与“大样本可支持更高 $K$”一致）。  
+$p=4$–$8$ 的 CV 差异已很小；绘图时 $p=6$ 与 $p=8$ 中段几乎重合。  
+**实务建议：** 报告 CV 最优阶，并检查边界；或改用样条（20.13）更稳。
+
+---
+
+## Exercise 20.11–20.12　log wage 对 education 的多项式
+
+### 设定
+
+education 重标到 $[0,1]$；$p=6$；AIC/CV 扫 $1$–$8$。
+
+### 结果
+
+- 曲线整体 **随教育上升**；12 年（高中）附近抬升明显，之后继续升。  
+- AIC/CV 仍倾向较高阶（本样本最优约 $p=8$）；中段 $p\ge3$ 已接近。  
+- education 为离散取值（0,4,6,8,…,20），高阶多项式是对**阶梯支撑**的光滑插值，节点间形状勿过度解读。
+
+---
+
+## Exercise 20.13　experience 的二次样条
+
+### (a) 四模型
+
+| 模型 | 节点 | $K$ | AIC | LOOCV |
+|------|------|----:|----:|------:|
+| (1) 二次 | 无 | 3 | −41555 | 0.4404 |
+| (2) | 20 | 4 | −41699 | 0.4391 |
+| (3) | 20, 40 | 5 | −41704 | 0.4391 |
+| (4) | 10,20,30,40 | 7 | **−41715** | **0.4390** |
+
+形状：均呈 **先升后缓**；多节点在 30–40 年经验处更灵活，避免全局二次“过早下降”或边界扭曲。
+
+### (b) 优选
+
+AIC 与 CV 均偏好 **四节点** 模型 (4)。相对无节点二次有实质改进；相对 (3) 改进较小。
+
+### (c) 优选模型 + 95% 带
+
+中段置信带很窄（$n$ 大）；高 experience 带变宽。经济含义：回报集中在职业生涯前半，后期平坦。
+
+### (d) 多项式 vs 二次样条
+
+- 高阶多项式在 **右尾** 更易乱动；  
+- 二次样条用局部二次 + 有限节点，**形状更稳、更易解释节点处曲率变化**；  
+- 本样本样条 CV 与高阶多项式接近，**更偏好样条**（尤其若关心 40+ 经验）。
+
+---
+
+## Exercise 20.14　education 的二次样条
+
+| 模型 | 节点 | AIC | CV |
+|------|------|----:|---:|
+| 无节点二次 | — | −50910 | 0.3661 |
+| 1@10 | 10 | −50998 | 0.3655 |
+| 3@5,10,15 | | −51031 | 0.3653 |
+| 4@4,8,12,16 | | **−51057** | **0.3651** |
+
+**优选：** 节点 4,8,12,16（对应常见学历坎）。  
+曲线在 **高中 / 大学** 附近抬升更清晰，比单二次更贴近“学历门槛”。  
+相对多项式：样条在离散教育点之间的插值更可控，**推荐样条**。
+
+---
+
+## Exercise 20.15　RR2010：部分线性 $Y_t=\alpha Y_{t-1}+m(D_{t-1})+e_t$
+
+### 设定
+
+- $Y_t$：GDP 增长；$D_{t-1}$：滞后债务/GDP；  
+- $m$：线性 / 线性样条（节点 60 或 40&80）；  
+- 美国 1791–2009，$n$ 约 200+。
+
+### (a)(c) 模型比较
+
+| 模型 | AIC | LOOCV |
+|------|----:|------:|
+| 线性 $m$ | 631.1 | **18.29** |
+| 节点 60 | 630.1 | 18.41 |
+| 节点 40,80 | **630.0** | 18.60 |
+
+AIC 略偏好有节点；**CV 偏好简单线性**。样本短、债务高区稀疏 → 复杂样条易过拟合。
+
+### (b) 单节点 60 的斜率
+
+估计（示意）：
+- $\hat\alpha\approx0.28$（增长持续）；  
+- $D<60$：$\partial m/\partial D\approx +0.01$（接近 0）；  
+- $D\ge60$：斜率 $\approx -0.08$。  
+
+点估计呈“高债务后变负”，但 SE 大，**远不足以确立 90% 魔咒**（参见 Ch.19 核回归结论）。
+
+### (d) 解释
+
+美国单国序列：**弱支持**“债务极高时增长略差”，但模型选择不稳定（AIC vs CV），且 **非因果**（债务内生、战争/萧条混淆）。不应外推为普遍 90% 门槛。
+
+---
+
+## Exercise 20.16　DDK2011：testscore 对 percentile 的二次样条
+
+### (a) 五模型 AIC / CV
+
+| 节点 | AIC | CV |
+|------|----:|---:|
+| 无 | 21239 | 100.80 |
+| 50 | **21227** | **100.52** |
+| 33,66 | 21227 | 100.54 |
+| 25,50,75 | 21229 | 100.57 |
+| 20,40,60,80 | 21230 | 100.60 |
+
+### (b) 选模
+
+AIC 与（个体）LOOCV 均偏好 **单节点 50**。  
+正文对聚类数据建议 **leave-cluster-out CV**（按 `schoolid`）；学校内相关时标准 LOO 偏乐观，但排序上单节点仍合理、更简约。
+
+### (c) 推断
+
+用 **school cluster-robust** SE 画点态 95% 带。  
+形状：成绩随入学百分位 **单调上升**，中段接近二次；与 Ch.19 核回归一致。顶尖百分位提升仍可见，但聚类 SE 使带更宽。
+
+---
+
+## Exercise 20.17　CHJ2004：transfers 对 income 的多项式
+
+### 设定
+
+- $n=8684$ 菲律宾城镇住户；  
+- $Y=\texttt{transfers}$，$X=\texttt{income}$ 先映到 $[0,1]$；  
+- (a) 无控制；(b) 可加教育、年龄、性别、婚姻、孩子、家庭规模、就业等（及 region）；  
+- 阶数用 AIC/CV（本无控制扫描 $p=1..8$，CV 缓降至 $p=8$）。
+
+### 结果与 Figure 20.2(b) 对照
+
+- 高阶多项式下，transfers 对 income 多呈 **先升或平台后的挤出形态**（高收入段转移下降）——与原文 **挤出（crowding-out）** 叙事一致。  
+- 无控制时噪声大；加入人口学控制后水平移动，**斜率形状定性仍可类似**。  
+- 与样条/核方法比：多项式在收入右尾同样可能扭曲；应用 **重标 + 勿迷信极高 $p$**，并报告点态带。  
+- 与 Figure 20.2(b)（原文控制下的非参/半参图）：相似点是高收入边际下降；差异来自基函数（多项式 vs 原文设定）与控制选择。
+
+---
+
+## Exercise 20.18　AL1999：数学成绩的 NPIV 型级数
+
+### 设定（仿 §20.30，因变量改 `avgmath`）
+
+- 内生：$\mathrm{classize}/40$ 的 1–3 次及与 $\mathrm{disadvantaged}/14$ 交互；  
+- 外生：disadvantaged 三次、enrollment、grade4；  
+- 工具：Maimonides 规则 $p$ 的 1–3 次及 $p\times\mathrm{disadvantaged}$；  
+- 2SLS，**学校 cluster** SE。
+
+### 主要结果（$n=4067$）
+
+| | 估计 | cluster SE |
+|--|-----:|-----------:|
+| classize/40 | 22.7 | 45.0 |
+| (classize/40)$^2$ | −28.1 | 71.7 |
+| (classize/40)$^3$ | 10.0 | 36.6 |
+| 交互 | −2.7 | 2.2 |
+| enrollment | 0.030 | 0.008 |
+| grade4 | 1.53 | 0.22 |
+
+- 班级规模系数 **联合 Wald $p\approx0.54$**（阅读成绩在正文中更显著，$p\approx0.013$）。  
+- 班级从 20→40 的预测效应约 **−2.3**（se≈1.6），符号与阅读一致（更大班 → 更低分），但 **数学上更不精确**。  
+- disadvantaged 多项式显著为负向（贫困不利）。
+
+### 与阅读成绩的异同
+
+| | 阅读（正文） | 数学（本题） |
+|--|--------------|--------------|
+| 班级规模 | 显著为负 | 符号为负但不显著 |
+| 效应量（20→40） | 约 −3.0 (1.2) | 约 −2.3 (1.6) |
+| 贫困 | 强负向 | 强负向 |
+
+**结论：** 规则工具下班级规模伤害学习的方向稳健，但 **数学分数识别更弱**；不宜把阅读的显著性直接套到数学。
+
+---
+
+## 小结
+
+| 题 | 要点 |
+|:--:|------|
+| 20.1–20.5 | 样条斜率/凹性约束；节点须在支撑内 |
+| 20.6–20.8 | 导数的 Theorem 20.8；CV 与尺度；NPIV 矩 |
+| 20.9–20.14 | CPS 多项式/样条工资剖面；边界谨慎 |
+| 20.15–20.16 | RR 债务；DDK 百分位样条 |
+| 20.17–20.18 | CHJ 转移；AL 数学 NPIV |
+
+代码与复现见 `Hansen_Ch20_Exercises_Solutions.ipynb`（含注释）。
+
+
+# 实证与数值代码（来自 notebook，R 版）
+
+## Hansen Ch.20 Series Regression
+
+理论逐步证明见 `Hansen_Ch20_Exercises_Solutions.md`（**20.1–20.18**）。
+
+本 notebook：多项式 / 样条 / 部分线性 / 2SLS-NPIV 实证，**代码含中文注释**。
+
+```{r}
+#| label: nb-cell-01
+# 原 Python notebook 代码（保留备查）→ R 对照草稿
+# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
+
+
+# Ch.20 series regression utilities
+# 详尽注释：基函数构造、OLS、AIC、LOOCV、cluster SE
+
+# import numpy as np
+# import pandas as pd
+# from pathlib import Path
+# from numpy.linalg import pinv, inv
+# from scipy import stats
+
+# PY: ROOT = Path("/home/fang/Project/zhihu-paper/p1/hansen/econometrics/data")
+
+
+# PY: def ols(y, X, cluster=None):
+# PY:     """OLS with optional cluster-robust sandwich variance.
+# PY:     y: (n,), X: (n,k) already including intercept if needed.
+# PY:     Returns beta, se, V, residuals.
+# PY:     """
+# PY:     y = np.asarray(y, float)
+# PY:     X = np.asarray(X, float)
+# PY:     b = pinv(X.T @ X) @ (X.T @ y)
+# PY:     e = y - X @ b
+# PY:     n, k = X.shape
+# PY:     if cluster is None:
+        # classical homoskedastic V = s^2 (X'X)^{-1}
+# PY:         s2 = (e @ e) / (n - k)
+# PY:         V = s2 * pinv(X.T @ X)
+# PY:     else:
+        # Arellano-type cluster meat
+# PY:         meat = np.zeros((k, k))
+# PY:         for g in pd.unique(cluster):
+# PY:             m = cluster == g
+# PY:             score = X[m].T @ e[m]
+# PY:             meat += np.outer(score, score)
+# PY:         nG = len(pd.unique(cluster))
+# PY:         bread = pinv(X.T @ X)
+# PY:         V = (nG / (nG - 1)) * ((n - 1) / (n - k)) * bread @ meat @ bread
+# PY:     se = np.sqrt(np.maximum(np.diag(V), 0.0))
+# PY:     return b, se, V, e
+
+
+# PY: def aic(y, X):
+# PY:     """Gaussian AIC = n log(SSR/n) + 2k  (up to additive constant)."""
+# PY:     y = np.asarray(y, float)
+# PY:     X = np.asarray(X, float)
+# PY:     n, k = X.shape
+# PY:     e = y - X @ (pinv(X.T @ X) @ (X.T @ y))
+# PY:     s2 = max((e @ e) / n, 1e-300)
+# PY:     return n * np.log(s2) + 2 * k
+
+
+# PY: def loocv(y, X):
+# PY:     """Leave-one-out CV via leverage formula: e_i / (1-h_ii)."""
+# PY:     y = np.asarray(y, float)
+# PY:     X = np.asarray(X, float)
+# PY:     XtXinv = pinv(X.T @ X)
+    # h_ii = x_i' (X'X)^{-1} x_i
+# PY:     Hdiag = np.sum((X @ XtXinv) * X, axis=1)
+# PY:     b = XtXinv @ (X.T @ y)
+# PY:     e = y - X @ b
+# PY:     return np.mean((e / (1 - Hdiag)) ** 2)
+
+
+# PY: def poly_basis(x, p):
+# PY:     """Polynomial basis 1, x, ..., x^p. x should already be scaled to [0,1]."""
+# PY:     x = np.asarray(x, float)
+# PY:     return np.column_stack([x ** j for j in range(p + 1)])
+
+
+# PY: def linear_spline(x, knots):
+# PY:     """Linear spline: 1, x, (x-tau)_+ for each knot."""
+# PY:     x = np.asarray(x, float)
+# PY:     cols = [np.ones_like(x), x]
+# PY:     for t in knots:
+# PY:         cols.append(np.maximum(x - t, 0.0))
+# PY:     return np.column_stack(cols)
+
+
+# PY: def quad_spline(x, knots):
+# PY:     """Quadratic spline: 1, x, x^2, (x-tau)_+^2 for each knot."""
+# PY:     x = np.asarray(x, float)
+# PY:     cols = [np.ones_like(x), x, x ** 2]
+# PY:     for t in knots:
+# PY:         cols.append(np.maximum(x - t, 0.0) ** 2)
+# PY:     return np.column_stack(cols)
+
+
+# PY: def m_and_se_at_grid(b, V, basis_rows):
+# PY:     """Given beta, Var(beta), and list/array of a(x)' rows, return m(x) and se."""
+# PY:     m = basis_rows @ b
+    # se^2 = a' V a for each row
+# PY:     se = np.sqrt(np.maximum(np.sum(basis_rows * (basis_rows @ V), axis=1), 0.0))
+# PY:     return m, se
+
+# --- R 惯用写法提示 ---
+# read_dta: haven::read_dta(file.path(data_root, ...))
+# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
+# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
+# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
+```
+
+### 20.1 数值核对：X=3 的边际效应 = 4
+
+```{r}
+#| label: nb-cell-02
+# 原 Python notebook 代码（保留备查）→ R 对照草稿
+# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
+
+# m'(x) = 2 + 5*1{x>=1} - 3*1{x>=2}
+# PY: for x in [0.5, 1.5, 3.0]:
+# PY:     me = 2 + 5 * (x >= 1) - 3 * (x >= 2)
+# PY:     print(f"x={x}, ME={me}")
+
+# --- R 惯用写法提示 ---
+# read_dta: haven::read_dta(file.path(data_root, ...))
+# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
+# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
+# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
+```
+
+### 20.9–20.14 CPS 工资剖面
+
+```{r}
+#| label: nb-cell-03
+# 原 Python notebook 代码（保留备查）→ R 对照草稿
+# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
+
+# PY: cps = pd.read_excel(ROOT / "cps09mar/cps09mar.xlsx")
+# experience 与 log 小时工资
+# PY: cps["exp"] = cps["age"] - cps["education"] - 6
+# PY: cps["lw"] = np.log(cps["earnings"] / (cps["hours"] * cps["week"]))
+# PY: cps = cps.replace([np.inf, -np.inf], np.nan).dropna(subset=["lw", "exp", "education"])
+# PY: cps = cps[(cps["exp"] >= 0) & (cps["exp"] <= 70)]
+# PY: y = cps["lw"].values
+# PY: x = cps["exp"].values.astype(float)
+# PY: xe = cps["education"].values.astype(float)
+
+# 重标到 [0,1]，减轻高次幂共线（Hansen §20.4）
+# PY: def unit(z):
+# PY:     zmin, zmax = z.min(), z.max()
+# PY:     return (z - zmin) / (zmax - zmin + 1e-15), zmin, zmax
+
+# PY: xr, xmin, xmax = unit(x)
+# PY: print("n =", len(y), "exp range", xmin, xmax)
+
+# PY: print("\nPoly order selection for experience:")
+# PY: for p in range(1, 9):
+# PY:     X = poly_basis(xr, p)
+# PY:     print(f"  p={p}: AIC={aic(y,X):.1f}, LOOCV={loocv(y,X):.6f}")
+
+# 6th order poly + pointwise band at integer experience
+# PY: X = poly_basis(xr, 6)
+# PY: b, se, V, e = ols(y, X)
+# PY: grid = np.arange(0, 61)
+# PY: gr = (grid - xmin) / (xmax - xmin + 1e-15)
+# PY: A = poly_basis(gr, 6)
+# PY: m, sm = m_and_se_at_grid(b, V, A)
+# PY: print("\n6th poly log wage at exp 10,20,40:")
+# PY: for g, mi, si in zip(grid, m, sm):
+# PY:     if g in (10, 20, 40, 50, 60):
+# PY:         print(f"  exp={g}: m={mi:.3f}, se={si:.3f}, 95% CI=[{mi-1.96*si:.3f},{mi+1.96*si:.3f}]")
+
+# PY: print("\nQuadratic spline (experience) AIC/CV:")
+# PY: for name, knots in [("none", []), ("@20", [20]), ("@20,40", [20, 40]), ("@10,20,30,40", [10, 20, 30, 40])]:
+# PY:     Xs = quad_spline(x, knots)
+# PY:     print(f"  {name}: AIC={aic(y,Xs):.1f}, CV={loocv(y,Xs):.6f}")
+
+# PY: print("\nQuadratic spline (education) AIC/CV:")
+# PY: for name, knots in [("none", []), ("@10", [10]), ("@5,10,15", [5, 10, 15]), ("@4,8,12,16", [4, 8, 12, 16])]:
+# PY:     Xs = quad_spline(xe, knots)
+# PY:     print(f"  {name}: AIC={aic(y,Xs):.1f}, CV={loocv(y,Xs):.6f}")
+
+# --- R 惯用写法提示 ---
+# read_dta: haven::read_dta(file.path(data_root, ...))
+# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
+# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
+# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
+```
+
+### 20.15 RR2010 部分线性债务
+
+```{r}
+#| label: nb-cell-04
+# 原 Python notebook 代码（保留备查）→ R 对照草稿
+# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
+
+# PY: rr = pd.read_excel(ROOT / "RR2010/RR2010.xlsx").sort_values("year")
+# PY: rr["Y"] = pd.to_numeric(rr["gdp"], errors="coerce")
+# PY: rr["D"] = pd.to_numeric(rr["debt"], errors="coerce")
+# PY: rr["Ylag"] = rr["Y"].shift(1)
+# PY: rr["Dlag"] = rr["D"].shift(1)
+# PY: d = rr.dropna(subset=["Y", "Ylag", "Dlag"])
+# PY: Y, Ylag, Dlag = d["Y"].values, d["Ylag"].values, d["Dlag"].values
+
+# PY: for name, knots in [("linear m", None), ("knot 60", [60]), ("knots 40,80", [40, 80])]:
+# PY:     if knots is None:
+# PY:         X = np.column_stack([np.ones(len(Y)), Ylag, Dlag])
+# PY:     else:
+        # Y_t = alpha Y_{t-1} + linear_spline(D_{t-1}) + e
+# PY:         X = np.column_stack([Ylag, linear_spline(Dlag, knots)])
+# PY:     print(f"{name}: AIC={aic(Y,X):.2f}, CV={loocv(Y,X):.3f}")
+
+# PY: X = np.column_stack([Ylag, linear_spline(Dlag, [60])])
+# PY: b, se, V, e = ols(Y, X)
+# PY: print("one-knot coeffs [alpha, b0, b1, b2]:", b)
+# PY: print("se:", se)
+# PY: print("slope D<60:", b[2], "; slope D>=60:", b[2] + b[3])
+
+# --- R 惯用写法提示 ---
+# read_dta: haven::read_dta(file.path(data_root, ...))
+# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
+# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
+# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
+```
+
+### 20.16 DDK 百分位二次样条
+
+```{r}
+#| label: nb-cell-05
+# 原 Python notebook 代码（保留备查）→ R 对照草稿
+# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
+
+# PY: ddk = pd.read_excel(ROOT / "DDK2011/DDK2011.xlsx")
+# PY: x = pd.to_numeric(ddk["percentile"], errors="coerce")
+# PY: y = pd.to_numeric(ddk["r2_totalscore"], errors="coerce")
+# PY: cl = ddk["schoolid"].values
+# PY: m = np.isfinite(x) & np.isfinite(y)
+# PY: x, y, cl = x[m].values, y[m].values, cl[m]
+# PY: for name, knots in [
+# PY:     ("none", []),
+# PY:     ("@50", [50]),
+# PY:     ("@33,66", [33, 66]),
+# PY:     ("@25,50,75", [25, 50, 75]),
+# PY:     ("@20,40,60,80", [20, 40, 60, 80]),
+# PY: ]:
+# PY:     X = quad_spline(x, knots)
+# PY:     print(f"{name}: AIC={aic(y,X):.1f}, CV={loocv(y,X):.3f}")
+# preferred: one knot at 50, cluster SE
+# PY: X = quad_spline(x, [50])
+# PY: b, se, V, e = ols(y, X, cluster=cl)
+# PY: grid = np.linspace(1, 99, 20)
+# build basis at grid
+# PY: A = quad_spline(grid, [50])
+# PY: mhat, se_m = m_and_se_at_grid(b, V, A)
+# PY: print("selected model m(percentile) with cluster SE (sample points):")
+# PY: for g, mi, si in zip(grid[::4], mhat[::4], se_m[::4]):
+# PY:     print(f"  p={g:.0f}: {mi:.2f} ({si:.2f})")
+
+# --- R 惯用写法提示 ---
+# read_dta: haven::read_dta(file.path(data_root, ...))
+# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
+# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
+# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
+```
+
+### 20.17 CHJ2004 transfers ~ poly(income)
+
+```{r}
+#| label: nb-cell-06
+# 原 Python notebook 代码（保留备查）→ R 对照草稿
+# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
+
+# PY: chj = pd.read_stata(ROOT / "CHJ2004/CHJ2004.dta")
+# PY: y = pd.to_numeric(chj["transfers"], errors="coerce").values
+# PY: inc = pd.to_numeric(chj["income"], errors="coerce").values
+# PY: m = np.isfinite(y) & np.isfinite(inc) & (inc >= 0)
+# PY: y, inc = y[m], inc[m]
+# scale income to [0,1]
+# PY: ir = (inc - inc.min()) / (inc.max() - inc.min() + 1e-15)
+# PY: print("CHJ n=", len(y))
+# PY: for p in range(1, 9):
+# PY:     X = poly_basis(ir, p)
+# PY:     print(f"p={p}: AIC={aic(y,X):.1f}, CV={loocv(y,X):.1f}")
+# with demographic controls
+# PY: ctrl = ["primary", "somesecondary", "secondary", "someuniversity", "university",
+# PY:         "age", "female", "married", "child1", "child7", "child15", "size",
+# PY:         "bothwork", "notemployed", "marriedf"]
+# PY: df = chj.loc[m].copy()
+# rebuild boolean mask index
+# simpler: use full frame cleaned
+# PY: df = chj.copy()
+# PY: df["transfers"] = pd.to_numeric(df["transfers"], errors="coerce")
+# PY: df["income"] = pd.to_numeric(df["income"], errors="coerce")
+# PY: df = df.dropna(subset=["transfers", "income"])
+# PY: df = df[df["income"] >= 0]
+# PY: ir = (df["income"] - df["income"].min()) / (df["income"].max() - df["income"].min() + 1e-15)
+# PY: Xpoly = poly_basis(ir.values, 6)
+# PY: Xc = df[ctrl].apply(pd.to_numeric, errors="coerce").fillna(0).values
+# PY: X = np.column_stack([Xpoly, Xc])
+# PY: b, se, V, e = ols(df["transfers"].values, X)
+# PY: print("poly6 + controls: first 7 poly coefs", b[:7])
+
+# --- R 惯用写法提示 ---
+# read_dta: haven::read_dta(file.path(data_root, ...))
+# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
+# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
+# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
+```
+
+### 20.18 AL1999 math scores NPIV-style 2SLS
+
+```{r}
+#| label: nb-cell-07
+# 原 Python notebook 代码（保留备查）→ R 对照草稿
+# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
+
+# PY: al = pd.read_excel(ROOT / "AL1999/AL1999.xlsx")
+# PY: enr = pd.to_numeric(al["enrollment"], errors="coerce")
+# Maimonides predicted class size p = enrollment / nclass
+# PY: nclass = 1 + np.floor((enr - 1) / 40.0)
+# PY: al["p"] = enr / nclass
+# PY: for c in ["classize", "disadvantaged", "avgmath", "enrollment"]:
+# PY:     al[c] = pd.to_numeric(al[c], errors="coerce")
+# PY: al["grade4"] = (pd.to_numeric(al["grade"], errors="coerce") == 4).astype(float)
+# PY: df = al.dropna(subset=["avgmath", "classize", "disadvantaged", "enrollment", "p", "schlcode"]).copy()
+
+# PY: c = df["classize"].values / 40.0
+# PY: d = df["disadvantaged"].values / 14.0
+# PY: Y = df["avgmath"].values
+# endogenous: class size poly + interaction
+# PY: X_en = np.column_stack([c, c**2, c**3, c * d])
+# exogenous controls
+# PY: X_ex = np.column_stack([np.ones(len(df)), d, d**2, d**3, df["enrollment"].values, df["grade4"].values])
+# PY: X = np.column_stack([X_en, X_ex])
+# instruments for endogenous parts
+# PY: pv = df["p"].values / 40.0
+# PY: Z_iv = np.column_stack([pv, pv**2, pv**3, pv * d])
+# PY: Z = np.column_stack([Z_iv, X_ex])
+
+# 2SLS: project X onto Z then OLS
+# PY: Pz_X = Z @ (pinv(Z.T @ Z) @ (Z.T @ X))
+# PY: b = pinv(Pz_X.T @ Pz_X) @ (Pz_X.T @ Y)
+# PY: e = Y - X @ b
+# cluster sandwich using projected X
+# PY: cl = df["schlcode"].values
+# PY: meat = np.zeros((len(b), len(b)))
+# PY: for g in pd.unique(cl):
+# PY:     msk = cl == g
+# PY:     score = Pz_X[msk].T @ e[msk]
+# PY:     meat += np.outer(score, score)
+# PY: n, k = X.shape
+# PY: nG = len(pd.unique(cl))
+# PY: bread = pinv(Pz_X.T @ Pz_X)
+# PY: V = (nG / (nG - 1)) * ((n - 1) / (n - k)) * bread @ meat @ bread
+# PY: se = np.sqrt(np.maximum(np.diag(V), 0))
+# PY: names = ["c", "c2", "c3", "c*d", "int", "d", "d2", "d3", "enr", "g4"]
+# PY: print("n =", n)
+# PY: for nm, bi, si in zip(names, b, se):
+# PY:     print(f"{nm:6s} {bi:9.3f} ({si:.3f})")
+
+# effect of classize 20 -> 40 at mean disadvantaged
+# PY: dbar = d.mean()
+# PY: a = np.zeros(len(b))
+# PY: a[0] = 0.5
+# PY: a[1] = 0.75
+# PY: a[2] = 0.875
+# PY: a[3] = 0.5 * dbar
+# PY: th = a @ b
+# PY: print(f"impact 20->40: {th:.3f} (se {np.sqrt(a@V@a):.3f})")
+# PY: R = np.eye(4, len(b))
+# PY: W = float((R @ b) @ inv(R @ V @ R.T) @ (R @ b))
+# PY: print(f"Wald (4 class terms)={W:.2f}, p={1-stats.chi2.cdf(W,4):.3f}")
+
+# --- R 惯用写法提示 ---
+# read_dta: haven::read_dta(file.path(data_root, ...))
+# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
+# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
+# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
+```
+
+
+# 依赖包
+
+```{r}
+#| label: install-pkgs
+#| eval: false
+pkgs <- c(
+  "haven", "readxl", "data.table", "sandwich", "lmtest", "AER",
+  "quantreg", "boot", "MASS", "Matrix", "nnet", "ggplot2", "knitr"
+)
+# 章节扩展：Ch14–16 vars/urca；Ch17 plm；Ch19 np；Ch26 mlogit
+miss <- setdiff(pkgs, rownames(installed.packages()))
+if (length(miss)) install.packages(miss, repos = "https://cloud.r-project.org")
+```
+
+---
+*第 20 章 · R/Quarto · md + ipynb 融合*

@@ -1,0 +1,400 @@
+---
+title: "Bruce Hansen《Econometrics》第 23 章习题解答"
+subtitle: "Chapter 23 Nonlinear Least Squares"
+author: "按 Hansen 计量经济学体系整理（R / Quarto 版）"
+date: today
+lang: zh-CN
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    number-sections: true
+    number-depth: 2
+    html-math-method: mathjax
+    theme: cosmo
+    code-fold: true
+    code-tools: true
+engine: knitr
+knitr:
+  opts_chunk:
+    comment: "#>"
+    fig.path: "figures/ch23/"
+execute:
+  eval: false
+  echo: true
+  warning: false
+  message: false
+---
+
+::: {.callout-note}
+## 说明
+
+- **理论：** 来自同目录 Markdown 逐步解答。
+- **代码：** Python notebook 已融合为 **R**（`scripts/r_companions/ch23.R` 优先；否则为带注释的翻译草稿）。
+- **数据：** `hansen/econometrics/data/`（gitignore）；渲染前请确保数据已下载。
+- 默认 `execute: eval: false`。有数据时改为 `true` 或交互运行代码块。
+- 缺包时：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot"))` 等。
+:::
+
+```{r}
+#| label: setup
+root <- if (dir.exists("../../hansen")) "../.." else if (dir.exists("hansen")) "." else "../.."
+data_root <- file.path(root, "hansen", "econometrics", "data")
+companion_dir <- file.path(root, "scripts", "r_companions")
+if (file.exists(file.path(companion_dir, "_common.R"))) {
+  source(file.path(companion_dir, "_common.R"), local = FALSE)
+}
+knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+options(stringsAsFactors = FALSE)
+```
+
+# 理论解答
+
+**章节：** Chapter 23 Nonlinear Least Squares  
+**书稿：** PDF 第 798–799 页（印刷页 778–779），§23.11 Exercises（**23.1–23.10 全部**）  
+
+**阅读提示（`AGENTS.md`）：** 默认读者熟悉 OLS 与“条件均值 + 误差”，但不默认掌握 NLLS、集中（concentrated）最小化、线性化回归元 $m_\theta$。下文逐步补齐。
+
+**本科搭桥：**  
+- OLS：最小化 $\sum(Y_i-X_i'\beta)^2$，回归函数对参数**线性**；  
+- NLLS：最小化 $\sum(Y_i-m(X_i,\theta))^2$，但 $m$ 对 $\theta$ **非线性**，一般无闭式解，需数值优化；  
+- 渐近上，NLLS 像把“有效回归元”$m_\theta=\partial m/\partial\theta$ 当成 OLS 回归元（Theorem 23.2）。
+
+---
+
+## Exercise 23.1　$Y=\exp(\theta)+e$，$\mathbb{E}[e]=0$
+
+### (a) 条件均值是否线性？是否非线性回归？
+
+模型不含 $X$，但“条件/无条件均值”为
+$$
+\mathbb{E}[Y]=\exp(\theta).
+$$
+- 对参数 $\theta$：**非线性**（指数）；  
+- 这是 Hansen 意义下的 **非线性回归模型** 的退化情形（$m$ 不依赖 $X$，但仍非线性于 $\theta$）。  
+不是“线性回归模型”$Y=X'\beta+e$。
+
+### (b) 能否用线性方法估计？
+
+由 $\mathbb{E}[Y]=\exp(\theta)$ 得 $\theta=\log\mathbb{E}[Y]$（若 $\mathbb{E}[Y]>0$）。  
+样本对应：**矩估计 / 模拟“线性”一步**
+$$
+\hat\theta=\log\bar Y,\qquad \bar Y=n^{-1}\sum_i Y_i
+$$
+（要求 $\bar Y>0$）。  
+这不是对 $Y$ 做 OLS，而是对均值的一对一变换。
+
+### (c) 与 NLLS 是否相同？
+
+NLLS 最小化
+$$
+S_n(\theta)=n^{-1}\sum_i\bigl(Y_i-\exp(\theta)\bigr)^2.
+$$
+一阶条件：$\sum_i\bigl(Y_i-\exp(\theta)\bigr)\exp(\theta)=0$。  
+若 $\exp(\theta)\ne0$，则 $\sum(Y_i-\exp(\theta))=0$，即 $\exp(\hat\theta)=\bar Y$，故
+$$
+\hat\theta_{\mathrm{nlls}}=\log\bar Y.
+$$
+**与 (b) 完全相同。**
+
+**回扣：** 无 $X$ 时，NLLS 退化为“让预测值等于样本均值”。
+
+---
+
+## Exercise 23.2　Box–Cox 变换在左边：$Y(\lambda)=\beta_0+\beta_1 X+e$
+
+### 题意陷阱
+
+$Y(\lambda)$ 是 **$Y$ 的 Box–Cox 变换**（依赖未知 $\lambda$），方程是
+$$
+Y(\lambda)=\beta_0+\beta_1 X+e,\qquad \mathbb{E}[e\mid X]=0.
+$$
+
+### (a) 是否关于 $(\lambda,\beta_0,\beta_1)$ 的非线性回归模型？
+
+**严格说：不是 Chapter 23 的标准非线性回归模型。**
+
+理由逐步：
+
+1. 标准非线性回归要求  
+   $\mathbb{E}[Y\mid X]=m(X,\theta)$，误差加在 **原始 $Y$** 上。  
+2. 本题 $\mathbb{E}[Y(\lambda)\mid X]=\beta_0+\beta_1 X$，是 **变换后** 因变量的条件均值。  
+3. 一般地 $\mathbb{E}[Y\mid X]\ne m(X;\lambda,\beta)$ 的简单闭式（除非再对误差分布建模并反变换）。  
+4. 固定 $\lambda$ 时对 $Y(\lambda)$ 做 OLS 是线性的；但 **联合** $(\lambda,\beta)$ 的估计是变换模型 / 似然或非线性程序，**不是** “$Y=m(X,\theta)+e$” 的 NLLS。
+
+**可说：** 对 $Y(\lambda)$ 而言是“带未知变换参数的线性模型”，不是标准 NLLS。
+
+---
+
+## Exercise 23.3　$Y=\dfrac{\beta_1}{\beta_2+\beta_3 X}+e$
+
+### (a) $(\beta_1,\beta_2,\beta_3)$ 是否识别？
+
+**否。** 对任意 $k\ne0$，
+$$
+\frac{\beta_1}{\beta_2+\beta_3 X}=\frac{k\beta_1}{k\beta_2+k\beta_3 X}.
+$$
+三参数只确定 **两个自由度** 的函数形状（水平尺度与 $X$ 的相对尺度混在一起）。
+
+### (b) 识别什么？如何估计？
+
+可识别 **比率参数**，例如规范化 $\beta_2=1$：
+$$
+Y=\frac{\alpha_1}{1+\alpha_2 X}+e,\qquad \alpha_1=\beta_1/\beta_2,\;\alpha_2=\beta_3/\beta_2
+$$
+（假设 $\beta_2\ne0$）。或设 $\beta_1=1$ 等。  
+
+估计：在规范化下对 $(\alpha_1,\alpha_2)$ 做 NLLS；或用数值优化最小化 $\sum(Y_i-\beta_1/(\beta_2+\beta_3 X_i))^2$ 并施加约束（如 $\beta_2=1$ 或 $\|\beta\|=1$）。
+
+---
+
+## Exercise 23.4　$Y=\beta_1\exp(\beta_2 X)+e$
+
+### (a) 识别
+
+在 $\mathbb{E}[e\mid X]=0$ 且 $X$ 有足够变异时 **识别**：  
+$m(x)=\beta_1 e^{\beta_2 x}$ 的对数 $\log m(x)=\log\beta_1+\beta_2 x$（$\beta_1>0$）由条件均值函数的水平与斜率唯一确定。  
+（若 $\beta_1$ 允许为负且 $e^{\beta_2 x}>0$，符号也可由 $m$ 的符号识别。）
+
+### (b) NLLS 协方差矩阵
+
+由 Theorem 23.2（及 §23.5）：
+$$
+\sqrt{n}(\hat\theta-\theta_0)\to_d N(0,V),\quad V=Q^{-1}\Omega Q^{-1},
+$$
+$$
+m_\theta(X,\theta)=\frac{\partial m}{\partial\theta}=\begin{pmatrix}e^{\beta_2 X}\\ \beta_1 X e^{\beta_2 X}\end{pmatrix},
+\quad
+Q=\mathbb{E}[m_\theta m_\theta'],\quad
+\Omega=\mathbb{E}[m_\theta m_\theta' e^2].
+$$
+可行估计：$\hat m_{\theta i}=m_\theta(X_i,\hat\theta)$，$\hat e_i=Y_i-m(X_i,\hat\theta)$，
+$$
+\hat Q=n^{-1}\sum_i\hat m_{\theta i}\hat m_{\theta i}',\quad
+\hat\Omega=n^{-1}\sum_i\hat m_{\theta i}\hat m_{\theta i}'\hat e_i^2,\quad
+\hat V=\hat Q^{-1}\hat\Omega\hat Q^{-1}.
+$$
+报告 $\widehat{\mathrm{se}}=\sqrt{n^{-1}\hat V_{jj}}$。同方差时可 $\hat V_0=\hat\sigma^2\hat Q^{-1}$。
+
+---
+
+## Exercise 23.5　正态误差下的 MLE
+
+$Y=m(X,\theta)+e$，$e\mid X\sim N(0,\sigma^2)$。
+
+对数似然（忽略常数）
+$$
+\ell(\theta,\sigma^2)=-\frac{n}{2}\log\sigma^2-\frac{1}{2\sigma^2}\sum_i\bigl(Y_i-m(X_i,\theta)\bigr)^2.
+$$
+
+对 $\theta$：最大化 $\ell$ $\Leftrightarrow$ 最小化 $\sum(Y_i-m_i(\theta))^2$，故
+$$
+\hat\theta_{\mathrm{MLE}}=\hat\theta_{\mathrm{NLLS}}.
+$$
+
+对 $\sigma^2$：在 $\hat\theta$ 处
+$$
+\hat\sigma^2_{\mathrm{MLE}}=\frac1n\sum_i\hat e_i^2,\qquad \hat e_i=Y_i-m(X_i,\hat\theta).
+$$
+（无偏版本常用 $1/(n-k)$，但严格 MLE 是 $1/n$。）
+
+---
+
+## Exercise 23.6　$Y=\exp(X'\theta)+e$，$\mathbb{E}[Ze]=0$
+
+$X$ 为 $k\times1$，$Z$ 为 $\ell\times1$。
+
+### (a) 识别需要的 $\ell$ 与 $k$
+
+矩条件 $\mathbb{E}[Z(Y-\exp(X'\theta))]=0$ 给出 $\ell$ 个方程、$k$ 个参数。  
+需要 **$\ell\ge k$**（阶条件）；秩条件为 $\mathbb{E}[Z m_\theta']=\mathbb{E}[Z X'\exp(X'\theta)]$ 列满秩 $k$。
+
+### (b) GMM 估计
+
+样本矩
+$$
+g_n(\theta)=n^{-1}\sum_i Z_i\bigl(Y_i-\exp(X_i'\theta)\bigr).
+$$
+- 恰好识别 $\ell=k$：解 $g_n(\theta)=0$（非线性 IV / 连续更新等）；  
+- 过度识别：$\hat\theta=\arg\min_\theta g_n(\theta)'W_n g_n(\theta)$，  
+  $W_n=I$ 或两步 $W_n=\widehat{\mathrm{Var}}(Z e)^{-1}$。
+
+### (c) 渐近方差估计
+
+在最优权重下，
+$$
+\sqrt{n}(\hat\theta-\theta)\to_d N\bigl(0,(G'\Omega^{-1}G)^{-1}\bigr),
+$$
+$G=\mathbb{E}[\partial g/\partial\theta']=-\mathbb{E}[Z X'\exp(X'\theta)]$，$\Omega=\mathbb{E}[Z Z' e^2]$。  
+用 $\hat e_i$、$\hat G= -n^{-1}\sum Z_i X_i'\exp(X_i'\hat\theta)$、$\hat\Omega=n^{-1}\sum Z_i Z_i'\hat e_i^2$ 代入。
+
+---
+
+## Exercise 23.7　$m(x)$ 的渐近 95% 置信区间
+
+$\hat\theta$ 为 NLLS，$\widehat{\mathrm{Var}}(\hat\theta)=\hat V/n$ 记为 $n^{-1}\hat V$（与教材 $\hat V=\widehat{\mathrm{avar}}$ 记号对齐：若 $\hat V$ 已是 $\mathrm{Var}(\hat\theta)$ 的估计则直接用）。
+
+$m(x)=m(x,\theta)$ 对 $\theta$ 可微时，delta 方法：
+$$
+\sqrt{n}\bigl(m(x,\hat\theta)-m(x,\theta_0)\bigr)\to_d N\bigl(0,\; m_\theta(x,\theta_0)' V m_\theta(x,\theta_0)\bigr).
+$$
+令 $\hat g=m_\theta(x,\hat\theta)$（$k\times1$ 梯度），
+$$
+\widehat{\mathrm{se}}\bigl(m(x,\hat\theta)\bigr)=\sqrt{\hat g'\,\widehat{\mathrm{Var}}(\hat\theta)\,\hat g}.
+$$
+**渐近 95% 区间：**
+$$
+m(x,\hat\theta)\;\pm\; 1.96\cdot\widehat{\mathrm{se}}\bigl(m(x,\hat\theta)\bigr).
+$$
+
+---
+
+## Exercise 23.8　PSS2017：CES 用 `EC_c_alt`, `EC_d_alt`
+
+### 模型 (23.3)
+
+$$
+\log Y=\beta+\frac{\nu}{\rho}\log\bigl(\alpha X_1^\rho+(1-\alpha)X_2^\rho\bigr)+e
+$$
+（$\rho\to0$ 时为 Cobb–Douglas 极限）。  
+$Y=$ `EG_total`，$X_1=$ `EC_c_alt`，$X_2=$ `EC_d_alt`；国家 cluster SE。
+
+### 估计结果（$n=338$，26 国）
+
+| 参数 | Table 23.1（容量） | 本题 alt 资本 | cluster se（alt） |
+|------|------------------:|-------------:|------------------:|
+| $\rho$ | 0.36 | **0.41** | 0.26 |
+| $\nu$ | 1.05 | **1.04** | 0.03 |
+| $\alpha$ | 0.39 | **0.32** | 0.04 |
+| $\beta$ | 1.66 | −12.58* | 0.71 |
+| $\sigma=1/(1-\rho)$ | 1.57 | **1.70** | 0.74 |
+
+\*$\beta$ 因 alt 投入量纲与发电量量级差极大而平移，**不可与 Table 23.1 的 $\beta$ 直接比**；关注 $(\rho,\nu,\alpha,\sigma)$。
+
+### 比较与解释
+
+- $\rho>0\Rightarrow\sigma>1$：清洁与肮脏技术仍为 **替代**；alt 下 $\hat\sigma\approx1.70$，略高于表中 1.57。  
+- 规模弹性 $\nu\approx1.04$ 仍略大于 1。  
+- 清洁份额 $\alpha$ 从 0.39 降到 0.32：用近似资本存量时，**肮脏技术权重更大**。  
+- 定性稳健：替代弹性 >1、轻度 IRS；定量上份额与 $\sigma$ 对投入度量敏感（作者稳健性检查的意义）。
+
+---
+
+## Exercise 23.9　RR2010：通胀对债务的回归拐点模型 (23.4)
+
+### 模型
+
+$$
+Y_t=\beta_1(X_{t-1}-c)_-+\beta_2(X_{t-1}-c)_++\beta_3 Y_{t-1}+\beta_4+e_t,
+$$
+$Y=$ 通胀，$X=$ 债务/GDP（滞后一期作运行变量，避免同期机械相关）。
+
+### 估计（集中网格搜 $c$ + 数值 refinement）
+
+| 参数 | 估计 | HC se |
+|------|-----:|------:|
+| $\beta_1$（低债务侧斜率） | −0.108 | 0.116 |
+| $\beta_2$（高债务侧斜率） | 0.041 | 0.018 |
+| $\beta_3$（滞后通胀） | 0.458 | 0.095 |
+| $\beta_4$ | −0.16 | 0.60 |
+| $c$（拐点 %） | **15.8** | 9.5 |
+
+### 解释
+
+- 对 **通胀** 而言，债务拐点估计约 **16%**，se 很大，**远低于** 民间常说的 90%，也不同于正文用 **GDP 增长** 时 Table 23.1 的 $c\approx44$。  
+- 高债务侧斜率略正、低债务侧不显著为负——**不像**“高债务抑制增长”那样清晰的倒 V；通胀与债务的关系更弱、更噪。  
+- 本科提醒：换 $Y$ 就换了经济含义；不能把增长方程的 kink 直接说成通胀方程的 kink。
+
+---
+
+## Exercise 23.10　Nerlove 电力成本：平滑门槛 (23.11)
+
+### 模型
+
+$$
+\log\mathrm{TC}=\beta_1+\beta_2\log Q+\beta_3(\log P_L+\log P_K+\log P_F)
++\beta_4\frac{\log Q}{1+\exp\bigl(-(\log Q-\gamma)\bigr)}+e.
+$$
+小 $Q$：$\log Q$ 斜率 $\approx\beta_2$；大 $Q$：斜率 $\approx\beta_2+\beta_4$。
+
+### (a) $\gamma$ 的合理范围
+
+$n=145$，$\log Q$ 约在 $[0.7,\,9.7]$，分位数约 3.9（10%）– 8.7（90%）。  
+为保证两侧各有约 ≥15 个观测，取
+$$
+\gamma\in[q_{0.15}(\log Q),\; q_{0.85}(\log Q)]\approx[4.5,\; 8.3].
+$$
+
+### (b)(c) 全局搜索 vs 集中搜索
+
+固定 $\gamma$ 时模型对 $(\beta_1,\beta_2,\beta_3,\beta_4)$ **线性**，可 OLS；再对 $\gamma$ 一维网格（集中 NLLS）。  
+全局 Nelder–Mead 多起点与集中法得到 **同一最小值**（数值误差内）：
+
+| 参数 | 估计 | HC se |
+|------|-----:|------:|
+| $\beta_1$ | −5.32 | 0.49 |
+| $\beta_2$ | 0.44 | 0.10 |
+| $\beta_3$ | 0.37 | 0.04 |
+| $\beta_4$ | 0.22 | 0.05 |
+| $\gamma$ | **6.88** | 0.36 |
+
+两侧样本：$\log Q<\hat\gamma$ 约 68 家，$>\hat\gamma$ 约 77 家，满足 (a) 要求。
+
+### (d) 解释
+
+- 低产出段 $\partial\log\mathrm{TC}/\partial\log Q\approx0.44$；高产出段 $\approx0.44+0.22=0.66$。  
+- **规模弹性随产出上升而提高**（成本对产出更敏感），符合“平滑从低产出制度过渡到高产出制度”。  
+- $\beta_3\approx0.37$：要素价格和的弹性；完全成本同质性会期望价格项系数和为 1（若三项分开约束），此处三项合并为一项，解释为价格总水平效应。  
+- $\gamma$ 的 se≈0.36，门槛位置有一定不确定性，但 $\beta_4$ 显著，**支持非线性门槛结构优于纯 Cobb–Douglas 斜率不变**。
+
+---
+
+## 小结
+
+| 题 | 要点 |
+|:--:|------|
+| 23.1 | $\mathbb{E}Y=e^\theta$；$\hat\theta=\log\bar Y$ 即 NLLS |
+| 23.2 | 左边 Box–Cox **不是** 标准 $Y=m(X,\theta)+e$ |
+| 23.3–23.4 | 尺度不可识别 / 指数模型可识别 + sandwich $V$ |
+| 23.5–23.7 | 正态 MLE=NLLS；GMM 阶条件；delta 区间 |
+| 23.8–23.10 | CES alt、通胀 kink、Nerlove 平滑门槛实证 |
+
+代码：`docs/ch23/Hansen_Ch23_Exercises_Solutions.ipynb`。
+
+
+# 实证与数值代码（R companion）
+
+手写/精译 R 脚本：`scripts/r_companions/ch23.R`。
+
+```{r}
+#| label: companion-main
+source(file.path(root, "scripts", "r_companions", "ch23.R"))
+```
+
+
+## Notebook 结构说明
+
+#### 23.8 CES with alternative capital stocks
+
+#### 23.9 RR2010: inflation ~ kink in lagged debt
+
+#### 23.10 Nerlove smooth threshold cost function
+
+
+# 依赖包
+
+```{r}
+#| label: install-pkgs
+#| eval: false
+pkgs <- c(
+  "haven", "readxl", "data.table", "sandwich", "lmtest", "AER",
+  "quantreg", "boot", "MASS", "Matrix", "nnet", "ggplot2", "knitr"
+)
+# 章节扩展：Ch14–16 vars/urca；Ch17 plm；Ch19 np；Ch26 mlogit
+miss <- setdiff(pkgs, rownames(installed.packages()))
+if (length(miss)) install.packages(miss, repos = "https://cloud.r-project.org")
+```
+
+---
+*第 23 章 · R/Quarto · md + ipynb 融合*

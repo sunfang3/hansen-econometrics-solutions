@@ -36,6 +36,14 @@ Bruce E. Hansen《Econometrics》习题解答（按 Hansen 体系完整解题）
 
 解答位于 `docs/chXX/`。
 
+## R / Quarto 版（分支 `r-toolset`）
+
+各章 **Markdown 理论 + notebook 代码** 已融合为 Quarto：
+
+- `docs/chXX/Hansen_ChXX_Exercises_Solutions.qmd`
+- R 实证：`scripts/r_companions/`（见 `docs/R_TOOLSET.md`）
+- 重新生成：`python3 scripts/convert_chapters_to_qmd.py`
+
 ## 合集 HTML
 
 全部章节习题解答已合并为单一 HTML（含 **MathJax 3** 公式渲染）：

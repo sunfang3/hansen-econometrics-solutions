@@ -1,0 +1,531 @@
+---
+title: "Bruce Hansen《Econometrics》第 19 章习题解答"
+subtitle: "Chapter 19 Nonparametric Regression"
+author: "按 Hansen 计量经济学体系整理（R / Quarto 版）"
+date: today
+lang: zh-CN
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    number-sections: true
+    number-depth: 2
+    html-math-method: mathjax
+    theme: cosmo
+    code-fold: true
+    code-tools: true
+engine: knitr
+knitr:
+  opts_chunk:
+    comment: "#>"
+    fig.path: "figures/ch19/"
+execute:
+  eval: false
+  echo: true
+  warning: false
+  message: false
+---
+
+::: {.callout-note}
+## 说明
+
+- **理论：** 来自同目录 Markdown 逐步解答。
+- **代码：** Python notebook 已融合为 **R**（`scripts/r_companions/ch19.R` 优先；否则为带注释的翻译草稿）。
+- **数据：** `hansen/econometrics/data/`（gitignore）；渲染前请确保数据已下载。
+- 默认 `execute: eval: false`。有数据时改为 `true` 或交互运行代码块。
+- 缺包时：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot"))` 等。
+:::
+
+```{r}
+#| label: setup
+root <- if (dir.exists("../../hansen")) "../.." else if (dir.exists("hansen")) "." else "../.."
+data_root <- file.path(root, "hansen", "econometrics", "data")
+companion_dir <- file.path(root, "scripts", "r_companions")
+if (file.exists(file.path(companion_dir, "_common.R"))) {
+  source(file.path(companion_dir, "_common.R"), local = FALSE)
+}
+knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+options(stringsAsFactors = FALSE)
+```
+
+# 理论解答
+
+**章节：** Chapter 19 Nonparametric Regression  
+**书稿：** PDF 第 718–719 页（印刷页 698–699），§19.27 Exercises（**19.1–19.11 全部**）  
+
+**阅读提示（对应 `AGENTS.md`）：** 默认读者熟悉本科 OLS / 条件均值直觉，但未必熟悉核回归、AIMSE、带宽权衡。下文每步尽量写清“在算什么、为什么这一步合法”。
+
+**本科搭桥：**  
+- 参数回归估计“整条直线的截距斜率”；核回归是在每个 $x$ 附近做**局部加权平均/加权回归**，带宽 $h$ 控制“附近有多宽”。  
+- AIMSE ≈ 积分形式的“偏差² + 方差”，类似 MSE，用来选 $h$。
+
+---
+
+## Exercise 19.1　缩放 $Y$ 时带宽应如何变？
+
+### 1. 题意
+
+若把 $Y$ 换成 $Y^*=cY$（例如 $c=100$），Nadaraya–Watson / 局部线性核回归的 **AIMSE 最优带宽** $h_0$ 会怎样变？
+
+### 2. 回归函数与误差方差如何变
+
+原模型 $Y=m(X)+e$，$\sigma^2(x)=\mathrm{Var}(e\mid X=x)$。
+
+新变量 $Y^*=cY$：
+$$
+Y^*=c\,m(X)+c\,e \implies m^*(x)=c\,m(x),\qquad \sigma^{*2}(x)=c^2\sigma^2(x).
+$$
+
+### 3. 偏差函数 $B(x)$ 如何变
+
+由 Theorem 19.1（$m'',f'$ 连续等正则条件）：
+
+- 局部线性：$\displaystyle B_{\mathrm{LL}}(x)=\frac12 m''(x)$  
+  $\Rightarrow$ $B_{\mathrm{LL}}^*(x)=\frac12 (c m)''(x)=c\,B_{\mathrm{LL}}(x)$。
+
+- NW：$\displaystyle B_{\mathrm{nw}}(x)=\frac12 m''(x)+f(x)^{-1}f'(x)m'(x)$  
+  $\Rightarrow$ $B_{\mathrm{nw}}^*(x)=c\,B_{\mathrm{nw}}(x)$（$m$ 的一、二阶导都乘 $c$）。
+
+因此加权积分
+$$
+B=\int B(x)^2 f(x)w(x)\,dx
+\quad\Rightarrow\quad
+B^*=\int [c B(x)]^2 f w\,dx = c^2 B.
+$$
+
+### 4. 方差部分 $\sigma^2$ 如何变
+
+AIMSE (19.5) 中
+$$
+\sigma^2=\int \sigma^2(x)\,w(x)\,dx
+\quad\Rightarrow\quad
+\sigma^{*2}=\int c^2\sigma^2(x)w\,dx=c^2\sigma^2.
+$$
+
+（注意：这里 $\sigma^2$ 是**加权平均条件方差**记号，不是某一点。）
+
+### 5. 最优 $h_0$ 如何变
+
+由 (19.6) / Theorem 19.3：
+$$
+h_0=\Big(\frac{R_K\sigma^2}{4B}\Big)^{1/5}n^{-1/5}.
+$$
+
+缩放后：
+$$
+h_0^*=\Big(\frac{R_K\cdot c^2\sigma^2}{4\cdot c^2 B}\Big)^{1/5}n^{-1/5}
+=\Big(\frac{R_K\sigma^2}{4B}\Big)^{1/5}n^{-1/5}
+=h_0.
+$$
+
+**$c^2$ 在分子分母相消，最优带宽不变。**
+
+### 6. 直觉
+
+带宽 $h$ 是 **$X$ 方向**上的平滑宽度，不是 $Y$ 的尺度。把工资从“元”改成“分”只是纵坐标拉伸，局部该用多宽的 $X$ 窗口不应改变。  
+（若同时对 $X$ 做仿射变换，带宽才应按 $X$ 的尺度同比改变——本题未问。）
+
+---
+
+## Exercise 19.2　证明 (19.6) 最小化 AIMSE (19.5)
+
+### 1. 目标函数
+
+$$
+\mathrm{AIMSE}(h)=h^4 B+\frac{R_K\sigma^2}{nh},\qquad h>0,
+$$
+其中 $B>0$、$\sigma^2>0$、$R_K=\int K(u)^2\,du>0$（否则无内部极小）。
+
+### 2. 一阶条件
+
+对 $h$ 求导：
+$$
+\frac{d}{dh}\mathrm{AIMSE}
+=4h^3 B-\frac{R_K\sigma^2}{nh^2}.
+$$
+
+令导数为 0：
+$$
+4h^3 B=\frac{R_K\sigma^2}{nh^2}
+\quad\Rightarrow\quad
+4B\,h^5=\frac{R_K\sigma^2}{n}
+\quad\Rightarrow\quad
+h^5=\frac{R_K\sigma^2}{4Bn}
+\quad\Rightarrow\quad
+h_0=\Big(\frac{R_K\sigma^2}{4B}\Big)^{1/5}n^{-1/5}.
+$$
+这正是 (19.6)。
+
+### 3. 二阶确认是极小
+
+$$
+\frac{d^2}{dh^2}\mathrm{AIMSE}
+=12h^2 B+\frac{2R_K\sigma^2}{nh^3}>0
+\quad(h>0).
+$$
+故 $h_0$ 为全局最小点。
+
+### 4. 权衡直觉（补思维空缺）
+
+- $h\uparrow$：平滑更狠 → 偏差项 $h^4B\uparrow$；  
+- $h\uparrow$：有效样本 $nh\uparrow$ → 方差项 $R_K\sigma^2/(nh)\downarrow$。  
+最优 $h$ 使两边际变化相抵。
+
+---
+
+## Exercise 19.3　局部线性估计在凸/凹区域的偏差（文字）
+
+### 1. 回忆偏差
+
+Theorem 19.1.2：$B_{\mathrm{LL}}(x)=\frac12 m''(x)$，渐近偏差 $\approx h^2 B_{\mathrm{LL}}(x)$。
+
+### 2. 凸区域 $m''(x)>0$
+
+$m$ 局部像“碗底朝上”（凸）。局部线性拟合相当于用直线贴一段曲线：  
+直线会 **“削掉”碗底**，预测值系统性 **高于** 真实 $m(x)$ → **正偏差**（向上偏）。
+
+### 3. 凹区域 $m''(x)<0$
+
+$m$ 局部像“山丘”（凹）。直线 **“削掉”山顶**，预测值系统性 **低于** 真值 → **负偏差**（向下偏）。
+
+### 4. 直觉是否合理？
+
+合理。核平滑是在做局部平均/局部直线；曲率越大、带宽越大，平滑“抹平峰谷”越明显。  
+正文 Figure 19.2(a) 正是：平滑后曲线在峰处偏低、在谷处偏高。
+
+---
+
+## Exercise 19.4　真实 $m$ 为线性时 NW 的偏差 $B(x)$
+
+### 1. 设定
+
+$m(x)=\alpha+\beta x$。则 $m'(x)=\beta$，$m''(x)=0$。
+
+### 2. 代入 NW 偏差公式
+
+$$
+B_{\mathrm{nw}}(x)=\frac12 m''(x)+\frac{f'(x)}{f(x)}m'(x)
+=\frac{f'(x)}{f(x)}\,\beta.
+$$
+
+（局部线性此时 $B_{\mathrm{LL}}=0$：线性对 LL 无渐近平滑偏差——本题问 NW。）
+
+### 3. $\beta>0$ 时符号
+
+$$
+\mathrm{sign}\big(B_{\mathrm{nw}}(x)\big)=\mathrm{sign}\big(f'(x)\big)
+\quad(\beta>0).
+$$
+
+- **$B(x)>0$：** $f'(x)>0$，密度在 $x$ 处向右增（单峰密度下多在**众数左侧**）；  
+- **$B(x)<0$：** $f'(x)<0$（众数右侧）。
+
+### 4. $\beta<0$ 时
+
+符号整体反转：
+- $f'>0$ 处 $B<0$；  
+- $f'<0$ 处 $B>0$。
+
+### 5. 直觉（为何 NW 会这样偏）
+
+NW 是 **$Y$ 的局部加权平均**，权重由 $X$ 的核决定。
+
+- 若 $f'(x)>0$：在 $x$ 右侧比左侧 **更多观测**（密度上升），平均会偏向 $X>x$ 的点。  
+- 若 $\beta>0$，$m$ 随 $X$ 递增，右侧 $Y$ 更大 → 局部平均 **高估** $m(x)$（$B>0$）。  
+- 若 $\beta<0$，$m$ 递减，右侧 $Y$ 更小 → **低估**（$B<0$）。
+
+**对照 LL：** 局部拟合截距+斜率，能吸收一阶斜率，故渐近偏差不含 $m'$ 项；这正是 LL 常优于 NW 的原因之一。
+
+---
+
+## Exercise 19.5　$m(x)=\alpha$ 常数时的最优带宽
+
+### 1. 偏差
+
+$m'=m''=0\Rightarrow B_{\mathrm{nw}}(x)=B_{\mathrm{LL}}(x)=0\Rightarrow B=0$。
+
+### 2. AIMSE 退化
+
+$$
+\mathrm{AIMSE}(h)=0+\frac{R_K\sigma^2}{nh}.
+$$
+对任意有限 $h$，AIMSE **随 $h$ 增大而减小**，在 $h\to\infty$ 时趋于 0 的方差下界（全样本平滑）。
+
+### 3. 公式 (19.6) 的结论
+
+$B=0$ 时 (19.6) 分母为 0 → **形式上 $h_0=\infty$**。  
+含义：常数回归没有曲率可估，**应把带宽拉到最大**，等价于：
+
+- NW：$m(x)\to\bar Y$（全局均值）；  
+- LL：$m(x)\to\hat\alpha+\hat\beta x$，但真 $\beta=0$ 时接近水平线。
+
+### 4. 解释
+
+没有非线性要保留时，任何“局部化”只会 **白白损失有效样本**，增大方差，却换不来偏差减少。  
+实务上：若 CV 选出 $h=\infty$，常表示数据支持常数或全局线性，而非复杂非参形状。
+
+---
+
+## Exercise 19.6　证明 Theorem 19.11（$d\ge1$ 维）
+
+### 1. 题意与设定
+
+$X\in\mathbb{R}^d$，为记号简单取**公共带宽** $h$（各维同 $h$）。  
+§19.23 给出 AIMSE 结构：
+
+$$
+\mathrm{AIMSE}
+=h^4\int\Big(\sum_{j=1}^d B_j(x)\Big)^2 f(x)w(x)\,dx
++\frac{R_K^d}{nh^d}\int\sigma^2(x)w(x)\,dx.
+$$
+
+记
+$$
+\mathrm{AIMSE}=C_1 h^4+\frac{C_2}{n h^d},
+$$
+其中 $C_1>0$ 来自平方偏差积分，$C_2=R_K^d\int\sigma^2 w>0$（$f>0$ 等正则下）。
+
+### 2. 最优 $h$ 的阶
+
+令 $g(h)=C_1 h^4+C_2 n^{-1}h^{-d}$，
+$$
+g'(h)=4C_1 h^3-d C_2 n^{-1}h^{-d-1}.
+$$
+$g'=0$：
+$$
+4C_1 h^{4+d}=d C_2 n^{-1}
+\quad\Rightarrow\quad
+h^{4+d}\propto n^{-1}
+\quad\Rightarrow\quad
+h_0=c\,n^{-1/(4+d)},
+$$
+$c=(d C_2/(4C_1))^{1/(4+d)}$ 为与 $n$ 无关的正常数。
+
+### 3. 最优 AIMSE 的阶
+
+代入 $h\sim n^{-1/(4+d)}$：
+$$
+h^4\sim n^{-4/(4+d)},\qquad
+\frac{1}{n h^d}\sim n^{-1}\cdot n^{d/(4+d)}=n^{-4/(4+d)}.
+$$
+两项同阶，故
+$$
+\mathrm{AIMSE}=O\big(n^{-4/(4+d)}\big).
+$$
+
+### 4. 与 $d=1$ 对照（维数灾难）
+
+$d=1$ 时 $h\sim n^{-1/5}$，AIMSE $\sim n^{-4/5}$，回到 Theorem 19.3。  
+$d$ 增大：最优 $h$ 衰减更慢（要用更宽窗才能找到邻居），收敛率 $n^{-4/(4+d)}$ 变慢——这就是 **curse of dimensionality**。  
+因此实务核回归多为 1–2 个连续回归元。
+
+---
+
+## Exercise 19.7　DDK2011：tracking 男生，考试分对百分位
+
+### 设定（对应 §19.21）
+
+- 样本：`tracking==1` 且 `girl==0`（接受分班的男生）；  
+- $Y$：未标准化总分 `r2_totalscore`（与正文女生应用一致用 raw score）；  
+- $X$：入学百分位 `percentile`；  
+- 估计：局部线性 + 高斯核；带宽用 Fan–Gijbels **ROT** (19.9)；  
+- 点态 95% 区间：$\hat m(x)\pm 1.96\cdot\widehat{\mathrm{se}}(x)$，  
+  $\widehat{\mathrm{se}}^2\approx R_K\hat\sigma^2(x)/(\hat f(x)nh)$（Gaussian $R_K=1/(2\sqrt\pi)$）。  
+  （正文聚类 SE 更稳妥；此处报告渐近公式便于复现。完整图见 notebook。）
+
+### 数值摘要（$n\approx1287$，$h_{\mathrm{rot}}\approx5.8$）
+
+| 百分位 | LL $\hat m$ | 约 se |
+|-------:|------------:|------:|
+| 20 | 14.0 | ≈0.55 |
+| 50 | 20.8 | ≈0.63 |
+| 80 | 24.8 | ≈0.62 |
+| 95 | 29.3 | ≈0.70 |
+
+整体随初始百分位 **单调上升**；在高端（约 90+）斜率仍为正，类似正文女生图中“顶尖学生抬升”的特征。
+
+### 与女生子样本的异同（对照 §19.21）
+
+| | 相同 | 可能差异 |
+|--|------|----------|
+| 形状 | 大体递增；中段接近线性 | 斜率水平可不同 |
+| 高端 | 往往高于简单直线外推 | 男生/女生顶尖抬升幅度不必相同 |
+| 带宽 | ROT 约 5–7 量级 | 聚类 CV 可能与标准 CV 分歧（正文女生） |
+
+**评论：** 分班样本内，最终成绩仍强烈依赖初始百分位；线性设定在高百分位可能不够，LL 更灵活。性别差异需并排画图比较置信带是否重叠。
+
+---
+
+## Exercise 19.8　cps09mar：education=20，经验 0–40 的对数工资
+
+### 样本
+
+- `education==20`（专业学位/博士）；  
+- `experience = age - education - 6` ∈ $[0,40]$；  
+- $\log(\mathrm{wage})=\log(\mathrm{earnings}/(\mathrm{hours}\cdot\mathrm{week}))$；  
+- 男女分开估计 NW 与 LL；ROT 带宽；95% 点态带。
+
+| | $n$ | $h_{\mathrm{rot}}$ |
+|--|----:|------------------:|
+| 男 | 1179 | ≈3.1 |
+| 女 | 640 | ≈3.8 |
+
+### (a) Nadaraya–Watson 结果要点
+
+- **男性：** 0→约 20 年经验，log wage 从约 3.26 升到约 3.91；**20 年以后基本走平或略降**（40 年约 3.82）。  
+- **女性：** 0→20 从约 3.18 升到约 3.63；之后 **平坦**（40 年约 3.66）。  
+
+**是否“20 年后期望工资下降”？**  
+点估计男性在 20–40 有轻微下行，但置信带较宽（尤其右尾样本少），**不足以稳健宣称显著下降**；更稳妥说法是：**峰值约在 20 年经验附近，之后收益停滞**。女性更接近平台。
+
+### (b) 局部线性
+
+- 形状与 NW **高度一致**；边界处 LL 通常略“更直”、边界偏差更小（正文 §19.10）。  
+- 男：LL 在 exp=0 处约 3.01（低于 NW 的 3.26）——体现 **边界修正**。  
+- 区间宽度与 NW 同阶（Theorem 19.2：渐近方差同形）。
+
+---
+
+## Exercise 19.9　Invest1993：$Q\le5$ 时 $I$ 对 $Q$
+
+### 设定
+
+- $I=\texttt{inva}$（投资/资产），$Q=\texttt{vala}$（托宾 $Q$）；  
+- 子样本 $Q\le5$；为计算量可对大样本随机抽 8000（全样本结论同向）；  
+- NW / LL + ROT；$h_{\mathrm{rot}}\approx0.20$。
+
+### 结果要点
+
+| $Q$ | NW $\hat m$ | LL $\hat m$ |
+|----:|------------:|------------:|
+| ≈0.05 | 0.07 | 0.06 |
+| ≈1 | 0.09 | 0.09 |
+| ≈2 | 0.11 | 0.11 |
+| ≈3 | 0.13 | 0.13 |
+| ≈5 | 0.13 | 0.11 |
+
+### 非线性？
+
+- 低 $Q$ 区投资随 $Q$ **上升**；$Q$ 较高后 **边际变缓**（略凹），符合“融资约束/凸调整成本”类叙事。  
+- NW 与 LL 中段几乎重合；**边界**（$Q$ 近 0 或近 5）LL 与 NW 略分叉。  
+- 相对全局直线，曲线更贴“先陡后平”，**有非线性证据**，但高 $Q$ 处 se 变大，勿过度解读拐点精确位置。
+
+---
+
+## Exercise 19.10　RR2010：美国 GDP 增长、债务率、通胀
+
+### 数据
+
+`year, debt, gdp, inflation`（1791–2009 年美国）；  
+$Y=\texttt{gdp}$（增长率），$X=\texttt{debt}$（债务/GDP，百分数）。$n=219$。
+
+### (a)(b) 增长对债务：NW / LL
+
+| 债务率约 | NW | LL |
+|--------:|---:|---:|
+| 低（~0–20） | ~3.7–4.4 | 相近 |
+| ~60 | ~3.2 | ~3.1 |
+| ~90 | ~4.5 | ~4.5 |
+| ~100+ | ~4.3 | ~4.0（se 很大） |
+
+$h_{\mathrm{rot}}\approx5.6$。高债务区观测稀疏，**置信带很宽**。
+
+### (c) 非线性？90% 门槛？
+
+- 曲线 **并非** 清晰的“超过 90% 后增长骤降”。  
+- 中等债务区间点估计甚至不单调；**90% 处无明显断崖**。  
+- 与 Reinhart–Rogoff 的强非线性叙事相比，**仅美国单国序列的非参回归不支持醒目的 90% 结构突变**（且高债务区极不精确）。
+
+### (d) 增长对通胀
+
+- 在通胀从负到中等正值，点估计增长略升后走平；极端通胀区 se 大。  
+- **无明显“通胀越高增长越低”的简单单调关系**（至少在此样本与带宽下）。  
+- 解读须谨慎：通胀与增长同期相关，非因果。
+
+---
+
+## Exercise 19.11　GDP 增长的非线性 AR(1)
+
+### (a) 构造 $Y_t$
+
+FRED-QD 取 `gdpc1`（实际 GDP 水平），
+$$
+Y_t=100\left[\Big(\frac{\mathrm{GDP}_t}{\mathrm{GDP}_{t-1}}\Big)^4-1\right]
+$$
+（年化季度增长率，百分数）。
+
+### (b)(c) NW / LL 估计 $m(x)=\mathbb{E}[Y_t\mid Y_{t-1}=x]$
+
+$n\approx234$，$h_{\mathrm{rot}}\approx3.8$。
+
+| $Y_{t-1}$ | NW | LL |
+|----------:|---:|---:|
+| 约 −2.5 | 2.5 | 1.4 |
+| 约 0 | 2.7 | 2.1 |
+| 约 4 | 3.2 | 3.5 |
+| 约 9 | 3.8 | 4.8 |
+
+### (d) 非线性？
+
+- 整体接近 **正斜率**（高增长后仍偏高，低增长后偏低）——持续性。  
+- NW 更平，LL 斜率更陡；两端（深度衰退/过热）样本少，带很宽。  
+- **中段** 接近线性 AR(1)；**两端** 可能略有弯曲，但证据弱于“强非线性门限”。  
+- 实务：线性 AR 对中心区域够用；非参主要作稳健性检查。
+
+---
+
+## 小结
+
+| 题 | 核心结论 |
+|:--:|----------|
+| 19.1 | 缩放 $Y$ 不改变最优 $h$（$B$ 与 $\sigma^2$ 同乘 $c^2$） |
+| 19.2 | 对 AIMSE 求导得 $h_0\propto n^{-1/5}$ |
+| 19.3 | LL：凸区正偏、凹区负偏（抹平曲率） |
+| 19.4 | 线性 $m$：$B_{\mathrm{nw}}=\beta f'/f$；密度倾斜导致 NW 偏误 |
+| 19.5 | 常数 $m$：$B=0$，$h_0=\infty$ |
+| 19.6 | $d$ 维：$h\sim n^{-1/(4+d)}$，AIMSE $\sim n^{-4/(4+d)}$ |
+| 19.7–19.11 | DDK / CPS / Invest / RR / FRED 核回归实证 |
+
+实现细节与作图代码见同目录 `Hansen_Ch19_Exercises_Solutions.ipynb`。
+
+
+# 实证与数值代码（R companion）
+
+手写/精译 R 脚本：`scripts/r_companions/ch19.R`。
+
+```{r}
+#| label: companion-main
+source(file.path(root, "scripts", "r_companions", "ch19.R"))
+```
+
+
+## Notebook 结构说明
+
+#### 19.7 DDK boys + tracking
+
+#### 19.8 CPS education=20
+
+#### 19.9 Invest I on Q (Q<=5)
+
+#### 19.10 RR2010
+
+#### 19.11 Nonlinear AR for GDP growth
+
+
+# 依赖包
+
+```{r}
+#| label: install-pkgs
+#| eval: false
+pkgs <- c(
+  "haven", "readxl", "data.table", "sandwich", "lmtest", "AER",
+  "quantreg", "boot", "MASS", "Matrix", "nnet", "ggplot2", "knitr"
+)
+# 章节扩展：Ch14–16 vars/urca；Ch17 plm；Ch19 np；Ch26 mlogit
+miss <- setdiff(pkgs, rownames(installed.packages()))
+if (length(miss)) install.packages(miss, repos = "https://cloud.r-project.org")
+```
+
+---
+*第 19 章 · R/Quarto · md + ipynb 融合*

@@ -1,0 +1,904 @@
+---
+title: "Bruce Hansen《Econometrics》第 10 章习题解答"
+subtitle: "Chapter 10 Resampling Methods"
+author: "按 Hansen 计量经济学体系整理（R / Quarto 版）"
+date: today
+lang: zh-CN
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    number-sections: true
+    number-depth: 2
+    html-math-method: mathjax
+    theme: cosmo
+    code-fold: true
+    code-tools: true
+engine: knitr
+knitr:
+  opts_chunk:
+    comment: "#>"
+    fig.path: "figures/ch10/"
+execute:
+  eval: false
+  echo: true
+  warning: false
+  message: false
+---
+
+::: {.callout-note}
+## 说明
+
+- **理论：** 来自同目录 Markdown 逐步解答。
+- **代码：** Python notebook 已融合为 **R**（`scripts/r_companions/ch10.R` 优先；否则为带注释的翻译草稿）。
+- **数据：** `hansen/econometrics/data/`（gitignore）；渲染前请确保数据已下载。
+- 默认 `execute: eval: false`。有数据时改为 `true` 或交互运行代码块。
+- 缺包时：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot"))` 等。
+:::
+
+```{r}
+#| label: setup
+root <- if (dir.exists("../../hansen")) "../.." else if (dir.exists("hansen")) "." else "../.."
+data_root <- file.path(root, "hansen", "econometrics", "data")
+companion_dir <- file.path(root, "scripts", "r_companions")
+if (file.exists(file.path(companion_dir, "_common.R"))) {
+  source(file.path(companion_dir, "_common.R"), local = FALSE)
+}
+knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+options(stringsAsFactors = FALSE)
+```
+
+# 理论解答
+
+**章节：** Chapter 10 Resampling Methods
+**书稿：** PDF 第 321–325 页（印刷页 301–305），§10.32 Exercises（**10.1–10.31 全部**）
+**记号：** 与 Hansen 一致——jackknife 方差 (10.1)、非参数 bootstrap、percentile / BC / BCa / percentile-$t$
+**数值验证：** `Hansen_Ch10_Exercises_Solutions.ipynb`（10.1、10.28–10.31 有可运行代码）
+
+> **写给谁看：** 假设你学过李子奈/陈强，会用 Stata 的 `bootstrap`/`vce(bootstrap)`，但说不清"**jackknife 和 bootstrap 有什么区别**""**percentile / BC / BCa / percentile-$t$ 该用哪个**""**为什么 bootstrap 做假设检验时必须在 $H_0$ 下重抽**"。
+> Hansen 第 10 章把这些讲透：重抽样是**用计算机模拟抽样分布**，是第 7–9 章"解析渐近理论"的**计算密集型替代品**——不用推导公式，直接让电脑帮你算标准误、置信区间、检验 $p$ 值。
+
+---
+
+## 0. 读题前必看：本章到底在讲什么
+
+**承上启下：**
+- 第 7–9 章：**解析地**推导 $\hat\beta$ 的渐近分布（CLT、夹心方差、Wald）。要算 $\mathrm{se}(\hat\theta)$，得推公式（如 delta method）。
+- **第 10 章：用"重抽样"让计算机直接模拟出 $\hat\theta$ 的抽样分布**，从而得到标准误、CI、检验临界值——**不必推导公式**。
+
+**核心直觉（一张图）：** 真实世界里，$\hat\theta$ 的抽样分布来自"从总体反复抽样"。我们只有一个样本，怎么办？**把这个样本当作"总体"，从它里面反复抽样**——这就是 bootstrap。样本足够大时，这种"样本里的再抽样"会模仿真实的抽样分布。
+
+**两类方法（务必分清）：**
+
+| 方法 | 怎么做 | 适合 |
+|---|---|---|
+| **Jackknife** | 逐个**删去**一个观测，算 $n$ 个 $\hat\theta_{(-i)}$，看它们散布多散 | 算方差/SE；发现影响点；估 BCa 的加速常数 $a$ |
+| **Bootstrap** | 从样本里**有放回重抽** $n$ 个观测（得到一个"新样本"），算 $\hat\theta^*$，重复 $B$ 次 | 算 SE、CI、检验 $p$ 值；可处理非线性/非正态 |
+
+> **和本科对照：** 李子奈很少讲重抽样；陈强系统讲 **bootstrap**（自助法）与 **jackknife**（刀切）。Hansen 的贡献：把两者放在统一的"模拟抽样分布"框架下，并强调 **bootstrap CI 的四个层次**（percentile→BC→BCa→percentile-$t$）和 **bootstrap 检验必须施加 $H_0$** 这个最容易踩的坑。
+
+**本章的灵魂（四条原则，记下来）：**
+
+1. **Jackknife = "删一"算散布**；**Bootstrap = "重抽"模拟分布**。两者目标相同（估抽样分布），手段不同。
+2. **Bootstrap CI 有四个层次**，精度递增：
+   - **Percentile**：直接取 $\hat\theta^*$ 的分位数。简单，但不纠偏、对不对称分布差。
+   - **BC**（bias-corrected）：用"中位数偏倚"$z_0^*$ 调分位。纠偏，不纠偏度。
+   - **BCa**：再估加速常数 $a$（jackknife 偏度）。**最推荐**，纠偏又纠偏度。
+   - **Percentile-$t$**：studentize（分母用 $s^*(\hat\theta^*)$）。**最精确**（二阶准确），但需稳定的 SE 估计。
+3. **Bootstrap 检验必须在 $H_0$ 下重抽！**（10.14、10.20、10.22、10.26 的核心）——见下。
+4. **Bootstrap 不能修识别错误**（10.27）：若 $\hat\beta$ 不一致（如 $E[Xe]\ne0$），bootstrap 只模拟"围绕错误极限的波动"，覆盖的是 $\mathrm{plim}$ 而非真参数。识别要靠工具变量等方法。
+
+**最易踩的坑（原则 3 详解，本章反复考）：**
+
+做假设检验 $H_0:\theta=0$ 时，**不能**直接用无约束 bootstrap 的 $\hat\theta^*$ 分布当零分布——因为重抽的 DGP 集中在 $\hat\theta$（可能远离 0），算出的临界值被"信号"撑大，导致**过度保守、甚至荒谬地不拒绝**（见下方实证）。
+
+> **实证（蒙特卡洛，已验证）：** 检验 $H_0:\beta=0$（单侧）。当真 $\beta=1$、$t$ 统计量高达 **9.06** 时：
+> - 无约束 bootstrap 临界值 ≈ **11.91**（被大 $\hat\beta$ 撑大）⇒ "不拒绝"——**荒谬**！
+> - 施加 $H_0$（$\beta=0$）的 bootstrap 临界值 ≈ **1.52**（接近 $N(0,1)$ 的 1.645）⇒ 正确拒绝。
+>
+> **教训：** bootstrap 检验的 DGP 必须满足 $H_0$（用约束估计/约束残差构造重抽数据），或用"中心化"统计量 $T^*=(\hat\theta^*-\hat\theta)/s^*$ 与 $T=(\hat\theta-\theta_0)/s$ 比较。
+
+---
+
+## 1. 记号与概念速查（对照李子奈/陈强）
+
+| Hansen 记号 | 中文/本科说法 | 一句话解释 |
+|---|---|---|
+| $\hat\theta_{(-i)}$ | 删一估计 / leave-one-out | 删去第 $i$ 个观测算的 $\hat\theta$ |
+| $\hat V^{\mathrm{jack}}$ (10.1) | 刀切方差 | $\frac{n-1}{n}\sum(\hat\theta_{(-i)}-\bar\theta_{(\cdot)})(\cdot)'$ |
+| $\hat\theta^*$ | bootstrap 复制 | 从样本重抽算的 $\hat\theta$ |
+| $\hat V^{\mathrm{boot}}$ | bootstrap 方差 | $B$ 个 $\hat\theta^*$ 的样本方差 |
+| Percentile CI | 分位数区间 | $[\hat q^*_{\alpha/2},\hat q^*_{1-\alpha/2}]$ |
+| BC | 偏差校正 | 用 $z_0^*=\Phi^{-1}(p^*)$ 调分位 |
+| BCa | 偏差校正加速 | 再用 jackknife 估 $a$（偏度） |
+| Percentile-$t$ | 学生化分位数 | 用 $T^*=(\hat\theta^*-\hat\theta)/s^*(\hat\theta^*)$ 的分位 |
+| 成对 bootstrap | paired / nonparametric | 重抽 $(Y_i,X_i)$ **对** |
+| 残差 bootstrap | residual | 固定 $X$，只重抽残差 $\hat e_i$ |
+| cluster bootstrap | 聚类自助 | 重抽"整块"（如学校） |
+
+**四个最常用的"技术点"：**
+
+1. **Jackknife 方差公式 (10.1)**：$\hat V^{\mathrm{jack}}_{\hat\theta}=\frac{n-1}{n}\sum_i(\hat\theta_{(-i)}-\bar\theta_{(\cdot)})(\cdot)'$。系数 $\frac{n-1}{n}$ 是因为删一估计之间高度相关（只差一个观测），需放大。
+2. **仿射等变性**：若 $\hat\theta=a+C\hat\beta$，则 jackknife/bootstrap 方差都按 $C(\cdot)C'$ 变换（10.2、10.4）。非线性函数则不能这样，须直接重算。
+3. **Bootstrap CLT（Theorem 10.4）**：$\sqrt n(\hat\mu^*-\hat\mu)\to_{d^*}N(0,V)$——与样本的 $\sqrt n(\hat\mu-\mu)$ **同极限**，故 bootstrap 能模仿抽样分布。
+4. **BC 的分位调整**：$x(\alpha)=\Phi(2z_0^*+z_\alpha)$；BCa 再加加速：$x(\alpha)=\Phi\!\big(z_0+\frac{z_0+z_\alpha}{1-a(z_0+z_\alpha)}\big)$。
+
+---
+
+## 2. 预备公式
+
+**Jackknife 方差 (10.1)：**
+$$\hat V^{\mathrm{jack}}_{\hat\theta}=\frac{n-1}{n}\sum_{i=1}^n(\hat\theta_{(-i)}-\bar\theta_{(\cdot)})(\hat\theta_{(-i)}-\bar\theta_{(\cdot)})',\quad \bar\theta_{(\cdot)}=n^{-1}\sum_i\hat\theta_{(-i)}.$$
+
+**非参数（成对）bootstrap：** 从经验分布有放回抽 $n$ 个 $(Y_i,X_i)$ 对得 $(Y^*,X^*)$，算 $\hat\theta^*$，重复 $B$ 次。$\hat V^{\mathrm{boot}}=\mathrm{Var}^*(\hat\theta^*)$（$B$ 个复制的样本方差）。
+
+**区间方法：** Percentile $[\hat q^*_{\alpha/2},\hat q^*_{1-\alpha/2}]$；BC 用 $p^*=P^*(\hat\theta^*\le\hat\theta)$、$z_0^*=\Phi^{-1}(p^*)$、分位 $x(\alpha)=\Phi(z_\alpha+2z_0^*)$；BCa 再估加速常数 $a$（jackknife 偏度）。
+
+---
+
+## Exercise 10.1　$\hat\mu_r=\bar{Y^r}$ 的 jackknife 方差 = 常规 $s^2/n$
+
+**考点：** 在最简单的估计量（样本均值）上验证 jackknife 给出与初等公式一致的结果，建立直觉。
+
+**解答：** 令 $W_i=Y_i^r$，则 $\hat\mu_r=\bar W$。删一估计
+$$\hat\mu_{r(-i)}=\frac{1}{n-1}\sum_{j\ne i}Y_j^r=\frac{n\hat\mu_r-Y_i^r}{n-1}\Rightarrow\hat\mu_{r(-i)}-\hat\mu_r=\frac{\hat\mu_r-Y_i^r}{n-1}.$$
+代入 (10.1)：
+$$\hat V^{\mathrm{jack}}_{\hat\mu_r}=\frac{n-1}{n}\sum_i\Big(\frac{\hat\mu_r-Y_i^r}{n-1}\Big)^2=\frac{1}{n(n-1)}\sum_i(Y_i^r-\hat\mu_r)^2,$$
+正是 $\bar W$ 的常规方差 $s_W^2/n$（$s_W^2$ 分母 $n-1$）。**完全相同**。（向量 $Y$ 把平方换外积。）
+
+> **和本科对照：** jackknife 在样本均值上退化为大家熟悉的 $s/\sqrt n$。代码见 notebook（数值核对一致）。
+
+---
+
+## Exercise 10.2　仿射变换的 jackknife 方差
+
+**考点：** 原则"仿射等变"。$\hat\theta=a+C\hat\beta$ ⇒ $\hat V^{\mathrm{jack}}_{\hat\theta}=C\hat V^{\mathrm{jack}}_{\hat\beta}C'$。
+
+**证明：** 仿射与删一可交换：$\hat\theta_{(-i)}=a+C\hat\beta_{(-i)}$，故 $\hat\theta_{(-i)}-\bar\theta_{(\cdot)}=C(\hat\beta_{(-i)}-\bar\beta_{(\cdot)})$。代入 (10.1)，$C$ 提出 ⇒ $C\hat V^{\mathrm{jack}}_{\hat\beta}C'$。□
+
+> **要点：** 线性变换的方差按 $CVC'$ 变（和 Ch4/Ch7 一致）。非线性变换则不能这样。
+
+---
+
+## Exercise 10.3　两步估计的 jackknife：两步都要重估
+
+**考点：** 生成回归元/两步估计（如 2SLS 的第一步）——**不能**固定第一步 $\hat A$ 只对第二步 jackknife。
+
+**正确步骤：** 对每个 $i$，删观测 $i$ 后**两步都重算**：先 $\hat A_{(-i)}$，再造 $\hat W_{j(-i)}=\hat A_{(-i)}'Z_j$，再算 $\hat\beta_{(-i)}$；最后套 (10.1)。
+
+> **要点：** 第一步 $\hat A$ 依赖全样本，其不确定性会传导到 $\hat\beta$。固定 $\hat A$ 会**低估**方差（漏算第一步贡献）。
+
+---
+
+## Exercise 10.4　仿射变换的 bootstrap 方差
+
+**考点：** 同 10.2 的 bootstrap 版。$\hat V^{\mathrm{boot}}_{\hat\theta}=C\hat V^{\mathrm{boot}}_{\hat\beta}C'$。
+
+**证明：** 每个 bootstrap 样本中 $\hat\theta^*=a+C\hat\beta^*$ ⇒ $\mathrm{Var}^*(\hat\theta^*)=C\,\mathrm{Var}^*(\hat\beta^*)\,C'$。非线性函数须直接对 $\hat\theta^*$ 算。□
+
+---
+
+## Exercise 10.5　Percentile 区间对仿射变换的等变性
+
+**考点：** percentile 区间端点随仿射变换同步变换。
+
+**证明：** $c>0$ 时，$q^*_\alpha(a+c\hat\beta^*)=a+c\,q^*_\alpha(\hat\beta^*)$（分位数对严格增变换等变）⇒ 区间 $[a+cL,a+cU]$。$c<0$ 端点对调成 $[a+cU,a+cL]$。
+
+> **要点：** percentile 区间对**单调变换等变**——换参数化（如 $\beta\to a+c\beta$）区间跟着变，覆盖不变。这是 percentile 的优点（也是 BC/BCa 共有的）。
+
+---
+
+## Exercise 10.6　"固定 SE 的 $T^*$" 其实就是 percentile
+
+**考点：** 区分 percentile 与 percentile-$t$。$T^*=(\hat\theta^*-\hat\theta)/s(\hat\theta)$，分母用**原样本**固定 SE。
+
+**证明：** $s(\hat\theta)$ 固定 ⇒ $T^*$ 是 $\hat\theta^*$ 的严格增仿射变换 ⇒ $T^*$ 的分位反推回 $\hat\theta^*$ 的分位，得到的 $C$ 恰是 percentile 区间。□
+
+> **要点（易混）：** 这**不是** percentile-$t$。真正的 percentile-$t$ 分母用**每个 bootstrap 样本的** $s^*(\hat\theta^*)$（studentize），才有二阶精度的好处。本题分母固定，故退化为 percentile。
+
+---
+
+## Exercise 10.7　证明 Theorem 10.6（Bootstrap Delta Method）
+
+**考点：** bootstrap 版 delta method——把 Ch7 的 delta method 搬到 bootstrap 世界。
+
+**证明：** 均值展开（条件于样本 $F_n$）：$g(\hat\mu^*)-g(\hat\mu)=G(\tilde\mu^*)'(\hat\mu^*-\hat\mu)$。因 $\hat\mu^*\to_{p^*}\hat\mu\to_p\mu$，$G(\tilde\mu^*)\to_{p^*}G(\mu)$。Slutsky（bootstrap 版）：
+$$\sqrt n(g(\hat\mu^*)-g(\hat\mu))=G(\tilde\mu^*)'\sqrt n(\hat\mu^*-\hat\mu)\to_{d^*}G'\xi.$$
+若 $\xi\sim N(0,V)$，极限 $N(0,G'VG)$。□
+
+---
+
+## Exercise 10.8　证明 Theorem 10.7（bootstrap 模仿非线性估计量分布）
+
+**考点：** bootstrap CLT + delta method ⇒ $\hat\theta^*=g(\hat\mu^*)$ 的 bootstrap 分布与样本 $\hat\theta=g(\hat\mu)$ 的真实抽样分布**同极限**。
+
+**证明：**
+1. **Bootstrap CLT**：条件于样本，$h(Y_i^*)$ 为 i.i.d.（来自经验分布），均值 $\hat\mu$、方差 $\hat V_n\to_p V$ ⇒ $\sqrt n(\hat\mu^*-\hat\mu)\to_{d^*}N(0,V)$。
+2. 用 Theorem 10.6（$g$ 的 delta）⇒ $\sqrt n(\hat\theta^*-\hat\theta)\to_{d^*}N(0,G'VG)$。
+
+这与样本 $\sqrt n(\hat\theta-\theta)$ 的极限**相同** ⇒ bootstrap 能模仿其分布。□
+
+> **核心结论：** bootstrap 之所以有效，是因为 $\sqrt n(\hat\theta^*-\hat\theta)$ 与 $\sqrt n(\hat\theta-\theta)$ **渐近同分布**——把 $\hat\theta$ 当真值，重抽扰动模仿真实扰动。
+
+---
+
+## Exercise 10.9　证明 Theorem 10.8（bootstrap 方差一致性）
+
+**考点：** $\hat V^*_\theta\to_{p^*}V_\theta$——bootstrap 方差估计收敛到真实渐近方差。
+
+**证明纲要：** 由 Thm 10.7，$\sqrt n(\hat\theta^*-\hat\theta)$ 条件依分布收敛到 $N(0,V_\theta)$。再加**一致可积**（或有界导数保证矩有限，Thm 10.10），则条件方差也收敛：$\mathrm{Var}^*(\sqrt n(\hat\theta^*-\hat\theta))\to_p V_\theta$。技术上 $\widehat{\mathrm{Var}}^*(h^*)=\frac1n\sum(h_i-\hat\mu)(\cdot)'\to_p V$，乘 $G(\hat\mu)$ 即得。□
+
+---
+
+## Exercise 10.10　$\theta=1/\mu$（凸变换）的有偏性
+
+**考点：** 非线性变换的 Jensen 偏差 + 为何需要 BC/BCa。
+
+**(a)(b)** $g(\mu)=1/\mu$ 在 $\mu>0$ 严格凸（$g''=2/\mu^3>0$）。Jensen：$E[\hat\theta]=E[1/\bar Y]\ge 1/E[\bar Y]=\theta$，**向上偏**（除非 $\bar Y$ 退化）。
+
+**(c)** 普通 percentile **不纠偏**，在右偏分布上覆盖差。宜用 **BC/BCa**（专为中位数偏倚/偏度设计），或对 $\log\hat\theta$ 区间再取指数。
+
+> **和本科对照：** 非线性估计量（比率、倒数、指数）有 Jensen 偏差；bootstrap 分布能**反映**这种偏态，BC/BCa 据此调整分位——这是 bootstrap 优于"对称正态 CI"之处。
+
+---
+
+## Exercise 10.11　残差配对写法 = 成对 bootstrap
+
+**考点：** "抽 $(X^*,\hat e^*)$ 再令 $Y^*=X^{*'}\hat\beta+e^*$" 与 "直接抽 $(Y_i,X_i)$ 对" 数值相同。
+
+**证明：** 原样本上 $Y_i=X_i'\hat\beta+\hat e_i$。重抽到指标 $i'$ 时，$Y^*=Y_{i'}=X_{i'}'\hat\beta+\hat e_{i'}$，与"抽 $(X_{i'},\hat e_{i'})$ 再组合"定义相同 ⇒ 生成的 bootstrap 数据集联合分布一致 ⇒ $\hat\beta^*$ 等一切统计量同分布。□
+
+> **要点：** 这是**成对/非参数** bootstrap 的改写，与**残差 bootstrap**（固定 $X$、只重抽残差）不同。后者假设 $X$ 固定（实验设计），前者保留 $X$ 的随机性。
+
+---
+
+## Exercise 10.12　BC 的 $p^*,z_0^*$ 对单调变换不变
+
+**考点：** BC 的偏倚量 $z_0^*$ 不受参数化影响（参数化不变性）。
+
+**证明：** $g$ 严格增 ⇒ $\hat\phi^*=g(\hat\theta^*)\le g(\hat\theta)=\hat\phi\Leftrightarrow\hat\theta^*\le\hat\theta$ ⇒ $p^*=P^*(\hat\theta^*\le\hat\theta)$ **不变** ⇒ $z_0^*=\Phi^{-1}(p^*)$ 不变。$g$ 严格减则 $p^*\mapsto1-p^*$、$z_0^*\mapsto-z_0^*$，BC 端点仍正确变换。
+
+---
+
+## Exercise 10.13　Percentile-$t$ 区间的仿射变换
+
+**考点：** studentized 区间对仿射变换的行为。
+
+**解答：** $\theta=a+c\beta$（$c>0$）：$T_\theta^*=(\hat\theta^*-\hat\theta)/s^*(\hat\theta^*)=(\hat\beta^*-\hat\beta)/s^*(\hat\beta^*)=T_\beta^*$（$c$ 在分子分母同时出现约掉）⇒ 同一 $q^*$，区间 $[a+cL,a+cU]$。$c<0$ 端点对调。
+
+---
+
+## Exercise 10.14　**bootstrap 检验必须在 $H_0$ 下重抽**（核心！）
+
+**考点：** 本章最重要的原则——无约束 bootstrap 的 $T^*$ 分布**不是** $H_0$ 下的零分布。
+
+**错在哪：** 数据来自真 $\theta$（可能 $>0$），$\hat\theta^*$ 集中在 $\hat\theta$ 而非 $\theta_0=0$。用 $T^*=\hat\theta^*/s^*$ 的 $1-\alpha$ 分位当临界值，得到的是**真参数下**的分位，被信号撑大 ⇒ 过度保守、水平 $\ne\alpha$。
+
+**实证（已验证，见 §0）：** $T=9.06$（极显著）时，无约束 cv≈11.91 ⇒ 荒谬地"不拒绝"；施加 $H_0$ 的 cv≈1.52 ⇒ 正确拒绝。
+
+**正确做法：**
+1. **约束/强制 $H_0$**：在 $\theta=\theta_0$ 下估（如 $\hat\theta_0=0$，用约束残差），重抽生成满足 $H_0$ 的数据，算 $T^*$ 的零分布；或
+2. **中心化**：用 $T^{c*}=(\hat\theta^*-\hat\theta)/s^*$ 与 $T_n=(\hat\theta-\theta_0)/s$ 比较（两者都"去掉中心"）。
+
+> **和本科对照：** 这是 bootstrap 假设检验的第一原则。陈强/现代计量强调：**bootstrap 检验的 DGP 必须满足 $H_0$**（"simulate under the null"）。
+
+---
+
+## Exercise 10.15　信息不足时只能给 percentile
+
+**题：** $\hat\theta=1.2$，$s=0.2$；$B=1000$ 时 $\hat\theta^*$ 的 2.5%/97.5% 分位为 0.75/1.3。
+
+**(a)** 95% percentile 区间：**$[0.75,1.3]$**。
+**(c)** BC 需 $p^*=P^*(\hat\theta^*\le1.2)$（题目只给两个分位，**算不出**）；percentile-$t$ 需每次的 $s^*$（**信息不足**）。故只能报告 percentile。
+
+> **要点：** 实证报告 bootstrap 结果时，要保留**全部** $\hat\theta^*_b$（和 $s^*_b$）才能算 BC/BCa/percentile-$t$，不能只存几个分位数。
+
+---
+
+## Exercise 10.16　正态回归的参数 bootstrap
+
+**考点：** 参数 bootstrap（固定 $X$，从 $N(0,\hat\sigma^2)$ 抽误差）。
+
+**(a)** 抽 $e_i^*\stackrel{iid}{\sim}N(0,\hat\sigma^2)$，$Y_i^*=X_i'\hat\beta+e_i^*$ ⇒ $Y_i^*|F_n\sim N(X_i'\hat\beta,\hat\sigma^2)$。
+**(b)** $\hat\beta^*=\hat\beta+(X'X)^{-1}X'e^*$，$e^*\sim N(0,\hat\sigma^2 I)$ ⇒ $\hat\beta^*|F_n\sim N(\hat\beta,\hat\sigma^2(X'X)^{-1})$。
+**(c)** $T_j^*=(\hat\beta_j^*-\hat\beta_j)/s^*(\hat\beta_j)\sim t_{n-k}$（精确，正态回归下 bootstrap 把真值换成 $\hat\beta$，分布形式不变）。
+
+> **要点：** 参数 bootstrap 在正态假设下能复现精确 $t_{n-k}$——这是 bootstrap 与第 5 章精确分布的交汇。
+
+---
+
+## Exercise 10.17　回归函数 $m(x)=x'\beta$ 的 CI
+
+**(a)** 渐近 CI：$x'\hat\beta\pm1.96\sqrt{x'\hat V_{\hat\beta}x}$（Ch7 工具）。
+**(b)** Percentile：成对 bootstrap 得 $\hat m^*(x)=x'\hat\beta^*$，取其 2.5%/97.5% 分位。
+**(c)** Percentile-$t$：$T^*(x)=\frac{\hat m^*(x)-\hat m(x)}{s^*(\hat m(x))}$，$s^{*2}(x)=x'\hat V^*x$，用 $T^*$ 分位构造 $[\hat m-s q^*_{1-\alpha/2},\hat m-s q^*_{\alpha/2}]$。
+
+---
+
+## Exercise 10.18　$\mu_3=E[e^3]$（误差三阶矩）的 bootstrap CI
+
+**(a)** $\hat\mu_3=n^{-1}\sum\hat e_i^3$（含截距时 $\bar{\hat e}=0$）。
+**(b)** 90% percentile：成对 bootstrap → $\hat\beta^*,\hat\mu_3^*$；重复 $B$ 次取 $\hat\mu_3^*$ 的 5%/95% 分位。（亦可用残差 bootstrap。）
+
+> **要点：** bootstrap 能轻松估计**任意统计量**（如三阶矩、分位数）的分布——不必推渐近公式。这是它相对解析法的最大优势。
+
+---
+
+## Exercise 10.19　$\sigma^2=E[e^2]$ 的 percentile（宜 BC/BCa）
+
+$\hat\sigma^2=n^{-1}\sum\hat e_i^2$。bootstrap 重估 $\hat\sigma^{2*}$，取分位。因 $\sigma^2>0$ 且右偏，**BC/BCa 优于**原始 percentile。
+
+---
+
+## Exercise 10.20　检验 $H_0:\beta_2=0$（**约束 bootstrap**）
+
+**做法（施加 $H_0$）：**
+1. $H_0$ 下回归 $Y$ 对 $X_1$ 得 $\tilde\beta_1$、残差 $\tilde e$；
+2. 构造零假设数据 $Y_i^{0*}=X_{1i}'\tilde\beta_1+\tilde e_i^*$（$\tilde e^*$ 有放回抽）；
+3. 在 $Y^{0*}$ 上估无约束模型，算 $t^*$ 或 Wald$^*$；
+4. $p^*=B^{-1}\sum 1\{|T^*|\ge|T|\}$。
+
+**错误做法：** 无约束成对 bootstrap 的 $|T^*|$ 分位直接当临界值（同 10.14）。
+
+---
+
+## Exercise 10.21　检验 $H_0:\beta_1=\beta_2$
+
+约束 $\beta_1=\beta_2=\gamma$：$Y=(X_1+X_2)'\gamma+e$。在 $H_0$ 下估 $\tilde\gamma$、残差；bootstrap；每次算 Wald $W^*=(\hat\beta_1^*-\hat\beta_2^*)'\widehat{\mathrm{Var}}^{*-1}(\hat\beta_1^*-\hat\beta_2^*)$；与样本 $W$ 比得 $p$ 值。
+
+---
+
+## Exercise 10.22　博士生的 bootstrap 检验（**陷阱**）
+
+$T=2$，$q^*_{.95}=3.5$，学生"不拒绝"。
+
+**不同意其方法**（同 10.14）：
+
+| 步骤 | 问题 |
+|------|------|
+| 1–2 | 无约束重抽，DGP 在 $\hat\alpha=2$ 附近，**不**是 $\alpha=0$ |
+| 4 | $q^*_{.95}$ 是非零 $\alpha$ 下 $|T^*|$ 的分位，**偏大** |
+| 5 | 用错误临界值"不拒绝"，水平/功效皆不可靠 |
+
+**改正：** 在 $H_0:\alpha=0$ 下估，用约束残差生成 $Y^*$（或中心化 $T^*$）。渐近拒绝而错误 bootstrap 不拒绝，正说明其**过度保守**。
+
+---
+
+## Exercise 10.23　$\theta=\beta_1\beta_2$ 的三类 CI
+
+**(a) 渐近/delta**：$\hat\theta=\hat\beta_1\hat\beta_2$，$\nabla g=(\beta_2,\beta_1)'$，$\mathrm{se}=\sqrt{\nabla'\hat V\nabla}$，CI $\hat\theta\pm1.96\,\mathrm{se}$。
+**(b) Percentile**：$\hat\theta^*=\hat\beta_1^*\hat\beta_2^*$，取分位。
+**(c) Percentile-$t$**：$T^*=(\hat\theta^*-\hat\theta)/s^*(\hat\theta^*)$，用 $T^*$ 分位构造 CI。
+
+---
+
+## Exercise 10.24　$\theta=\beta_1/\beta_2$ 的 percentile-$t$
+
+delta：$\nabla=(1/\beta_2,-\beta_1/\beta_2^2)$，$s(\hat\theta)=\sqrt{\nabla'\hat V\nabla}$。bootstrap 复制 $\hat\theta^*,s^*(\hat\theta^*)$，$T^*=(\hat\theta^*-\hat\theta)/s^*$，取分位造 CI。
+
+> **警示：** 比值在 $\beta_2\approx0$ 时矩可能失效，bootstrap SE 不稳定。
+
+---
+
+## Exercise 10.25　异方差不破坏成对 bootstrap
+
+**否。** 成对 bootstrap 重抽 $(Y_i,X_i)$ 对，保留条件分布 $Y|X$ 的经验结构（含 $\sigma^2(X)$），**不依赖同方差**。与异方差稳健推断相容。
+
+> **注意：** 成对 bootstrap 假设观测**独立**；若有聚类/时间相关，应改用 **block/cluster bootstrap**（10.31）。
+
+---
+
+## Exercise 10.26　RESET 的 bootstrap（**必须施加线性 $H_0$**）
+
+**同事做法不正确。** RESET 的 $H_0$ 是线性 CEF；在无约束真实数据（可能已非线性）上重抽，bootstrap 世界 $H_0$ 不成立，$R^*$ 的 95% 分位**不是** $H_0$ 临界值。
+
+**修正：** 在 $H_0$ 下只估线性模型得 $\hat\beta,\hat e,\hat Y=X\hat\beta$；残差 bootstrap $Y_i^*=X_i'\hat\beta+\hat e_i^*$；在 $(Y^*,X)$ 上**完整重做** RESET；用 $R^*$ 分位与样本 $R$ 比。
+
+---
+
+## Exercise 10.27　$E[Xe]\ne0$ 时 BC 能否覆盖真 $\beta$？
+
+**不能。** BC 纠的是**估计量抽样分布的中位数偏倚**，**不是识别偏倚**。$E[Xe]\ne0$ 时 $\hat\beta\to_p\beta_{\mathrm{plim}}\ne\beta$，bootstrap 分布集中在 $\beta_{\mathrm{plim}}$ 附近，BC 区间覆盖的是 $\beta_{\mathrm{plim}}$ 而非结构参数 $\beta$。
+
+> **核心：** bootstrap 不能替代**识别策略**（工具变量等）。它只修"正确识别下的有限样本偏倚"。
+
+---
+
+## Exercise 10.28（Nerlove1963，$n=145$）　$\theta=\beta_3+\beta_4+\beta_5$
+
+**方法：** 渐近 SE（HC3 sandwich）；jackknife SE（删 $i$ 重估，(10.1)）；bootstrap SE（成对，$B\ge999$）；percentile/BCa（对 $\theta^*$ 分位，BCa 用 jackknife 估 $a$）。数值见 notebook。
+
+---
+
+## Exercise 10.29（MRW1992，$n=98$）　$\theta=$ 第 2+3+4 系数和
+
+报告同 10.28 的三类 SE 与 percentile、**BC** 区间。
+
+---
+
+## Exercise 10.30（CPS 小样本 $n=99$）　$\theta=\beta_1/(\beta_2+0.2\beta_3)$
+
+**(a)** 报告 $\hat\theta$ 与 asym/jack/boot SE。
+**(b)** $n=99$ 小、比率非线性时三者可差很多：渐近 delta 依赖局部线性；jackknife 对高杠杆点敏感；bootstrap 反映偏态。**小样本非线性估计，bootstrap/BC 往往更可信。**
+**(c)** BC percentile 区间（用 $p^*$ 调分位）。
+
+---
+
+## Exercise 10.31（DDK2011）　cluster bootstrap + BCa
+
+**做法：** 以 `schoolid` 为簇，有放回抽 $G$ 个**学校**块，堆叠学生观测，每次算 $\hat\beta^*$；列向标准差 = cluster bootstrap SE；BCa 用 **delete-cluster jackknife** 估 $a$。
+
+> **和本科对照：** 聚类数据必须用 **cluster bootstrap**（重抽整块），不能逐观测重抽（否则破坏组内相关）。通常 cluster bootstrap SE ≈ 渐近聚类 SE，且**大于**个体稳健 SE（尤其 tracking，见 Ch4 Ex 4.26）。
+
+---
+
+## 附录 A：四种 bootstrap CI 对比
+
+| 方法 | 怎么做 | 纠偏 | 纠偏度 | 精度 | 需要 |
+|---|---|---|---|---|---|
+| Percentile | $\hat\theta^*$ 的分位 | 否 | 否 | 一阶 | $\hat\theta^*_b$ |
+| BC | 调 $2z_0^*+z_\alpha$ | 是 | 否 | 一阶+ | $\hat\theta^*_b$ |
+| BCa | 再加加速 $a$ | 是 | 是 | **二阶** | $\hat\theta^*_b$ + jackknife |
+| Percentile-$t$ | studentize $T^*$ | — | — | **二阶**（最准） | $\hat\theta^*_b,s^*_b$ |
+
+**选择：** 默认 **BCa**（自适应、推荐）；若 SE 估计稳定且追求精度，用 **percentile-$t$**；快速粗看用 percentile。
+
+---
+
+## 附录 B：bootstrap 检验的"零原则"
+
+| 场景 | 正确做法 |
+|---|---|
+| 检验 $H_0:\theta=\theta_0$ | 在 $\theta=\theta_0$ 下估，用约束残差生成 bootstrap 数据（10.14/10.20/10.22） |
+| 检验 $H_0:\beta_1=\beta_2$ | 约束 $\beta_1=\beta_2$ 估，再 bootstrap（10.21） |
+| RESET/设定检验 | 在 $H_0$（线性）下估，残差 bootstrap（10.26） |
+| 一般 | 或用**中心化**统计量 $(\hat\theta^*-\hat\theta)/s^*$ 与 $(\hat\theta-\theta_0)/s$ 比较 |
+
+**一句话：bootstrap 检验的 DGP 必须满足 $H_0$（"simulate under the null"），否则临界值被信号撑大、过度保守。**
+
+---
+
+## 附录 C：notebook 单元对应
+
+| 习题 | notebook 内容 |
+|------|----------------|
+| 10.1 | jackknife = $s^2/n$ 核对 code cell |
+| 10.28 | Nerlove asym/jack/boot SE + BCa code cell |
+| 10.29 | MRW 三类 SE + BC code cell |
+| 10.30 | CPS 小样本 $\theta$ 三类 SE + BC code cell |
+| 10.31 | DDK cluster bootstrap + BCa code cell |
+
+
+# 实证与数值代码（来自 notebook，R 版）
+
+## Hansen Ch.10 习题完整解答（计算）
+
+**Chapter 10 Resampling Methods**
+
+完整推导与**面向初学者的详细注释**见同目录 `Hansen_Ch10_Exercises_Solutions.md`（强烈建议先读 §0、§1）。
+
+本 notebook：
+- 10.1 jackknife 与公式核对
+- **10.28** Nerlove
+- **10.29** MRW
+- **10.30** CPS 小样本 $\theta$
+- **10.31** DDK cluster bootstrap + BCa
+
+> **写给只学过李子奈/陈强的同学：** 本章是"用计算机模拟抽样分布"——第 7–9 章**解析地**推渐近分布，本章**用重抽样**算 SE/CI/$p$ 值，不必推公式。两类方法：**jackknife**（删一算散布）、**bootstrap**（重抽模拟分布）。
+> **四条原则：** (1) jackknife vs bootstrap 的区别；(2) CI 四层次 percentile→BC→BCa→percentile-$t$（精度递增，默认 BCa）；(3) **bootstrap 检验必须在 $H_0$ 下重抽**（否则临界值被信号撑大、过度保守）；(4) bootstrap 不能修识别错误（$E[Xe]\ne0$ 时覆盖 plim 而非真参数）。
+> **核心警示（已 MC 验证）：** 检验 $H_0:\beta=0$，当 $T=9.06$（极显著）时，无约束 bootstrap 临界值≈11.91 ⇒ 荒谬地"不拒绝"；施加 $H_0$ 的临界值≈1.52 ⇒ 正确拒绝。
+
+### 公共函数
+
+```{r}
+#| label: nb-cell-01
+# 原 Python notebook 代码（保留备查）→ R 对照草稿
+# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
+
+
+# import numpy as np
+# import pandas as pd
+# from pathlib import Path
+# from scipy import stats
+
+# PY: ROOT = Path("/home/fang/Project/zhihu-paper/p1/hansen/econometrics/data")
+
+# PY: def ols(y, X):
+# PY:     beta = np.linalg.lstsq(X, y, rcond=None)[0]
+# PY:     e = y - X @ beta
+# PY:     return beta, e
+
+# PY: def hc3_var(X, e):
+# PY:     n, k = X.shape
+# PY:     XXinv = np.linalg.inv(X.T @ X)
+# PY:     h = np.sum(X * (X @ XXinv), axis=1)
+# PY:     u = X * (e / np.clip(1.0 - h, 1e-12, None))[:, None]
+# PY:     return (n / (n - k)) * XXinv @ (u.T @ u) @ XXinv
+
+# PY: def jackknife_se_theta(estimator_fn, n):
+# PY:     """estimator_fn(i) -> theta without observation i"""
+# PY:     thetas = np.array([estimator_fn(i) for i in range(n)])
+# PY:     return float(np.sqrt((n - 1) / n * np.sum((thetas - thetas.mean()) ** 2))), thetas
+
+# PY: def pairs_bootstrap_theta(X, y, theta_fn, B=999, seed=0):
+# PY:     rng = np.random.default_rng(seed)
+# PY:     n = len(y)
+# PY:     out = np.empty(B)
+# PY:     for b in range(B):
+# PY:         idx = rng.integers(0, n, n)
+# PY:         out[b] = theta_fn(X[idx], y[idx])
+# PY:     return out
+
+# PY: def bc_interval(theta_hat, theta_star, alpha=0.05):
+# PY:     p0 = np.mean(theta_star <= theta_hat)
+# PY:     z0 = stats.norm.ppf(np.clip(p0, 1e-8, 1 - 1e-8))
+# PY:     za = stats.norm.ppf(alpha / 2)
+# PY:     zb = stats.norm.ppf(1 - alpha / 2)
+# PY:     a1 = stats.norm.cdf(2 * z0 + za)
+# PY:     a2 = stats.norm.cdf(2 * z0 + zb)
+# PY:     return np.quantile(theta_star, [a1, a2]), p0, z0
+
+# PY: def bca_interval(theta_hat, theta_star, theta_jack, alpha=0.05):
+    # Efron acceleration from jackknife
+# PY:     th = np.asarray(theta_jack)
+# PY:     tbar = th.mean()
+# PY:     num = np.sum((tbar - th) ** 3)
+# PY:     den = 6.0 * (np.sum((tbar - th) ** 2) ** 1.5) + 1e-18
+# PY:     a = num / den
+# PY:     p0 = np.mean(theta_star <= theta_hat)
+# PY:     z0 = stats.norm.ppf(np.clip(p0, 1e-8, 1 - 1e-8))
+# PY:     def x(alp):
+# PY:         z = stats.norm.ppf(alp)
+# PY:         return stats.norm.cdf(z0 + (z0 + z) / (1 - a * (z0 + z)))
+# PY:     a1, a2 = x(alpha / 2), x(1 - alpha / 2)
+# PY:     a1, a2 = np.clip([a1, a2], 1e-6, 1 - 1e-6)
+# PY:     return np.quantile(theta_star, [a1, a2]), a, z0, p0
+
+# PY: print("helpers ready")
+
+# --- R 惯用写法提示 ---
+# read_dta: haven::read_dta(file.path(data_root, ...))
+# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
+# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
+# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
+```
+
+### Exercise 10.1 核对：jackknife 方差 = 常规 $s^2/n$
+
+```{r}
+#| label: nb-cell-02
+# 原 Python notebook 代码（保留备查）→ R 对照草稿
+# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
+
+
+# PY: rng = np.random.default_rng(0)
+# PY: Y = rng.normal(size=50)
+# PY: r = 3
+# PY: mu = np.mean(Y ** r)
+# formula
+# PY: V_jack = np.sum((Y ** r - mu) ** 2) / (len(Y) * (len(Y) - 1))
+# direct leave-one-out
+# PY: n = len(Y)
+# PY: ths = np.array([(np.sum(Y**r) - Y[i]**r) / (n - 1) for i in range(n)])
+# PY: V_direct = (n - 1) / n * np.sum((ths - ths.mean()) ** 2)
+# PY: print(V_jack, V_direct, abs(V_jack - V_direct))
+
+# --- R 惯用写法提示 ---
+# read_dta: haven::read_dta(file.path(data_root, ...))
+# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
+# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
+# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
+```
+
+### Exercise 10.28 Nerlove：系数与 $\theta=\beta_3+\beta_4+\beta_5$
+
+```{r}
+#| label: nb-cell-03
+# 原 Python notebook 代码（保留备查）→ R 对照草稿
+# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
+
+
+# PY: ner = pd.read_excel(ROOT / "Nerlove1963/Nerlove1963.xlsx")
+# PY: for c in ner.columns:
+# PY:     ner[c] = pd.to_numeric(ner[c], errors="coerce")
+# PY: ner = ner.dropna().reset_index(drop=True)
+# PY: y = np.log(ner.Cost.values)
+# PY: X = np.column_stack([
+# PY:     np.ones(len(ner)),
+# PY:     np.log(ner.output.values),
+# PY:     np.log(ner.Plabor.values),
+# PY:     np.log(ner.Pcapital.values),
+# PY:     np.log(ner.Pfuel.values),
+# PY: ])
+# PY: names = ["const", "logQ", "logPL", "logPK", "logPF"]
+# PY: n, k = X.shape
+# PY: beta, e = ols(y, X)
+# PY: V = hc3_var(X, e)
+# PY: se_as = np.sqrt(np.diag(V))
+# PY: print(pd.DataFrame({"beta": beta, "SE_asym(HC3)": se_as}, index=names))
+
+# jackknife SE for beta
+# PY: def beta_without(i):
+# PY:     return ols(np.delete(y, i), np.delete(X, i, axis=0))[0]
+
+# PY: Bjack = np.array([beta_without(i) for i in range(n)])
+# PY: se_jack = np.sqrt((n - 1) / n * np.sum((Bjack - Bjack.mean(0)) ** 2, axis=0))
+# PY: print("jackknife SE:", se_jack)
+
+# bootstrap SE for beta
+# PY: B = 999
+# PY: rng = np.random.default_rng(1)
+# PY: Bboot = np.zeros((B, k))
+# PY: for b in range(B):
+# PY:     idx = rng.integers(0, n, n)
+# PY:     Bboot[b] = ols(y[idx], X[idx])[0]
+# PY: se_boot = Bboot.std(axis=0, ddof=1)
+# PY: print("bootstrap SE:", se_boot)
+
+# theta
+# PY: R = np.array([0.0, 0.0, 1.0, 1.0, 1.0])
+# PY: theta = R @ beta
+# PY: se_theta_as = float(np.sqrt(R @ V @ R))
+# PY: th_jack = Bjack @ R
+# PY: se_theta_jack = float(np.sqrt((n - 1) / n * np.sum((th_jack - th_jack.mean()) ** 2)))
+# PY: th_boot = Bboot @ R
+# PY: se_theta_boot = float(th_boot.std(ddof=1))
+# PY: print(f"\ntheta={theta:.4f}")
+# PY: print(f"SE asym={se_theta_as:.4f}, jack={se_theta_jack:.4f}, boot={se_theta_boot:.4f}")
+# PY: pc = np.quantile(th_boot, [0.025, 0.975])
+# PY: bca, a_hat, z0, p0 = bca_interval(theta, th_boot, th_jack)
+# PY: print("percentile 95%:", pc)
+# PY: print(f"BCa 95%: {bca}, a={a_hat:.4f}, z0={z0:.4f}, p*={p0:.3f}")
+
+# --- R 惯用写法提示 ---
+# read_dta: haven::read_dta(file.path(data_root, ...))
+# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
+# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
+# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
+```
+
+### Exercise 10.29 MRW： unrestricted + $\theta=$ 第2–4 系数和
+
+```{r}
+#| label: nb-cell-04
+# 原 Python notebook 代码（保留备查）→ R 对照草稿
+# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
+
+
+# PY: mrw = pd.read_excel(ROOT / "MRW1992/MRW1992.xlsx")
+# PY: m = mrw[mrw.N == 1].reset_index(drop=True)
+# PY: y = (np.log(m.Y85) - np.log(m.Y60)).to_numpy()
+# PY: X = np.column_stack([
+# PY:     np.log(m.Y60),
+# PY:     np.log(m.invest / 100),
+# PY:     np.log(m.pop_growth / 100 + 0.05),
+# PY:     np.log(m.school / 100),
+# PY:     np.ones(len(m)),
+# PY: ])
+# PY: names = ["logY60", "logI", "log(n+g+d)", "logSchool", "const"]
+# PY: n, k = X.shape
+# PY: beta, e = ols(y, X)
+# PY: V = hc3_var(X, e)
+# PY: print(pd.DataFrame({"beta": beta, "SE_asym": np.sqrt(np.diag(V))}, index=names))
+
+# PY: Bjack = np.array([ols(np.delete(y, i), np.delete(X, i, axis=0))[0] for i in range(n)])
+# PY: se_jack = np.sqrt((n - 1) / n * np.sum((Bjack - Bjack.mean(0)) ** 2, axis=0))
+# PY: print("jack SE", se_jack)
+
+# PY: B = 999
+# PY: rng = np.random.default_rng(2)
+# PY: Bboot = np.zeros((B, k))
+# PY: for b in range(B):
+# PY:     idx = rng.integers(0, n, n)
+# PY:     Bboot[b] = ols(y[idx], X[idx])[0]
+# PY: print("boot SE", Bboot.std(0, ddof=1))
+
+# PY: R = np.array([0.0, 1.0, 1.0, 1.0, 0.0])
+# PY: theta = R @ beta
+# PY: th_jack = Bjack @ R
+# PY: th_boot = Bboot @ R
+# PY: print(f"theta={theta:.4f}")
+# PY: print("SE asym", float(np.sqrt(R @ V @ R)),
+# PY:       "jack", float(np.sqrt((n-1)/n*np.sum((th_jack-th_jack.mean())**2))),
+# PY:       "boot", float(th_boot.std(ddof=1)))
+# PY: print("percentile", np.quantile(th_boot, [0.025, 0.975]))
+# PY: bc, p0, z0 = bc_interval(theta, th_boot)
+# PY: print(f"BC 95%: {bc}, p*={p0:.3f}, z0={z0:.3f}")
+
+# --- R 惯用写法提示 ---
+# read_dta: haven::read_dta(file.path(data_root, ...))
+# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
+# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
+# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
+```
+
+### Exercise 10.30 CPS：从未结婚 + Midwest 白人男性西班牙裔，$n=99$
+
+```{r}
+#| label: nb-cell-05
+# 原 Python notebook 代码（保留备查）→ R 对照草稿
+# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
+
+
+# PY: df = pd.read_excel(ROOT / "cps09mar/cps09mar.xlsx")
+# PY: df["experience"] = df.age - df.education - 6
+# PY: df["lwage"] = np.log(df.earnings / (df.hours * df.week))
+# PY: df["exp2"] = (df.experience ** 2) / 100
+# PY: s = df[
+# PY:     (df.race == 1) & (df.female == 0) & (df.hisp == 1)
+# PY:     & (df.marital == 7) & (df.region == 2)
+# PY: ].copy().reset_index(drop=True)
+# PY: print("n =", len(s))
+# PY: y = s.lwage.to_numpy(float)
+# PY: X = np.column_stack([s.education, s.experience, s.exp2, np.ones(len(s))])
+# theta = b1 / (b2 + 0.2*b3)
+
+# PY: def theta_from_beta(b):
+# PY:     return b[0] / (b[1] + 0.2 * b[2])
+
+# PY: beta, e = ols(y, X)
+# PY: V = hc3_var(X, e)
+# PY: th = theta_from_beta(beta)
+# delta
+# PY: den = beta[1] + 0.2 * beta[2]
+# PY: g = np.array([1 / den, -beta[0] / den**2, -0.2 * beta[0] / den**2, 0.0])
+# PY: se_as = float(np.sqrt(g @ V @ g))
+# PY: print("beta", beta, "theta", th, "SE_asym", se_as)
+
+# PY: n = len(y)
+# PY: th_jack = []
+# PY: for i in range(n):
+# PY:     bi = ols(np.delete(y, i), np.delete(X, i, axis=0))[0]
+# PY:     th_jack.append(theta_from_beta(bi))
+# PY: th_jack = np.array(th_jack)
+# PY: se_jack = float(np.sqrt((n - 1) / n * np.sum((th_jack - th_jack.mean()) ** 2)))
+# PY: print("SE_jack", se_jack)
+
+# PY: B = 1999
+# PY: rng = np.random.default_rng(3)
+# PY: th_boot = np.empty(B)
+# PY: for b in range(B):
+# PY:     idx = rng.integers(0, n, n)
+# PY:     th_boot[b] = theta_from_beta(ols(y[idx], X[idx])[0])
+# PY: se_boot = float(th_boot.std(ddof=1))
+# PY: print("SE_boot", se_boot)
+# PY: print("Note: large gaps among SEs are common with n=99 and a ratio functional.")
+# PY: bc, p0, z0 = bc_interval(th, th_boot)
+# PY: print(f"BC 95% CI: {bc}, p*={p0:.3f}")
+
+# --- R 惯用写法提示 ---
+# read_dta: haven::read_dta(file.path(data_root, ...))
+# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
+# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
+# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
+```
+
+### Exercise 10.31 DDK：cluster bootstrap SE + BCa
+
+```{r}
+#| label: nb-cell-06
+# 原 Python notebook 代码（保留备查）→ R 对照草稿
+# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
+
+
+# PY: ddk = pd.read_excel(ROOT / "DDK2011/DDK2011.xlsx")
+# PY: for c in ddk.columns:
+# PY:     ddk[c] = pd.to_numeric(ddk[c], errors="coerce")
+# PY: ddk["ystd"] = (ddk.totalscore - ddk.totalscore.mean()) / ddk.totalscore.std()
+# PY: d = ddk[["ystd", "tracking", "agetest", "girl", "etpteacher", "percentile", "schoolid"]].dropna().reset_index(drop=True)
+# PY: y = d.ystd.to_numpy()
+# PY: X = np.column_stack([d.tracking, d.agetest, d.girl, d.etpteacher, d.percentile, np.ones(len(d))])
+# PY: names = ["tracking", "age", "girl", "etpteacher", "percentile", "intercept"]
+# PY: beta, e = ols(y, X)
+# PY: print("point estimates", dict(zip(names, beta.round(4))))
+
+# cluster map
+# from collections import defaultdict
+# PY: rows = defaultdict(list)
+# PY: for i, g in enumerate(d.schoolid.to_numpy()):
+# PY:     rows[g].append(i)
+# PY: schools = np.array(list(rows.keys()))
+# PY: G = len(schools)
+
+# PY: B = 999
+# PY: rng = np.random.default_rng(4)
+# PY: Bboot = np.zeros((B, X.shape[1]))
+# PY: for b in range(B):
+# PY:     draw = rng.choice(schools, size=G, replace=True)
+# PY:     idx = np.concatenate([rows[g] for g in draw])
+# PY:     Bboot[b] = ols(y[idx], X[idx])[0]
+# PY: se_boot = Bboot.std(axis=0, ddof=1)
+# PY: print(pd.DataFrame({"beta": beta, "cluster_boot_SE": se_boot}, index=names))
+
+# BCa per coefficient using delete-cluster jackknife for a
+# PY: def beta_del_cluster(g_del):
+# PY:     idx = np.concatenate([rows[g] for g in schools if g != g_del])
+# PY:     return ols(y[idx], X[idx])[0]
+
+# jackknife delete-cluster (may be slow but G~111)
+# PY: Jack = np.array([beta_del_cluster(g) for g in schools])
+# PY: for j, nm in enumerate(names):
+# PY:     bca, a, z0, p0 = bca_interval(beta[j], Bboot[:, j], Jack[:, j])
+# PY:     print(f"{nm:12s} BCa95% [{bca[0]:.4f}, {bca[1]:.4f}]  a={a:.4f} p*={p0:.3f}")
+
+# --- R 惯用写法提示 ---
+# read_dta: haven::read_dta(file.path(data_root, ...))
+# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
+# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
+# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
+```
+
+### 理论结论的蒙特卡洛验证（无需外部数据）
+
+以下单元格核对 ch10：jackknife 对样本均值 $=s/\sqrt n$；以及**核心警示**——bootstrap 假设检验必须在 $H_0$ 下重抽（否则临界值被信号撑大、过度保守）。可独立运行。
+
+```{r}
+#| label: nb-cell-07
+# 原 Python notebook 代码（保留备查）→ R 对照草稿
+# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
+
+# import numpy as np
+# PY: rng = np.random.default_rng(10)
+
+# Ex 10.1: jackknife 对样本均值的 SE = 常规 s/√n
+# PY: n = 50
+# PY: Y = rng.standard_normal(n) * 2 + 3
+# PY: loos = np.array([(Y.sum() - Y[i]) / (n - 1) for i in range(n)])
+# PY: se_jack = np.sqrt((n - 1) / n * ((loos - loos.mean())**2).sum())
+# PY: print(f"[10.1] jackknife SE={se_jack:.6f} = s/√n={Y.std(ddof=1)/np.sqrt(n):.6f}")
+
+# Ex 10.14 / 10.22: bootstrap 检验必须施加 H₀
+# 单侧 H₀:β=0 vs H₁:>0。当 β̂ 较大时，无约束 bootstrap 的 T*=β̂*/se* 分布集中在 β̂/se，
+# 其 0.95 分位被信号撑大 ⇒ 巨大的 T 也"不拒绝"（荒谬）。施加 H₀(β=0) 则临界值≈1.645。
+# PY: print("\n[10.14/10.22] bootstrap 检验：无约束 vs 施加 H₀")
+# PY: for beta_true in [0.0, 0.3, 1.0]:
+# PY:     n, B = 100, 999
+# PY:     X = rng.standard_normal(n)
+# PY:     Y = beta_true * X + rng.standard_normal(n)
+# PY:     bhat = np.sum(X*Y) / np.sum(X**2)
+# PY:     eh = Y - X * bhat
+# PY:     T = bhat / np.sqrt(np.sum(eh**2) / (n - 1) / np.sum(X**2))
+# PY:     Tb = np.empty(B); Tb0 = np.empty(B)
+# PY:     for b in range(B):
+# PY:         idx = rng.integers(0, n, n); Xb = X[idx]
+        # 无约束: 重抽 (Y,X), T* = β̂*/se*（未中心化）
+# PY:         Yb = Y[idx]
+# PY:         bb = np.sum(Xb*Yb) / np.sum(Xb**2)
+# PY:         s2b = np.sum((Yb - Xb*bb)**2) / (n - 1)
+# PY:         Tb[b] = bb / np.sqrt(s2b / np.sum(Xb**2))
+        # 施加 H₀: DGP 中 β=0，即 Y⁰ = 重抽的残差
+# PY:         Y0 = eh[idx]
+# PY:         bb0 = np.sum(Xb*Y0) / np.sum(Xb**2)
+# PY:         s2b0 = np.sum((Y0 - Xb*bb0)**2) / (n - 1)
+# PY:         Tb0[b] = bb0 / np.sqrt(s2b0 / np.sum(Xb**2))
+# PY:     cv_u = np.quantile(Tb, 0.95)
+# PY:     cv_0 = np.quantile(Tb0, 0.95)
+# PY:     print(f"  β={beta_true}: T={T:5.2f} | 无约束 cv={cv_u:5.2f} (拒绝? {T > cv_u})"
+# PY:           f" | H₀施加 cv={cv_0:5.2f} (拒绝? {T > cv_0})")
+# PY: print("  ⇒ 无约束 cv 随 T 增大 → 巨大 T 也'不拒绝'(荒谬); H₀施加 cv≈1.645 ⇒ 正确拒绝。")
+
+# --- R 惯用写法提示 ---
+# read_dta: haven::read_dta(file.path(data_root, ...))
+# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
+# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
+# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
+```
+
+
+# 依赖包
+
+```{r}
+#| label: install-pkgs
+#| eval: false
+pkgs <- c(
+  "haven", "readxl", "data.table", "sandwich", "lmtest", "AER",
+  "quantreg", "boot", "MASS", "Matrix", "nnet", "ggplot2", "knitr"
+)
+# 章节扩展：Ch14–16 vars/urca；Ch17 plm；Ch19 np；Ch26 mlogit
+miss <- setdiff(pkgs, rownames(installed.packages()))
+if (length(miss)) install.packages(miss, repos = "https://cloud.r-project.org")
+```
+
+---
+*第 10 章 · R/Quarto · md + ipynb 融合*

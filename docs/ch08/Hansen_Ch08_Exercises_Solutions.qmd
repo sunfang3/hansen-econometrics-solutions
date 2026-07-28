@@ -1,0 +1,508 @@
+---
+title: "Bruce Hansen《Econometrics》第 8 章习题解答"
+subtitle: "Chapter 8 Restricted Estimation"
+author: "按 Hansen 计量经济学体系整理（R / Quarto 版）"
+date: today
+lang: zh-CN
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    number-sections: true
+    number-depth: 2
+    html-math-method: mathjax
+    theme: cosmo
+    code-fold: true
+    code-tools: true
+engine: knitr
+knitr:
+  opts_chunk:
+    comment: "#>"
+    fig.path: "figures/ch08/"
+execute:
+  eval: false
+  echo: true
+  warning: false
+  message: false
+---
+
+::: {.callout-note}
+## 说明
+
+- **理论：** 来自同目录 Markdown 逐步解答。
+- **代码：** Python notebook 已融合为 **R**（`scripts/r_companions/ch08.R` 优先；否则为带注释的翻译草稿）。
+- **数据：** `hansen/econometrics/data/`（gitignore）；渲染前请确保数据已下载。
+- 默认 `execute: eval: false`。有数据时改为 `true` 或交互运行代码块。
+- 缺包时：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot"))` 等。
+:::
+
+```{r}
+#| label: setup
+root <- if (dir.exists("../../hansen")) "../.." else if (dir.exists("hansen")) "." else "../.."
+data_root <- file.path(root, "hansen", "econometrics", "data")
+companion_dir <- file.path(root, "scripts", "r_companions")
+if (file.exists(file.path(companion_dir, "_common.R"))) {
+  source(file.path(companion_dir, "_common.R"), local = FALSE)
+}
+knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+options(stringsAsFactors = FALSE)
+```
+
+# 理论解答
+
+**章节：** Chapter 8 Restricted Estimation
+**书稿：** PDF p238–240（印刷页 218–220），§8.17 Exercises
+**数值验证：** `Hansen_Ch08_Exercises_Solutions.ipynb`（Exercise 8.19 有可运行代码）
+
+> **写给谁看：** 假设你学过李子奈/陈强，知道"可以做约束回归（Stata `cnsreg`）"，但说不清**为什么施加约束能提高效率**、**CLS 和"最小距离（MD）"是什么关系**、**约束错了会怎样**。
+> Hansen 第 8 章回答：当**经济理论**告诉我们系数满足某约束 $R'\beta=c$（如 $\beta_1=\beta_2$、$\beta_1+\beta_2=1$、排除某变量），把约束**纳入估计**可以在约束为真时**减小方差**（提高效率）。本章给出两套等价工具——**CLS（约束最小二乘）**与**MD（最小距离）**，并推出"有效 MD"。
+
+---
+
+## 0. 读题前必看：本章到底在讲什么
+
+**承上启下：** 第 7 章给了**无约束** OLS 的渐近理论（$\hat\beta$，方差 $V_\beta=Q^{-1}\Omega Q^{-1}$）。第 8 章问：**如果理论说 $\beta$ 满足 $R'\beta=c$，怎么利用它？**
+
+**核心直觉（一张图记住全章）：** 把无约束估计 $\hat\beta$ "投影"到约束集合 $\{\beta:R'\beta=c\}$ 上，得到约束估计 $\tilde\beta$。投影后**离真值更近**（方差更小），**前提是约束为真**。
+
+**两种做法（殊途同归）：**
+1. **CLS（约束最小二乘, Constrained Least Squares）：** 直接在约束下最小化 SSE：
+   $$\tilde\beta_{\text{cls}}=\arg\min_\beta\|Y-X\beta\|^2\quad\text{s.t.}\quad R'\beta=c.$$
+2. **MD（最小距离, Minimum Distance）：** 先算无约束 $\hat\beta$，再把它"拉回"约束集合，用权重 $W$ 衡量距离：
+   $$\tilde\beta_{\text{md}}=\arg\min_\beta(\hat\beta-\beta)'W(\hat\beta-\beta)\quad\text{s.t.}\quad R'\beta=c.$$
+
+**关键事实：CLS 是 MD 的特例**（取 $W=\hat Q_{XX}=n^{-1}X'X$）。而**有效 MD** 取 $W=V_\beta^{-1}$（用渐近方差的倒数作权重），方差最小。
+
+> **和本科对照：** 李子奈略提"约束回归"；陈强讲 Stata `cnsreg` 和 Wald/LM/LR 三大检验（第 9 章）。Hansen 的贡献：用 **MD 框架统一** CLS、有效约束估计、（第 9 章的）三大检验；并讲清"施加正确约束→方差下降"的机制。
+
+**全章反复出现的"减去一个半正定项"结构（务必记住）：**
+$$\boxed{\ V_{\tilde\beta,\text{有效}}=V_\beta-\underbrace{V_\beta R(R'V_\beta R)^{-1}R'V_\beta}_{\text{半正定，}\ge0}\ \le\ V_\beta\ }$$
+- 施加**正确**约束 ⇒ 方差**下降**（减去一个半正定项）。
+- 施加**错误**约束 ⇒ 方差虽降，但**引入偏差**（一致性问题）——得不偿失。
+- 这与 Gauss-Markov 的"线性无偏中方差最小"一脉相承：在"约束为真"的子类里，有效 MD 最优。
+
+**两种"施加线性约束"的手法（做题时选简单的）：**
+- **重参数化**（简单约束，如排除、相等、比例）：把约束直接代入模型，化简后做普通 OLS。如 $\beta_2=0$→去掉 $X_2$；$\beta_1=\beta_2$→用 $X_1+X_2$；$\beta_1=2\beta_2$→用 $2X_1+X_2$。**Ex 8.1–8.3、8.22 都用此法。**
+- **通用公式**（一般约束 $R'\beta=c$）：用 CLS 公式 (8.8)。
+
+---
+
+## 1. 记号与概念速查（对照李子奈/陈强）
+
+| Hansen 记号 | 中文/本科说法 | 一句话解释 |
+|---|---|---|
+| $R'\beta=c$ | 线性约束 | $R$ 为 $k\times q$，秩 $q$（$q$ 个独立约束） |
+| CLS $\tilde\beta_{\text{cls}}$ | 约束最小二乘 | 约束下最小化 SSE；Stata `cnsreg` |
+| MD $\tilde\beta_{\text{md}}$ | 最小距离估计 | $\hat\beta$ 投影到约束集，权重 $W$ |
+| 有效 MD $\tilde\beta_{\text{emd}}$ | 有效约束估计 | $W=V_\beta^{-1}$，方差最小 |
+| $V_{\tilde\beta}=V_\beta-V_\beta R(R'V_\beta R)^{-1}R'V_\beta$ | 约束后方差 | "减去半正定项" |
+| $s^2_{\text{cls}}$，df $=n-k+q$ | 约束残差方差 | 施加 $q$ 约束"还回"$q$ 自由度 |
+| Hausman 等式 (8.18) | 方差分解 | $\mathrm{var}(\hat\beta-\tilde\beta)=\mathrm{var}(\hat\beta)-\mathrm{var}(\tilde\beta)$ |
+
+**三个核心公式（背下来）：**
+
+- **CLS (8.8)：** $\tilde\beta_{\text{cls}}=\hat\beta-\hat Q_{XX}^{-1}R(R'\hat Q_{XX}^{-1}R)^{-1}(R'\hat\beta-c)$。
+- **MD (8.23)：** $\tilde\beta_{\text{md}}=\hat\beta-W^{-1}R(R'W^{-1}R)^{-1}(R'\hat\beta-c)$。（$W=\hat Q_{XX}$ 时 = CLS。）
+- **有效 MD (8.25)：** $W=V_\beta^{-1}$ ⇒ $\tilde\beta_{\text{emd}}=\hat\beta-V_\beta R(R'V_\beta R)^{-1}(R'\hat\beta-c)$，方差 $V_\beta-V_\beta R(R'V_\beta R)^{-1}R'V_\beta$。
+
+**直观读公式：** 约束估计 = 无约束估计 **减去一个"修正项"**；修正项的大小正比于"无约束估计违反约束的程度" $(R'\hat\beta-c)$。若 $\hat\beta$ 恰好满足约束（$R'\hat\beta=c$），修正为 0，$\tilde\beta=\hat\beta$。
+
+---
+
+## 2. 预备记号
+
+模型 $Y=X\beta+e$（$X$ 含截距，$k$ 列）。约束 $R'\beta=c$，$R$ 为 $k\times q$ 列满秩。
+无约束 OLS $\hat\beta=(X'X)^{-1}X'Y$，$\hat Q_{XX}=n^{-1}X'X$，渐近方差 $V_\beta=Q^{-1}\Omega Q^{-1}$。
+CLS 残差 $\tilde e=Y-X\tilde\beta_{\text{cls}}$。
+
+---
+
+## 主题一：用重参数化求 CLS（简单约束）
+
+> 套路：把约束**代入**模型 $Y=X'\beta+e$，化成对"新回归元"的普通 OLS。比套公式 (8.8) 简单直观。
+
+### Exercise 8.1　排除约束 $\beta_2=0$ ⇒ $Y$ 对 $X_1$ 回归
+
+**证明：** 约束 $\beta_2=0$ 代入 $Y=X_1\beta_1+X_2\beta_2+e$ 得 $Y=X_1\beta_1+e$。CLS 即最小化 $\|Y-X_1\beta_1\|^2$，正是 $Y$ 对 $X_1$ 的 OLS：
+$$\tilde\beta_1=(X_1'X_1)^{-1}X_1'Y,\qquad \tilde\beta_2=0.$$
+
+> **和本科对照：** 排除性约束 = 直接**去掉**该变量。这是最常见的约束（"控制变量"取舍）。
+
+### Exercise 8.2　固定约束 $\beta_1=c$ ⇒ $(Y-X_1c)$ 对 $X_2$ 回归
+
+**证明：** 约束 $\beta_1=c$ 代入：$Y=X_1c+X_2\beta_2+e$，即 $(Y-X_1c)=X_2\beta_2+e$。CLS 即最小化 $\|(Y-X_1c)-X_2\beta_2\|^2$，正是 $(Y-X_1c)$ 对 $X_2$ 的 OLS。
+
+> **要点：** 固定某系数为已知值 $c$，先把该项 $X_1c$ 从 $Y$ 里**减掉**，再对剩余回归元做 OLS。
+
+### Exercise 8.3　相等约束 $\beta_1=-\beta_2$ ⇒ 用 $X_1-X_2$
+
+**证明：** 设 $\beta_1=\gamma,\beta_2=-\gamma$。代入：$Y=X_1\gamma-X_2\gamma+e=(X_1-X_2)\gamma+e$。CLS 即 $Y$ 对 $Z=X_1-X_2$ 的 OLS：
+$$\tilde\gamma=\big((X_1-X_2)'(X_1-X_2)\big)^{-1}(X_1-X_2)'Y,\quad \tilde\beta_1=\tilde\gamma,\ \tilde\beta_2=-\tilde\gamma.$$
+
+> **要点：** 等式约束（系数成比例）→ **合并**成新回归元（$X_1-X_2$ 或一般 $aX_1+bX_2$），降维后做 OLS。见 8.22（比例 2:1）。
+
+### Exercise 8.4　约束 $\beta=0$（只留截距 $\alpha$）
+
+**(a) CLS of $\alpha$：** 约束 $\beta=0$ 代入 $Y=\alpha+X'\beta+e$ 得 $Y=\alpha+e$ ⇒ $\tilde\alpha=\bar Y$（样本均值）。
+
+**(b) 有效 MD of $\alpha$：** 记 $\theta=(\alpha,\beta)$。有效 MD (8.25) 把 $\hat\theta$ 投影到 $\beta=0$ 子空间：
+$$\tilde\alpha=\hat\alpha-V_{\alpha\beta}V_\beta^{-1}\hat\beta,$$
+其中 $V_{\alpha\beta}$ 是 $\hat\alpha$ 与 $\hat\beta$ 的渐近协方差块。**同方差下** $\hat\alpha=\bar Y-\hat\beta'\bar X$，故 $V_{\alpha\beta}=-\bar X\,V_\beta$，代入：$\tilde\alpha=(\bar Y-\hat\beta'\bar X)+\bar X'\hat\beta=\bar Y$。即同方差下 EMD 与 CLS 都给 $\bar Y$。
+
+> **要点：** 约束只涉及 $\beta$，但有效估计 $\alpha$ 时会"借用"$\hat\beta$ 的信息（通过协方差 $V_{\alpha\beta}$）。同方差时恰好抵消回 $\bar Y$；异方差下 EMD 与 $\bar Y$ 不同。
+
+---
+
+## 主题二：CLS 的性质（公式与定理 8.1–8.4）
+
+### Exercise 8.5　验证 $R'\tilde\beta_{\text{cls}}=c$
+
+**证明：** 由 (8.8)，$\tilde\beta_{\text{cls}}=\hat\beta-\hat Q^{-1}R(R'\hat Q^{-1}R)^{-1}(R'\hat\beta-c)$。左乘 $R'$：
+$$R'\tilde\beta_{\text{cls}}=R'\hat\beta-\underbrace{R'\hat Q^{-1}R(R'\hat Q^{-1}R)^{-1}}_{=I}(R'\hat\beta-c)=R'\hat\beta-(R'\hat\beta-c)=c.\quad\checkmark$$
+
+> **意义：** CLS 估计**精确满足**约束（这是它的定义性性质）。
+
+### Exercise 8.6　证明 Theorem 8.1（CLS 的结构）
+
+**考点：** 用 **Lagrange 乘子法**推导 CLS，并证明它是 $e$ 的线性函数（⇒ 后面的无偏性）。
+
+**推导：** 约束最小化 $\|Y-X\beta\|^2$ s.t. $R'\beta=c$。Lagrange 函数 $\mathcal L(\beta,\lambda)=\|Y-X\beta\|^2+2\lambda'(R'\beta-c)$。一阶条件：
+$$\partial_\beta\mathcal L=-2X'Y+2X'X\tilde\beta+2R\tilde\lambda=0\quad(8.6),\qquad \partial_\lambda\mathcal L=R'\tilde\beta-c=0\quad(8.7).$$
+由 (8.6) 解 $\tilde\beta=(X'X)^{-1}(X'Y-R\tilde\lambda)=\hat\beta-(X'X)^{-1}R\tilde\lambda$。代入 (8.7)：$R'\hat\beta-R'(X'X)^{-1}R\tilde\lambda=c$ ⇒ $\tilde\lambda=(R'(X'X)^{-1}R)^{-1}(R'\hat\beta-c)$。代回得 (8.8)。
+
+**关键结构（Theorem 8.1.2）：** 代入 $Y=X\beta+e$（$\hat\beta-\beta=(X'X)^{-1}X'e$）：
+$$\tilde\beta_{\text{cls}}-\beta=\big((X'X)^{-1}X'-AX'\big)e,\qquad A=(X'X)^{-1}R(R'(X'X)^{-1}R)^{-1}R'(X'X)^{-1}.$$
+即 **CLS 估计是误差 $e$ 的线性函数**。残差 $\tilde e=(I-P+XAX')e$，其中 $(I-P+XAX')$ 对称幂等，迹 $=n-k+q$（Theorem 8.1.4–5）。
+
+> **和本科对照：** 这就是带约束的"正规方程"。线性结构是无偏性的关键（下一步）。
+
+### Exercise 8.7　证明 Theorem 8.2（CLS 无偏）
+
+**证明：** 由 Theorem 8.1.2，$\tilde\beta_{\text{cls}}-\beta=((X'X)^{-1}X'-AX')e$ 是 $e$ 的线性函数。取条件期望（$X$ 视作固定，系数矩阵提出）：
+$$E[\tilde\beta_{\text{cls}}-\beta\mid X]=((X'X)^{-1}X'-AX')E[e\mid X]=0\quad(\text{用 }E[e\mid X]=0).$$
+故 $E[\tilde\beta_{\text{cls}}\mid X]=\beta$。□
+
+> **要点：** 约束**为真**时，CLS 是**无偏**的（和 OLS 一样）。注意前提是约束 $R'\beta=c$ 在总体中成立。
+
+### Exercise 8.8　证明 Theorem 8.3（CLS 同方差方差）
+
+**证明：** 由 Theorem 8.1.2 的线性结构，同方差（$E[ee'|X]=\sigma^2 I$）下：
+$$\mathrm{var}(\tilde\beta_{\text{cls}}\mid X)=((X'X)^{-1}-A(X'X))\,\sigma^2.$$
+展开 $A$ 并化简（关键用 $R'(X'X)^{-1}R$ 的可逆性），得"减去半正定项"的形式：
+$$V^0_{\tilde\beta}=\sigma^2\Big((X'X)^{-1}-(X'X)^{-1}R(R'(X'X)^{-1}R)^{-1}R'(X'X)^{-1}\Big).$$
+第二项半正定，故 **$V^0_{\tilde\beta}\le\sigma^2(X'X)^{-1}=V^0_{\hat\beta}$**（约束后方差 ≤ 无约束）。
+
+> **核心：** 这就是本章的"减法结构"在有限样本的体现。施加正确约束 ⇒ 方差下降。
+
+### Exercise 8.9　证明 Theorem 4（$s^2_{\text{cls}}$ 无偏，df $=n-k+q$）
+
+**考点：** 约束回归的**自由度**是 $n-k+q$（不是 $n-k$）——因为 $q$ 个约束"还回"了 $q$ 个自由度。
+
+**证明：** 由 Theorem 8.1.3–5，$\tilde e=(I-P+XAX')e$，零化矩阵 $I-P+XAX'$ 对称幂等、迹 $n-k+q$。故（同方差下）
+$$E\Big[\sum\tilde e_i^2\Big|X\Big]=\mathrm{tr}\big((I-P+XAX')\sigma^2\big)=\sigma^2(n-k+q).$$
+因此 $s^2_{\text{cls}}=\frac{1}{n-k+q}\sum\tilde e_i^2$ 满足 $E[s^2_{\text{cls}}\mid X]=\sigma^2$。无偏。□
+
+> **和本科对照：** 无约束 OLS 用 $s^2=\frac{1}{n-k}\sum\hat e_i^2$（df $n-k$）；约束 CLS 用 $\frac{1}{n-k+q}$（df $n-k+q$）。施加 $q$ 个约束让需要估的参数少 $q$ 个，自由度多 $q$。
+
+---
+
+## 主题三：最小距离（MD）与有效约束估计
+
+### Exercise 8.10　MD = CLS（当 $W=\hat Q_{XX}$）
+
+**考点：** 验证 CLS 是 MD 的特例。
+
+**证明：** MD 的解（Lagrange 推导，同 8.6 但目标换成 $(\hat\beta-\beta)'W(\hat\beta-\beta)$）为 (8.23)：
+$$\tilde\beta_{\text{md}}=\hat\beta-W^{-1}R(R'W^{-1}R)^{-1}(R'\hat\beta-c).$$
+取 $W=\hat Q_{XX}=n^{-1}X'X$ ⇒ $W^{-1}=\hat Q_{XX}^{-1}$，恰为 CLS 公式 (8.9)。故 **$\tilde\beta_{\text{md}}=\tilde\beta_{\text{cls}}$**。□
+
+> **意义：** CLS（在 SSE 空间工作）和 MD（在 $\hat\beta$ 空间工作）是**同一个估计量**的两种视角，桥梁是 $W=\hat Q_{XX}$。
+
+### Exercise 8.11–8.13　定理 8.6–8.8（MD 的一致性、渐近正态、渐近方差）
+
+**纲要：** 在 Assumption 8.1（约束 $R'\beta=c$ 真）+ 8.2（$W\to_p W_0>0$）下：
+- **Thm 8.6（一致性）：** $\tilde\beta_{\text{md}}\to_p\beta$。
+- **Thm 8.7（渐近正态）：** $\sqrt n(\tilde\beta_{\text{md}}-\beta)\to_d N(0,V_\beta(W))$，其中
+$$V_\beta(W)=(I-W_0^{-1}R(R'W_0^{-1}R)^{-1}R')V_\beta(\cdots)'.$$
+- **Thm 8.8：** 特例 $W=Q_{XX}$ 给 CLS 的渐近方差。
+
+证明用 Slutsky + Ch7 的 $\sqrt n(\hat\beta-\beta)\to_d N(0,V_\beta)$（MD 是 $\hat\beta$ 的连续函数）。
+
+### Exercise 8.14–8.15　有效 MD 方差（$W=V_\beta^{-1}$）
+
+**考点：** 在所有 MD 估计量里，$W=V_\beta^{-1}$ 给出**最小方差**。
+
+**证明（思路）：** 把 $W=V_\beta^{-1}$ 代入 $V_\beta(W)$，化简（用矩阵恒等式）得：
+$$V_{\beta,\text{emd}}=V_\beta-V_\beta R(R'V_\beta R)^{-1}R'V_\beta.\quad(8.26)$$
+（Ex 8.14 验证此式；Ex 8.15 证 $V_{\beta,\text{emd}}\le V_\beta$，即减去项半正定。）
+
+> **核心结论：**
+> - (8.27) $V_{\beta,\text{emd}}\le V_\beta$：施加**正确**约束 ⇒ 方差**严格下降**（比无约束 OLS 更有效）。
+> - (8.28) $V_{\beta,\text{emd}}\le V_\beta(W)$：有效 MD 是**所有** MD 里方差最小的（CLS 一般不是有效 MD）。
+> - **CLS = 有效 MD 仅在同方差时**（因同方差下 $V_\beta\propto Q_{XX}$，故 $W=\hat Q_{XX}$ 恰为有效权重）。异方差时有效 MD 优于 CLS。
+
+### Exercise 8.16–8.17　(8.29)–(8.34) 的代数验证
+
+包括 **Hausman 等式** (8.18)：$\mathrm{var}(\hat\beta-\tilde\beta)=\mathrm{var}(\hat\beta)-\mathrm{var}(\tilde\beta)$——无约束与约束估计量之差的方差，等于"方差下降量"。这条等式是第 9 章 **Hausman 检验**的基础（检验约束是否为真）。
+
+---
+
+## 主题四：应用
+
+### Exercise 8.18　两独立样本，约束 $\beta_1=\beta_2$
+
+**题：** 两个独立样本各 $n$ 观测，$\hat\beta_1,\hat\beta_2$ 各自 OLS，渐近方差 $\hat V_1,\hat V_2$。约束 $\beta_1=\beta_2=:\beta$ 下求有效 MD。
+
+**(a) 估计量：** 有效 MD = **逆方差加权平均**：
+$$\tilde\beta=(\hat V_1^{-1}+\hat V_2^{-1})^{-1}(\hat V_1^{-1}\hat\beta_1+\hat V_2^{-1}\hat\beta_2).$$
+（精确的估计给大权重，不精确的给小权重。）
+
+**(b) 渐近分布：** $\sqrt n(\tilde\beta-\beta)\to_d N(0,(\hat V_1^{-1}+\hat V_2^{-1})^{-1})$。
+
+**(c) 样本量不同 $n_1,n_2$：** $\hat\beta_j$ 的实际方差 $\propto V_j/n_j$，故权重按**信息量** $n_j\hat V_j^{-1}$：
+$$\tilde\beta=(n_1\hat V_1^{-1}+n_2\hat V_2^{-1})^{-1}(n_1\hat V_1^{-1}\hat\beta_1+n_2\hat V_2^{-1}\hat\beta_2).$$
+
+> **和本科对照：** 这就是 **meta-analysis（元分析）/ 固定效应汇总** —— 把多个独立研究的估计按精度加权合并。也与 SUR（似无关回归）、面板数据 pooled 估计相关。
+
+### Exercise 8.19（CPS 实证）　CLS 与 EMD 实操
+
+白人男性西班牙裔，$n=4230$。
+
+|  | edu | exp | exp2 | m1 | m2 | m3 | wid | div | sep | int |
+|--|-----|-----|------|----|----|----|-----|-----|-----|-----|
+| OLS | 0.087 | 0.028 | −0.037 | 0.182 | −0.479 | −0.039 | 0.237 | 0.074 | 0.017 | 1.191 |
+
+**(b)(c)** 约束 m1=wid、div=sep：
+- **CLS（重参数化）：** 把 m1+wid 合并成一个虚拟、div+sep 合并成一个，再做 OLS。
+- **EMD：** 用 (8.25) 投影。两者数值接近（m1=wid≈0.181，div=sep≈0.052）。
+
+**(d)** 工资对经验**非递减**（exp≤50）的约束：$\partial m/\partial\text{exp}=\beta_2+2\beta_3\cdot\text{exp}/100\ge0$ 对 $\text{exp}\in[0,50]$。因 $\beta_3<0$（凹），最小值在 exp=50 处：需 $\beta_2+\beta_3\ge0$（即 $\beta_2\ge-\beta_3$）。
+- 无约束 $\beta_2+\beta_3\approx0.028-0.037=-0.009<0$ ⇒ **违反** ⇒ 需施加**不等式约束**（二次规划）。
+
+**(e)** 同时施加 (b) 的等式约束 + (d) 的不等式约束。
+
+> **看点：** 等式约束用 CLS/MD（重参数化或公式）；**不等式约束**（凹性、单调性）需**二次规划**——这是约束估计的进阶。代码见 notebook。
+
+### Exercise 8.20　多项式导数 $g(x)=m'(x)$ + 形状约束
+
+**(a)** $m(x)=\beta_0+\beta_1x+\cdots+\beta_px^p$ 是 $Y$ 对 $\{1,x,\ldots,x^p\}$ 的投影（CEF 的最佳多项式近似）；$g(x)=m'(x)$ 是**边际效应/导数**。
+
+**(b)** $\hat g(x)=\sum_{j=1}^p j\hat\beta_j x^{j-1}$（逐项求导）。
+
+**(c)** delta method（第 7 章）：$\sqrt n(\hat g(x)-g(x))\to_d N(0,\nabla_g'V_\beta\nabla_g)$，梯度 $\nabla_g=(0,1,2x,3x^2,\ldots,px^{p-1})'$。
+
+**(d)** 95% CI：$\hat g(x)\pm 1.96\sqrt{\nabla_g'\hat V_\beta\nabla_g}$。
+
+**(e)** $p=2$ 的**凹性**：$m''(x)=2\beta_2$，凹 ⇒ $\beta_2\le0$（不等式约束）。
+
+**(f)** $p=2$ 在 $[x_L,x_U]$ **递增**：$g(x)=\beta_1+2\beta_2x\ge0$ 在区间内。线性函数的最小值在端点 ⇒ 约束 $\beta_1+2\beta_2 x_L\ge0$ **且** $\beta_1+2\beta_2 x_U\ge0$（两个线性不等式）。
+
+> **和本科对照：** 多项式回归 + delta method 估计边际效应（第 7 章工具的直接应用），再加形状约束（凹/单调）= 不等式约束估计。
+
+### Exercise 8.21　三种估计的 SSE 比较（系数效率 ≠ 拟合优度）
+
+**题：** 无约束 $\hat\beta$、CLS $\tilde\beta$、有效 MD $\bar\beta$，对应残差 $\hat e,\tilde e,\bar e$ 与 $\hat\sigma^2,\tilde\sigma^2,\bar\sigma^2$。
+
+**(a) 是否 $\bar\sigma^2<\tilde\sigma^2<\hat\sigma^2$？** **否。** OLS **最小化 SSE**，故 $\hat\sigma^2$（无约束）最小；施加约束使 SSE **增大** ⇒ $\tilde\sigma^2,\bar\sigma^2\ge\hat\sigma^2$。"$\bar\beta$ 最有效"指的是**系数方差**小，不是 SSE 小。**系数效率 ≠ 拟合优度。**
+
+**(b)** $T_n=\hat\sigma^{-2}\sum(\hat e_i-\tilde e_i)^2$，约束为真时 $T_n\to_d\chi^2_q$（与 Wald/LR 同族，第 9 章的**距离检验**统计量）。
+
+**(c)** 同方差时 $T_n$ 与经典 $F$/似然比**单调相关**。
+
+> **关键区分：** 施加约束让**系数方差下降**（效率↑），但让 **SSE 上升**（拟合↓）。两者方向相反，别混淆。
+
+### Exercise 8.22　比例约束 $\beta_1/\beta_2=2$（即 $\beta_1=2\beta_2$）
+
+**(a) CLS：** 代入 $Y=X_1\beta_1+X_2\beta_2+e=(2X_1+X_2)\beta_2+e$。记 $Z=2X_1+X_2$，CLS 即 $Y$ 对 $Z$ 的 OLS：
+$$\tilde\beta_2=\frac{\sum Z_iY_i}{\sum Z_i^2},\qquad \tilde\beta_1=2\tilde\beta_2.$$
+
+**(b) 渐近分布：** 这是对 $Z$ 的一元 OLS，$\sqrt n(\tilde\beta_2-\beta_2)\to_d N(0,E[Z^2e^2]/(E[Z^2])^2)$。$\tilde\beta_1=2\tilde\beta_2$ 故其方差为 $4\times$。
+
+> **要点：** 比例约束 = 重参数化（合并成 $2X_1+X_2$），与 8.3 同思路。
+
+---
+
+## 附录 A：约束估计公式总表
+
+| 估计量 | 公式 | 方差 |
+|---|---|---|
+| 无约束 OLS $\hat\beta$ | $(X'X)^{-1}X'Y$ | $V_\beta=Q^{-1}\Omega Q^{-1}$ |
+| CLS $\tilde\beta_{\text{cls}}$ | $\hat\beta-\hat Q^{-1}R(R'\hat Q^{-1}R)^{-1}(R'\hat\beta-c)$ | $\le V_\beta$（同方差下精确减 PSD 项） |
+| MD $\tilde\beta_{\text{md}}$ | $\hat\beta-W^{-1}R(R'W^{-1}R)^{-1}(R'\hat\beta-c)$ | $V_\beta(W)$ |
+| 有效 MD $\tilde\beta_{\text{emd}}$ | $W=V_\beta^{-1}$ 时的 MD | $V_\beta-V_\beta R(R'V_\beta R)^{-1}R'V_\beta$ |
+
+**df：** 无约束 $n-k$；CLS $n-k+q$（$q$ 个约束还回 $q$ 自由度）。
+
+---
+
+## 附录 B：约束估计 vs 第 9 章假设检验（预告）
+
+本章估计**在约束为真时**的系数。第 9 章反过来：**检验约束是否为真**。三大检验（Wald、LR、LM/距离）都建立在"无约束 vs 约束估计的差异"上：
+- **Wald：** 看 $R'\hat\beta-c$ 偏离 0 多少（用无约束估计）。
+- **LR：** 看约束/无约束的 SSE（或似然）差距。
+- **LM/距离：** 看约束估计的 Lagrange 乘子（或 $\hat\beta-\tilde\beta$ 的距离，即 8.21 的 $T_n$）。
+
+本章的"减去 PSD 项"和 Hausman 等式 (8.18) 正是这些检验的代数基石。
+
+---
+
+## 附录 C：notebook 单元对应
+
+| 习题 | notebook 内容 |
+|------|----------------|
+| 8.19(a) | OLS + HC3 SE code cell |
+| 8.19(b) | CLS（重参数化）code cell |
+| 8.19(c) | EMD（用 (8.25)）code cell |
+| 8.19(d) | 经验边际效应端点检查 |
+
+
+# 实证与数值代码（来自 notebook，R 版）
+
+## Hansen Ch.8 Restricted Estimation — 计算
+
+**Chapter 8 Restricted Estimation**
+
+完整推导与**面向初学者的详细注释**见同目录 `Hansen_Ch08_Exercises_Solutions.md`（强烈建议先读 §0、§1）。
+
+本 notebook：**Exercise 8.19**（CLS 与有效 MD 实操）。
+
+> **写给只学过李子奈/陈强的同学：** 本章讲**当经济理论给出约束 $R'\beta=c$ 时如何利用它**。两套等价工具：
+> - **CLS（约束最小二乘）**：约束下最小化 SSE，Stata `cnsreg`。
+> - **MD（最小距离）**：把无约束 $\hat\beta$ 投影到约束集合，权重 $W$。CLS 是 MD 的特例（$W=\hat Q_{XX}$）。
+>
+> 核心直觉——**施加正确约束让方差下降**（"减去一个半正定项"）：
+> $$V_{\tilde\beta,\text{有效}}=V_\beta-V_\beta R(R'V_\beta R)^{-1}R'V_\beta\le V_\beta.$$
+> 但约束**为真**才有此好处；约束**错**了会引入偏差（且让 SSE 上升，见 Ex 8.21）。
+> 有效 MD 用 $W=V_\beta^{-1}$（方差倒数作权重），同方差下退化为 CLS，异方差下优于 CLS。
+
+```{r}
+#| label: nb-cell-01
+# 原 Python notebook 代码（保留备查）→ R 对照草稿
+# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
+
+
+# import numpy as np
+# import pandas as pd
+# from pathlib import Path
+
+# PY: def ols_hc3(y, X):
+# PY:     n, k = X.shape
+# PY:     beta = np.linalg.lstsq(X, y, rcond=None)[0]
+# PY:     e = y - X @ beta
+# PY:     XXinv = np.linalg.inv(X.T @ X)
+# PY:     h = np.sum(X * (X @ XXinv), axis=1)
+# PY:     u = X * (e / np.clip(1 - h, 1e-12, None))[:, None]
+# PY:     V = XXinv @ (u.T @ u) @ XXinv
+# PY:     return beta, e, V, n, k
+
+# PY: CPS = Path("/home/fang/Project/zhihu-paper/p1/hansen/econometrics/data/cps09mar/cps09mar.xlsx")
+# PY: df = pd.read_excel(CPS)
+# PY: df["experience"] = df["age"] - df["education"] - 6
+# PY: df["lwage"] = np.log(df["earnings"] / (df["hours"] * df["week"]))
+# PY: df["exp2"] = (df["experience"] ** 2) / 100
+# PY: s = df[(df.race == 1) & (df.female == 0) & (df.hisp == 1)].copy().reset_index(drop=True)
+# PY: for code, name in [(1, "m1"), (2, "m2"), (3, "m3"), (4, "wid"), (5, "div"), (6, "sep")]:
+# PY:     s[name] = (s.marital == code).astype(float)
+# PY: y = s.lwage.to_numpy()
+# PY: X = np.column_stack([
+# PY:     s.education, s.experience, s.exp2, s.m1, s.m2, s.m3, s.wid, s.div, s.sep, np.ones(len(s))
+# PY: ])
+# PY: names = ["edu", "exp", "exp2", "m1", "m2", "m3", "wid", "div", "sep", "int"]
+# PY: beta, e, V, n, k = ols_hc3(y, X)
+# PY: print("n =", n)
+# PY: print(pd.DataFrame({"beta": beta, "HC3_SE": np.sqrt(np.diag(V))}, index=names))
+
+# CLS: m1=wid, div=sep
+# PY: Xcls = np.column_stack([
+# PY:     s.education, s.experience, s.exp2, s.m1 + s.wid, s.m2, s.m3, s.div + s.sep, np.ones(len(s))
+# PY: ])
+# PY: bcls, _, Vcls, _, _ = ols_hc3(y, Xcls)
+# PY: print("\nCLS (reparameterized):", bcls)
+
+# EMD
+# PY: R = np.array([[0, 0, 0, 1, 0, 0, -1, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 1, -1, 0]], float)
+# PY: bmd = beta - V @ R.T @ np.linalg.inv(R @ V @ R.T) @ (R @ beta)
+# PY: print("\nEMD:")
+# PY: print(pd.Series(bmd, index=names))
+# PY: print("d(exp)/d at 0 and 50:", beta[1], beta[1] + beta[2])
+
+# --- R 惯用写法提示 ---
+# read_dta: haven::read_dta(file.path(data_root, ...))
+# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
+# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
+# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
+```
+
+### 理论结论的蒙特卡洛验证（无需外部数据）
+
+以下单元格核对 ch08：CLS 公式=重参数化、$s^2_{\mathrm{cls}}$ 在 df=$n-k+q$ 下无偏（约束为真）、有效 MD 方差"减去半正定项"、两样本逆方差加权。可独立运行。
+
+```{r}
+#| label: nb-cell-02
+# 原 Python notebook 代码（保留备查）→ R 对照草稿
+# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
+
+# import numpy as np
+# PY: rng = np.random.default_rng(8)
+
+# Ex 8.5 / 8.9: CLS 公式 (8.8) 与重参数化一致；约束为真时 s²_cls(df=n-k+q) 无偏
+# PY: n, k, q = 80, 2, 1
+# PY: R = np.array([[1.0], [0.0]]); c = np.array([3.0]); sigma2 = 4.0
+# PY: X = np.c_[rng.standard_normal(n), np.ones(n)]
+# PY: beta = np.array([3.0, 1.0])                                     # 约束为真: β₁=3
+# PY: s2_nkq = []
+# PY: for r in range(40000):
+# PY:     e = rng.standard_normal(n) * np.sqrt(sigma2); Y = X @ beta + e
+# PY:     bhat = np.linalg.solve(X.T @ X, X.T @ Y); Qinv = np.linalg.inv(X.T @ X)
+# PY:     bcls = bhat - Qinv @ R @ np.linalg.inv(R.T @ Qinv @ R) @ (R.T @ bhat - c)   # CLS 公式 (8.8)
+# PY:     bcls2 = np.array([3.0, np.mean(Y - 3.0 * X[:, 0])])        # 重参数化: 固定 β₁=3 后对 X₂ 回归
+# PY:     assert np.allclose(bcls, bcls2)
+# PY:     te = Y - X @ bcls
+# PY:     s2_nkq.append((te @ te) / (n - k + q))                     # df = n - k + q
+# PY: print(f"[8.5/8.9] CLS公式=重参数化(逐样本一致); E[s²_cls(df=n-k+q)]={np.mean(s2_nkq):.4f} = σ²={sigma2}")
+
+# Ex 8.26: 有效 MD 方差 = V - V·R·(R'VR)^-1·R'·V（减去半正定项 ⇒ 施加正确约束降方差）
+# PY: Q = np.array([[2.0, 0.3], [0.3, 1.0]])
+# PY: Om = np.array([[3.0, 0.5], [0.5, 2.0]])
+# PY: Vb = np.linalg.solve(Q, Om @ np.linalg.inv(Q))                 # Q^-1 Ω Q^-1
+# PY: R2 = np.array([[1.0], [-1.0]])                                  # 约束 β₁-β₂=0
+# PY: Vemd = Vb - Vb @ R2 @ np.linalg.inv(R2.T @ Vb @ R2) @ R2.T @ Vb
+# PY: print(f"[8.26] V - V_emd 特征值={np.round(np.linalg.eigvalsh(Vb - Vemd), 4)} (≥0 ⇒ 方差下降)")
+
+# Ex 8.18: 两独立样本的逆方差加权（信息量加权汇总）
+# PY: b, N, reps = 1.0, 100, 30000
+# PY: est = []
+# PY: for r in range(reps):
+# PY:     X1 = rng.standard_normal(N); X2 = rng.standard_normal(N)
+# PY:     e1 = rng.standard_normal(N) * np.sqrt(2.0); e2 = rng.standard_normal(N)
+# PY:     b1 = np.sum(X1*(X1*b + e1)) / np.sum(X1**2)
+# PY:     b2 = np.sum(X2*(X2*b + e2)) / np.sum(X2**2)
+# PY:     v1, v2 = 2.0/np.sum(X1**2), 1.0/np.sum(X2**2)
+# PY:     est.append((b1/v1 + b2/v2) / (1/v1 + 1/v2))
+# PY: print(f"[8.18] 两样本加权 var={np.var(est):.6f} ≈ (信息量倒数和)⁻¹={1/(N/2 + N/1):.6f}")
+
+# --- R 惯用写法提示 ---
+# read_dta: haven::read_dta(file.path(data_root, ...))
+# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
+# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
+# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
+```
+
+
+# 依赖包
+
+```{r}
+#| label: install-pkgs
+#| eval: false
+pkgs <- c(
+  "haven", "readxl", "data.table", "sandwich", "lmtest", "AER",
+  "quantreg", "boot", "MASS", "Matrix", "nnet", "ggplot2", "knitr"
+)
+# 章节扩展：Ch14–16 vars/urca；Ch17 plm；Ch19 np；Ch26 mlogit
+miss <- setdiff(pkgs, rownames(installed.packages()))
+if (length(miss)) install.packages(miss, repos = "https://cloud.r-project.org")
+```
+
+---
+*第 8 章 · R/Quarto · md + ipynb 融合*

@@ -1,0 +1,695 @@
+---
+title: "Bruce Hansen《Econometrics》第 18 章习题解答"
+subtitle: "Chapter 18 Difference in Differences"
+author: "按 Hansen 计量经济学体系整理（R / Quarto 版）"
+date: today
+lang: zh-CN
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    number-sections: true
+    number-depth: 2
+    html-math-method: mathjax
+    theme: cosmo
+    code-fold: true
+    code-tools: true
+engine: knitr
+knitr:
+  opts_chunk:
+    comment: "#>"
+    fig.path: "figures/ch18/"
+execute:
+  eval: false
+  echo: true
+  warning: false
+  message: false
+---
+
+::: {.callout-note}
+## 说明
+
+- **理论：** 来自同目录 Markdown 逐步解答。
+- **代码：** Python notebook 已融合为 **R**（`scripts/r_companions/ch18.R` 优先；否则为带注释的翻译草稿）。
+- **数据：** `hansen/econometrics/data/`（gitignore）；渲染前请确保数据已下载。
+- 默认 `execute: eval: false`。有数据时改为 `true` 或交互运行代码块。
+- 缺包时：`install.packages(c("haven","readxl","sandwich","AER","quantreg","boot"))` 等。
+:::
+
+```{r}
+#| label: setup
+root <- if (dir.exists("../../hansen")) "../.." else if (dir.exists("hansen")) "." else "../.."
+data_root <- file.path(root, "hansen", "econometrics", "data")
+companion_dir <- file.path(root, "scripts", "r_companions")
+if (file.exists(file.path(companion_dir, "_common.R"))) {
+  source(file.path(companion_dir, "_common.R"), local = FALSE)
+}
+knitr::opts_chunk$set(fig.width = 7, fig.height = 4.5)
+options(stringsAsFactors = FALSE)
+```
+
+# 理论解答
+
+**章节：** Chapter 18 Difference in Differences  
+**书稿：** PDF 第 682–684 页（印刷页 662–664），§18.10 Exercises（**18.1–18.8 全部**）
+
+---
+
+## 0. 读题前必看：本章到底在讲什么
+
+**承上启下：**
+- 第 17 章：面板数据（FE/RE 消除个体效应 $u_i$）。
+- **第 18 章：双重差分（DiD）—— 面板 FE 应用于因果推断。** 当一项"处理"（政策、干预）在某一组、某一时间实施，DiD 用**对照组的变化**来推断处理组"如果没有处理会怎样"（反事实）。
+
+**核心直觉（一张图记住 DiD）：**
+$$\theta^{\mathrm{DiD}}=\underbrace{(\bar Y_{\text{处理},\text{后}}-\bar Y_{\text{处理},\text{前}})}_{\text{处理组的实际变化}}-\underbrace{(\bar Y_{\text{对照},\text{后}}-\bar Y_{\text{对照},\text{前}})}_{\text{对照组的变化（反事实代理）}}$$
+"处理效应 = 处理组变化 − 对照组变化"。第一差分消个体效应，第二差分消共同时间冲击。
+
+**关键假设——平行趋势：** 若无处理，处理组和对照组**会沿平行路径变化**。这是 DiD 的**识别核心**——无法直接检验，但可用处理前数据佐证。
+
+**回归形式（与面板 FE 等价）：**
+$$Y_{it}=\theta D_{it}+u_i+\delta_t+\varepsilon_{it}$$
+其中 $D_{it}=\text{Treat}_i\times\text{Post}_t$（处理 × 后期交互项），$u_i$ 个体 FE，$\delta_t$ 时间 FE。$\hat\theta$ 就是 DiD 估计量。**平衡面板下**，州 FE、餐馆 FE、混合 OLS + 交互项三种写法给**相同** $\hat\theta$（18.1）。
+
+**四大要点（本章反复）：**
+1. **必须有对照组**：省略时间效应（只有处理组前后差）是**单一差分**，不是 DiD（18.2）。
+2. **必须 cluster SE**：处理通常在组层面（州/店/街区），个体层面 cluster。
+3. **平行趋势是识别核心**：不可检验，但可用处理前趋势、安慰剂检验佐证。
+4. **处理同质性可检验**：加 $N_2-1$ 个处理组×时间交互，联合为 0 ⇔ 同质（18.4）。
+
+> **和本科对照：** 陈强讲 **双重差分（DID）** 和自然实验。李子奈略有提及。Hansen 的贡献：把 DiD 严格纳入面板 FE 框架（$D_{it}$ = TWFE 的系数），并讨论内生处理（FE-IV）、同质性检验、溢出效应（18.7 一街之隔）。
+
+---
+
+## 1. 记号与概念速查
+
+| Hansen 记号 | 中文/本科说法 | 一句话解释 |
+|---|---|---|
+| $D_{it}=\text{Treat}_i\times\text{Post}_t$ | 处理 × 后期交互项 | DiD 的核心回归元 |
+| $\theta$ | 处理效应 | DiD 估计的目标参数 |
+| 平行趋势 | parallel trends | 无处理下两组变化路径平行（识别核心） |
+| TWFE | 双向固定效应 | $Y_{it}=\theta D_{it}+u_i+\delta_t+\varepsilon_{it}$ |
+| 单一差分 | before-after | 只有处理组前后差（**不是** DiD） |
+| cluster SE | 聚类标准误 | 按处理组层级（州/店/街区）聚类 |
+| 同质检验 | treatment homogeneity | $N_2-1$ 个处理×时间交互联合 $=0$ |
+
+---
+
+## Exercise 18.1　个体 FE 与州级去均值变量的正交性
+
+记平衡面板：$i$ 为餐馆（或个人），属于州 $s(i)$，共 $T$ 期。州级去均值变量（如州×时间虚拟、州级政策）对每个州-时期在个体间为常数：  
+$W_{it}=w_{s(i),t}$。
+
+### (a) 平衡样本
+
+个体 within 变换 $\dot W_{it}=W_{it}-\bar W_i$。因 $W_{it}$ 仅依赖 $(s,t)$，且平衡时每个 $i$ 经历相同时间集合，
+$$
+\bar W_i=T^{-1}\sum_t w_{s(i),t}
+$$
+仅依赖州 $s(i)$，与餐馆在州内的身份无关。对任意两家同州餐馆 $i,j$，有 $\dot W_{it}=\dot W_{jt}$。  
+
+个体固定效应虚拟 $d_i$ 的 within 变换为 0（被完全吸收）。更关键的正交性：在含个体 FE 的回归中，对任意仅随 $(s,t)$ 变化的回归元 $W$，
+$$
+\sum_{i,t}\dot d_i\,\dot W_{it}=0
+$$
+（因 $\dot d_i\equiv0$ 或 Frisch–Waugh：个体 demean 后 $W$ 在州内仍为时间函数，与已去均值的个体常数正交）。  
+等价地：州级去均值变量落在“州×时间”空间中，与“个体相对州均值”的偏差正交。
+
+### (b) 非平衡样本
+
+**一般不成立。** 若不同个体的观测时期集合不同，则
+$$
+\bar W_i=T_i^{-1}\sum_{t\in S_i}w_{s(i),t}
+$$
+依赖 $S_i$。同州个体可有不同 $\bar W_i$，从而 $\dot W_{it}$ 在个体间不再相同；个体 FE 与州级变量的 within 变换一般 **相关**。
+
+### (c) 两式给出相同 $\hat\theta$
+
+$$
+Y_{it}=\beta_0+\beta_1\mathrm{State}_i+\beta_2\mathrm{Time}_t+\theta D_{it}+\varepsilon_{it}
+\tag{A}
+$$
+与
+$$
+Y_{it}=\theta D_{it}+u_i+\delta_t+\varepsilon_{it}
+\tag{B}
+$$
+在 **平衡** 样本且 $D_{it}$ 仅随州×时间变化（$D_{it}=\mathrm{State}_i\cdot\mathrm{Time}_t$）时：  
+
+- (A) 是州 FE + 时间 FE + $D$ 的饱和设定；  
+- (B) 用餐馆 FE 替代州 FE。  
+
+由 (a)，餐馆 FE 相对州级 demean 变量正交，Frisch–Waugh 下 $D$ 与时间效应的系数与仅用州 FE 时相同。故 $\hat\theta$ 相同（正文 (18.2) 与 (18.4)）。
+
+---
+
+## Exercise 18.2　省略时间效应的回归
+
+$T=2,N=2$（两州两期），$D_{it}=\mathrm{State}_i\cdot\mathrm{Time}_t$，估计
+$$
+Y_{it}=\beta_0+\beta_1\mathrm{State}_i+\theta D_{it}+\varepsilon_{it}
+$$
+（**无** $\mathrm{Time}$）。
+
+### (a) $\hat\theta$ 的代数式
+
+四个单元均值（饱和在 $\mathrm{State}$ 与 $D$ 上；PA 两期被约束为相同截距）：
+
+| | $\mathrm{Time}=0$ | $\mathrm{Time}=1$ |
+|--|--|--|
+| PA ($\mathrm{State}=0$) | $\beta_0$ | $\beta_0$ |
+| NJ ($\mathrm{State}=1$) | $\beta_0+\beta_1$ | $\beta_0+\beta_1+\theta$ |
+
+OLS 在各组样本量下拟合单元均值时：
+$$
+\hat\theta=\bar Y_{\mathrm{NJ},1}-\bar Y_{\mathrm{NJ},0}.
+$$
+（更一般：对 NJ 子样本做 $Y$ 对常数与 $\mathrm{Time}$ 的回归，斜率即 $\hat\theta$；PA 只识别 $\hat\beta_0$。）
+
+### (b) 仅依赖处理组
+
+由上式，$\hat\theta$ **只** 是新泽西处理前后之差，与宾州样本无关。
+
+### (c) 是否为 DiD？
+
+**不是。** 标准 DiD 为
+$$
+\theta^{\mathrm{DiD}}=(\bar Y_{\mathrm{NJ},1}-\bar Y_{\mathrm{NJ},0})-(\bar Y_{\mathrm{PA},1}-\bar Y_{\mathrm{PA},0}).
+$$
+本题 $\hat\theta$ 缺少对照组的时间差分，只是 **处理组 before–after（单一差分）**。
+
+### (d) 何时可作为处理效应？
+
+当且仅当 **对照组无时间趋势 / 处理组在无处理下的反事实不变**（$\mathbb{E}[\Delta Y\mid\mathrm{PA}]=0$ 且平行趋势退化为处理组水平稳定），例如：  
+- 无共同冲击、无趋势；或  
+- 理论保证 PA 的变化为零且可忽略。  
+
+在 Card–Krueger 类应用中 PA 就业明显下降，该估计 **不合适**。
+
+---
+
+## Exercise 18.3　内生处理与工具变量
+
+模型 $Y_{it}=\theta D_{it}+u_i+\delta_t+\varepsilon_{it}$，$Z_{it}\perp\varepsilon$ 但与 $D$ 相关。
+
+**估计：** 在双向固定效应下对 $D$ 做 **FE-IV / 2SLS**（§17.28）：  
+
+1. Within（或等价 LSDV）变换消去 $u_i,\delta_t$，得 $\ddot Y_{it}=\theta\ddot D_{it}+\ddot\varepsilon_{it}$；  
+2. 用 $\ddot Z_{it}$（及严格外生控制的 within）作 $\ddot D$ 的工具；  
+3. 2SLS / GMM 得 $\hat\theta$，标准误在个体（或州）层面 **cluster**。  
+
+识别需要：相关（第一阶段 $\ddot Z$ 预测 $\ddot D$）与外生（$Z$ 只通过 $D$ 影响 $Y$，且与 $\varepsilon$ 正交）。$Z$ 本身若仅随州×时间变化，需足够州/时期变异。
+
+---
+
+## Exercise 18.4　同质效应检验为何用 $N_2-1$、$N_1-1$ 个交互
+
+**处理同质：** 设 $N_2$ 个处理单位（如 NJ 三区）。在已含“处理×时间”（共同 $\theta$）与单位/时间 FE 时，再加入 **全部** $N_2$ 个“区×时间”会与共同处理效应 **完全共线**（处理区时间变化被重复参数化）。故只加 **$N_2-1$** 个区×时间交互，测量相对基准处理区的 **差异**；联合为 0 $\Leftrightarrow$ 同质 $\theta$。
+
+**对照同质：** $N_1$ 个对照单位的时间变化由共同 $\delta_t$（或共同对照趋势）刻画；加入全部 $N_1$ 个对照区×时间会与时间 FE 共线。只加 **$N_1-1$** 个交互，检验对照区之间时间路径是否相同。
+
+---
+
+## Exercise 18.5　威斯康星 Act10 虚构表
+
+| | 2001–2010 | 2011–2020 | $\Delta$ |
+|--|----------:|----------:|---------:|
+| Wisconsin | 15.23 | 16.72 | 1.49 |
+| Minnesota | 16.42 | 18.10 | 1.68 |
+
+### (a) DiD 点估计
+
+$$
+\hat\theta=(16.72-15.23)-(18.10-16.42)=1.49-1.68=\mathbf{-0.19}.
+$$
+（相对明尼苏达，威州工资增长约低 0.19。）
+
+### (b) 县域回归中的 $\hat\beta$
+
+回归 $\mathrm{wage}=\alpha+\beta\mathrm{Act10}+\gamma\mathrm{Wisconsin}+\delta\mathrm{Post2010}+e$ 为 $2\times2$ 饱和设定。若表中数字即各单元的县域简单平均（或每格权重一致），则
+$$
+\hat\beta=\hat\theta=\mathbf{-0.19}.
+$$
+
+### (c) $\hat\gamma$
+
+$\hat\gamma$ 为处理前威州相对明尼苏达的差距：
+$$
+\hat\gamma=15.23-16.42=\mathbf{-1.19}.
+$$
+
+---
+
+## Exercise 18.6　CK1994：最低限度工资与餐价
+
+**数据：** `CK1994`；$\mathrm{price}=\mathrm{priceentree}+\mathrm{pricefry}+\mathrm{pricesoda}$。  
+删除缺失价后，仅保留两期都有价格的门店（平衡面板）：**356 店 × 2 = 712**。  
+$\mathrm{state}=1$：NJ；$\mathrm{time}=1$：政策后；$D=\mathrm{state}\times\mathrm{time}$。SE 在 **store** 上 cluster。
+
+### (b) 类似 Table 18.1（餐价）
+
+| | NJ | PA | Diff |
+|--|---:|---:|-----:|
+| Before | 3.359 | 3.088 | 0.271 |
+| After | 3.425 | 3.054 | 0.371 |
+| Diff | 0.066 | −0.034 | **0.100** |
+
+**解读：** NJ 餐价上升约 \$0.07，PA 略降；DiD **+\$0.10**，与“提高最低工资推高价格”一致，且与就业 DiD 同号（价格↑、就业↑）。
+
+### (c)(d)(e) 回归
+
+$$
+\widehat{\mathrm{price}}=3.088+0.271\,\mathrm{State}-0.034\,\mathrm{Time}+0.100\,D
+$$
+（cluster SE：0.074, 0.084, 0.037, **0.044**）。
+
+州 FE + 时间、$D$：$\hat\theta=0.100$（0.044）。  
+餐馆 FE + 时间、$D$：$\hat\theta=0.100$（0.044）。
+
+### (f) 是否相同？
+
+**是**（平衡面板且 $D$ 仅州×时间）：与 18.1 / 正文就业回归平行，三种写法给出相同 $\hat\theta$。
+
+### (g) 类似 Table 18.2（分区）
+
+| | South NJ | Central NJ | North NJ | PA1 | PA2 |
+|--|--------:|----------:|---------:|----:|----:|
+| Before | 3.314 | 3.484 | 3.340 | 3.136 | 3.052 |
+| After | 3.375 | 3.480 | 3.432 | 3.072 | 3.040 |
+| Diff | 0.061 | −0.004 | 0.092 | −0.063 | −0.012 |
+
+NJ 分区涨价幅度不一（中央接近 0）；PA 两区均略降。
+
+### (h) 处理同质（$N_2-1=2$ 个 NJ 区×时间）
+
+餐馆 FE 回归加入 `centralj×time`、`northj×time`：  
+Wald $\chi^2_2\approx2.19$，$p\approx0.34$ → **不拒绝** 同质处理效应。
+
+### (i) 对照同质（$N_1-1=1$ 个 PA 区×时间）
+
+加入 `pa1×time`：$t\approx-0.61$，$p\approx0.54$ → **不拒绝** 同质对照趋势。
+
+---
+
+## Exercise 18.7　DS2004：一街之隔的威慑？
+
+**数据：** `DS2004`；剔除 7 月；`sameblock` = 受保护建筑所在街区；`oneblock` = 相距一个街区。
+
+### (a) 类似 Table 18.3：oneblock vs 更远
+
+| | One block away | Farther (>1 block) | Diff |
+|--|---------------:|-------------------:|-----:|
+| Pre (Apr–Jun) | 0.092 | 0.096 | −0.004 |
+| Post (Aug–Dec) | 0.096 | 0.107 | −0.011 |
+| Diff | 0.004 | 0.011 | **DiD ≈ −0.007** |
+
+（对照：sameblock 上 Pre 0.113 → Post 0.035，Diff −0.078，与正文 Table 18.3 一致。）
+
+### (b) 街区 + 月份 FE，双重处理
+
+$$
+\mathrm{thefts}_{it}=\theta_1(\mathrm{sameblock}_i\times\mathrm{Post}_t)+\theta_2(\mathrm{oneblock}_i\times\mathrm{Post}_t)+u_i+\delta_t+\varepsilon_{it}
+$$
+（7 月已删；cluster by block）。
+
+| | 估计 | SE | $t$ |
+|--|-----:|---:|----:|
+| sameblock × Post | **−0.088** | 0.030 | −2.91 |
+| oneblock × Post | **−0.007** | 0.016 | −0.43 |
+
+### (c) 结论
+
+同街区警察保护显著降低盗窃（约 −0.09，与正文 −0.087 一致）。  
+**一街之隔** 的效应接近 0 且不显著 → **威慑高度局部化**，基本不延伸到相邻街区。
+
+---
+
+## Exercise 18.8　BMN2016：啤酒 / 葡萄酒蓝法
+
+设定仿 (18.7)–(18.8)：州 FE + 年 FE；解释变量为周日可售小时、失业率、跨州流出；SE **cluster by state**。再估含 **州特定线性趋势** 的版本。
+
+### 啤酒 `logbeer`
+
+| | OnHours | OffHours | UR | OnOut | OffOut |
+|--|--------:|---------:|---:|------:|-------:|
+| 州+年 FE (18.7 型) | 0.0011 (0.0028) | 0.0030 (0.0019) | −0.0004 (0.0037) | 0.0044 (0.0049) | 0.0003 (0.0047) |
+| + 州线性趋势 (18.8 型) | −0.0013 (0.0021) | 0.0003 (0.0020) | −0.0052 (0.0027) | −0.0007 (0.0016) | −0.0004 (0.0028) |
+
+### 葡萄酒 `logwine`
+
+| | OnHours | OffHours | UR | OnOut | OffOut |
+|--|--------:|---------:|---:|------:|-------:|
+| 州+年 FE | 0.0059 (0.0037) | −0.0031 (0.0040) | −0.0048 (0.0061) | −0.0030 (0.0048) | 0.0055 (0.0071) |
+| + 州线性趋势 | 0.0031 (0.0027) | 0.0014 (0.0029) | −0.0021 (0.0048) | 0.0030 (0.0026) | 0.0041 (0.0048) |
+
+### 解读
+
+- **啤酒：** 周日营业小时系数小且不显著；与正文烈酒中 on-premise 显著不同，啤酒本已较易获得，蓝法边际影响弱。加州趋势后 on-hours 仍接近 0。  
+- **葡萄酒：** on-premise 小时在无州趋势时约为 0.006（边缘），加趋势后减弱；off-premise 不显著。  
+- **共同信息：** 趋势设定改变点估计（与正文烈酒 OnHours 从 0.011→0 的故事同类）——州异质趋势与政策变量相关时，忽略趋势会 **遗漏变量偏误**。失业率系数为负（亲周期）在部分设定中更清晰。
+
+---
+
+## 小结
+
+| 题 | 要点 |
+|:--:|------|
+| 18.1–18.2 | 平衡面板下个体 FE 与州级变量；省略时间效应 ≠ DiD |
+| 18.3–18.4 | FE-IV；同质检验用 $N_j-1$ 个交互 |
+| 18.5 | 2×2 表与饱和回归 $\hat\beta=\mathrm{DiD}$ |
+| 18.6 | CK 餐价 DiD≈+\$0.10；FE 写法等价；分区同质检验不拒绝 |
+| 18.7 | 警察威慑同街区显著，一街区外不显著 |
+| 18.8 | 啤/酒蓝法；州趋势敏感 |
+
+数值依赖当前 `CK1994` / `DS2004` / `BMN2016` 样本；cluster 层级为 store / block / state。
+
+
+# 实证与数值代码（来自 notebook，R 版）
+
+```{r}
+#| label: nb-cell-01
+# 原 Python notebook 代码（保留备查）→ R 对照草稿
+# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
+
+
+# import numpy as np
+# import pandas as pd
+# from pathlib import Path
+# from numpy.linalg import inv, pinv
+# from scipy import stats
+
+# PY: ROOT = Path("/home/fang/Project/zhihu-paper/p1/hansen/econometrics/data")
+
+
+# PY: def cluster_ols(y, X, clusters, add_const=False):
+# PY:     y = np.asarray(y, float)
+# PY:     X = np.asarray(X, float)
+# PY:     if add_const:
+# PY:         X = np.column_stack([np.ones(len(y)), X])
+# PY:     b = pinv(X.T @ X) @ (X.T @ y)
+# PY:     e = y - X @ b
+# PY:     meat = np.zeros((X.shape[1], X.shape[1]))
+# PY:     for g in pd.unique(clusters):
+# PY:         m = clusters == g
+# PY:         score = X[m].T @ e[m]
+# PY:         meat += np.outer(score, score)
+# PY:     n, k = X.shape
+# PY:     nG = len(pd.unique(clusters))
+# PY:     bread = pinv(X.T @ X)
+# PY:     V = (nG / (nG - 1)) * ((n - 1) / (n - k)) * bread @ meat @ bread
+# PY:     se = np.sqrt(np.maximum(np.diag(V), 0))
+# PY:     return b, se, V
+
+
+# PY: def fe_reg(df, ycol, xcols, fe_col, cluster_col):
+# PY:     d = df.copy()
+# PY:     cols = [ycol] + list(xcols)
+# PY:     means = d.groupby(fe_col)[cols].transform("mean")
+# PY:     yd = d[ycol] - means[ycol]
+# PY:     Xd = d[xcols].values - means[xcols].values
+# PY:     return cluster_ols(yd.values, Xd, d[cluster_col].values, add_const=False)
+
+# --- R 惯用写法提示 ---
+# read_dta: haven::read_dta(file.path(data_root, ...))
+# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
+# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
+# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
+```
+
+### 18.5 Act10 表计算
+
+```{r}
+#| label: nb-cell-02
+# 原 Python notebook 代码（保留备查）→ R 对照草稿
+# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
+
+# PY: wi_pre, wi_post = 15.23, 16.72
+# PY: mn_pre, mn_post = 16.42, 18.10
+# PY: did = (wi_post - wi_pre) - (mn_post - mn_pre)
+# PY: print("DiD / beta =", did)
+# PY: print("gamma (WI-MN pre) =", wi_pre - mn_pre)
+
+# --- R 惯用写法提示 ---
+# read_dta: haven::read_dta(file.path(data_root, ...))
+# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
+# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
+# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
+```
+
+### 18.6 CK1994 meal prices
+
+```{r}
+#| label: nb-cell-03
+# 原 Python notebook 代码（保留备查）→ R 对照草稿
+# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
+
+# PY: ck = pd.read_excel(ROOT / "CK1994/CK1994.xlsx")
+# PY: for c in ck.columns:
+# PY:     if c != "store":
+# PY:         ck[c] = pd.to_numeric(ck[c], errors="coerce")
+# PY: ck["price"] = ck["priceentree"] + ck["pricefry"] + ck["pricesoda"]
+# PY: ck = ck.dropna(subset=["price"])
+# PY: nper = ck.groupby("store").size()
+# PY: ck = ck[ck.store.isin(nper[nper == 2].index)].copy()
+# PY: ck["D"] = (ck["state"] * ck["time"]).astype(float)
+# PY: ck["time1"] = ck["time"].astype(float)
+
+# PY: print("Means by state x time:")
+# PY: print(ck.groupby(["state", "time"])["price"].mean().unstack())
+# PY: did = (
+# PY:     ck[(ck.state == 1) & (ck.time == 1)]["price"].mean()
+# PY:     - ck[(ck.state == 1) & (ck.time == 0)]["price"].mean()
+# PY:     - (
+# PY:         ck[(ck.state == 0) & (ck.time == 1)]["price"].mean()
+# PY:         - ck[(ck.state == 0) & (ck.time == 0)]["price"].mean()
+# PY:     )
+# PY: )
+# PY: print("DiD", did)
+
+# PY: y = ck["price"].values
+# PY: X = np.column_stack([ck["state"], ck["time"], ck["D"]])
+# PY: b, se, V = cluster_ols(y, X, ck["store"].values, add_const=True)
+# PY: print("\n(18.2) style:")
+# PY: for n, bi, si in zip(["const", "state", "time", "D"], b, se):
+# PY:     print(f"  {n:8s} {bi:8.4f} ({si:.4f})")
+
+# PY: b, se, V = fe_reg(ck, "price", ["D", "time1"], "store", "store")
+# PY: print("\nRestaurant FE:")
+# PY: print(f"  D {b[0]:.4f} ({se[0]:.4f})")
+
+# PY: ck["cent_time"] = ck["centralj"] * ck["time"]
+# PY: ck["north_time"] = ck["northj"] * ck["time"]
+# PY: b, se, V = fe_reg(ck, "price", ["D", "time1", "cent_time", "north_time"], "store", "store")
+# PY: R = np.zeros((2, 4)); R[0, 2] = 1; R[1, 3] = 1
+# PY: w = float((R @ b) @ inv(R @ V @ R.T) @ (R @ b))
+# PY: print(f"\nHomogeneous treatment Wald p={1 - stats.chi2.cdf(w, 2):.3f}")
+
+# PY: ck["pa1_time"] = ck["pa1"] * ck["time"]
+# PY: b, se, V = fe_reg(ck, "price", ["D", "time1", "pa1_time"], "store", "store")
+# PY: print(f"Equal control t={b[2]/se[2]:.3f}")
+
+# --- R 惯用写法提示 ---
+# read_dta: haven::read_dta(file.path(data_root, ...))
+# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
+# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
+# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
+```
+
+### 18.7 DS2004 police deterrence spillovers
+
+```{r}
+#| label: nb-cell-04
+# 原 Python notebook 代码（保留备查）→ R 对照草稿
+# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
+
+# PY: ds = pd.read_excel(ROOT / "DS2004/DS2004.xlsx")
+# PY: for c in ds.columns:
+# PY:     if c not in ["barrio", "calle", "altura"]:
+# PY:         ds[c] = pd.to_numeric(ds[c], errors="coerce")
+# PY: ds2 = ds[ds.month != 7].copy()
+# PY: ds2["post"] = (ds2.month >= 8).astype(int)
+
+# PY: for label, mask in [
+# PY:     ("oneblock", ds2.oneblock == 1),
+# PY:     ("farther", (ds2.oneblock == 0) & (ds2.sameblock == 0)),
+# PY:     ("sameblock", ds2.sameblock == 1),
+# PY: ]:
+# PY:     sub = ds2[mask]
+# PY:     pre = sub[sub.post == 0]["thefts"].mean()
+# PY:     post = sub[sub.post == 1]["thefts"].mean()
+# PY:     print(f"{label:10s} pre {pre:.4f} post {post:.4f} d {post-pre:.4f}")
+
+# PY: ds2["treat_same"] = ds2["sameblock"] * ds2["post"]
+# PY: ds2["treat_one"] = ds2["oneblock"] * ds2["post"]
+# PY: months = sorted(ds2.month.unique())
+# PY: for m in months[1:]:
+# PY:     ds2[f"m{m}"] = (ds2.month == m).astype(float)
+# PY: xcols = ["treat_same", "treat_one"] + [f"m{m}" for m in months[1:]]
+# PY: means = ds2.groupby("block")[["thefts"] + xcols].transform("mean")
+# PY: yd = ds2["thefts"] - means["thefts"]
+# PY: Xd = ds2[xcols].values - means[xcols].values
+# PY: b, se, V = cluster_ols(yd.values, Xd, ds2["block"].values)
+# PY: print("\nFE estimates:")
+# PY: print(f"  sameblock x post {b[0]:.4f} ({se[0]:.4f})")
+# PY: print(f"  oneblock x post  {b[1]:.4f} ({se[1]:.4f})")
+
+# --- R 惯用写法提示 ---
+# read_dta: haven::read_dta(file.path(data_root, ...))
+# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
+# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
+# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
+```
+
+### 18.8 BMN2016 beer / wine blue laws
+
+```{r}
+#| label: nb-cell-05
+# 原 Python notebook 代码（保留备查）→ R 对照草稿
+# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
+
+# PY: bmn = pd.read_stata(ROOT / "BMN2016/BMN2016.dta")
+
+
+# PY: def panel_twoway(df, y, xcols, idcol, tcol):
+# PY:     d = df.copy()
+# PY:     times = sorted(d[tcol].unique())
+# PY:     for t in times[1:]:
+# PY:         d[f"t{int(t)}"] = (d[tcol] == t).astype(float)
+# PY:     tdums = [f"t{int(t)}" for t in times[1:]]
+# PY:     allx = xcols + tdums
+# PY:     means = d.groupby(idcol)[[y] + allx].transform("mean")
+# PY:     yd = d[y] - means[y]
+# PY:     Xd = d[allx].values - means[allx].values
+# PY:     b, se, V = cluster_ols(yd.values, Xd, d[idcol].values)
+# PY:     return list(zip(allx, b, se))[: len(xcols)]
+
+
+# PY: def panel_unit_trend(df, y, xcols, idcol, tcol):
+# PY:     d = df.sort_values([idcol, tcol]).copy()
+# PY:     d["_t"] = d[tcol].astype(float)
+# PY:     vars_ = [y] + xcols
+# PY:     out = {c: [] for c in vars_}
+# PY:     ids, ts = [], []
+# PY:     for i, g in d.groupby(idcol):
+# PY:         t = g["_t"].values
+# PY:         Tmat = np.column_stack([np.ones(len(t)), t])
+# PY:         P = pinv(Tmat.T @ Tmat) @ Tmat.T
+# PY:         for c in vars_:
+# PY:             yc = g[c].values.astype(float)
+# PY:             out[c].append(yc - Tmat @ (P @ yc))
+# PY:         ids.append(np.full(len(t), i))
+# PY:         ts.append(t)
+# PY:     dd = pd.DataFrame({c: np.concatenate(out[c]) for c in vars_})
+# PY:     dd[idcol] = np.concatenate(ids)
+# PY:     dd[tcol] = np.concatenate(ts)
+# PY:     return panel_twoway(dd, y, xcols, idcol, tcol)
+
+
+# PY: df = bmn.dropna(subset=["logbeer", "beeronsun", "beeroffsun", "unempw", "beerOnOutflows", "beerOffOutflows"])
+# PY: xcols = ["beeronsun", "beeroffsun", "unempw", "beerOnOutflows", "beerOffOutflows"]
+# PY: print("Beer TWFE:")
+# PY: for n, bi, si in panel_twoway(df, "logbeer", xcols, "id", "year"):
+# PY:     print(f"  {n:16s} {bi:8.4f} ({si:.4f})")
+# PY: print("Beer + unit trends:")
+# PY: for n, bi, si in panel_unit_trend(df, "logbeer", xcols, "id", "year"):
+# PY:     print(f"  {n:16s} {bi:8.4f} ({si:.4f})")
+
+# PY: dfw = bmn.dropna(subset=["logwine", "wineonsun", "wineoffsun", "unempw", "wineOnOutflows", "wineOffOutflows"])
+# PY: xcolsw = ["wineonsun", "wineoffsun", "unempw", "wineOnOutflows", "wineOffOutflows"]
+# PY: print("\nWine TWFE:")
+# PY: for n, bi, si in panel_twoway(dfw, "logwine", xcolsw, "id", "year"):
+# PY:     print(f"  {n:16s} {bi:8.4f} ({si:.4f})")
+# PY: print("Wine + unit trends:")
+# PY: for n, bi, si in panel_unit_trend(dfw, "logwine", xcolsw, "id", "year"):
+# PY:     print(f"  {n:16s} {bi:8.4f} ({si:.4f})")
+
+# --- R 惯用写法提示 ---
+# read_dta: haven::read_dta(file.path(data_root, ...))
+# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
+# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
+# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
+```
+
+### 理论结论的蒙特卡洛验证（无需外部数据）
+
+以下单元格核对 ch18 的核心结论：(1) **DiD 正确恢复处理效应** $\theta$（平行趋势成立时）；(2) **省略时间效应（单一差分）有偏**——把共同冲击混入处理效应。可独立运行。
+
+```{r}
+#| label: nb-cell-06
+# 原 Python notebook 代码（保留备查）→ R 对照草稿
+# 完整可运行版本请优先使用 companion：scripts/r_companions/chXX.R
+
+# import numpy as np
+# PY: rng = np.random.default_rng(18)
+
+# ===== 2×2 DiD 模拟 =====
+# 设定: N_treat 个处理个体 + N_ctrl 个对照个体, 各 T=2 期(pre, post)
+# 平行趋势: 两组在无处理下都增长 delta_common
+# 处理效应: theta 只作用于处理组 post 期
+# PY: N_treat, N_ctrl = 200, 200
+# PY: theta_true = 2.0          # 真实处理效应
+# PY: delta_common = 1.5        # 共同时间趋势(两组都有)
+
+# PY: did_est, single_diff = [], []
+# PY: for r in range(5000):
+    # 个体效应
+# PY:     u = rng.standard_normal(N_treat + N_ctrl) * 2
+    # 前后两期
+# PY:     eps_pre = rng.standard_normal(N_treat + N_ctrl)
+# PY:     eps_post = rng.standard_normal(N_treat + N_ctrl)
+    # 处理虚拟
+# PY:     D = np.concatenate([np.ones(N_treat), np.zeros(N_ctrl)])
+    # 生成 Y
+# PY:     Y_pre = u + eps_pre
+# PY:     Y_post = u + delta_common + theta_true * D + eps_post
+    # DiD: 处理组变化 - 对照组变化
+# PY:     d_treat = np.mean(Y_post[:N_treat] - Y_pre[:N_treat])
+# PY:     d_ctrl = np.mean(Y_post[N_treat:] - Y_pre[N_treat:])
+# PY:     did_est.append(d_treat - d_ctrl)
+    # 单一差分(只有处理组前后, 无对照——18.2 的错误做法)
+# PY:     single_diff.append(d_treat)
+
+# PY: print(f"[DiD] 真实 θ={theta_true}, 共同趋势 δ={delta_common}")
+# PY: print(f"  DiD 估计均值={np.mean(did_est):.4f} (≈θ={theta_true} ✓)")
+# PY: print(f"  单一差分均值={np.mean(single_diff):.4f} (≈θ+δ={theta_true+delta_common}, 偏!)")
+# PY: print(f"  ⇒ 省略对照组(时间效应)把共同冲击 {delta_common} 混入了处理效应!")
+
+# ===== TWFE 回归也恢复 θ =====
+# 回归: Y = θ*D*Post + u_i + δ_t + ε (与 DiD 等价)
+# PY: N = N_treat + N_ctrl
+# 构造面板
+# PY: Y_panel = np.concatenate([Y_pre, Y_post])
+# PY: D_panel = np.concatenate([np.zeros(N), D])               # D*Post: pre=0, post=D
+# PY: post = np.concatenate([np.zeros(N), np.ones(N)])
+# PY: ids = np.concatenate([np.arange(N), np.arange(N)])
+# 简单回归 (含截距, D*Post, Post) —— TWFE 的等价
+# PY: X = np.column_stack([np.ones(2*N), D_panel, post])
+# PY: b = np.linalg.lstsq(X, Y_panel, rcond=None)[0]
+# PY: print(f"\n[TWFE 回归] θ̂={b[1]:.4f} (≈{theta_true}), δ̂={b[2]:.4f} (≈{delta_common})")
+# PY: print(f"  ⇒ TWFE 系数 = DiD 估计量 ✓")
+
+# --- R 惯用写法提示 ---
+# read_dta: haven::read_dta(file.path(data_root, ...))
+# OLS:     qr.solve(X, y) 或 lm.fit(X, y)$coefficients
+# HC1 SE:  sandwich::vcovHC(lm_obj, type='HC1')
+# 矩阵:    crossprod(X), solve(crossprod(X), crossprod(X, y))
+```
+
+
+# 依赖包
+
+```{r}
+#| label: install-pkgs
+#| eval: false
+pkgs <- c(
+  "haven", "readxl", "data.table", "sandwich", "lmtest", "AER",
+  "quantreg", "boot", "MASS", "Matrix", "nnet", "ggplot2", "knitr"
+)
+# 章节扩展：Ch14–16 vars/urca；Ch17 plm；Ch19 np；Ch26 mlogit
+miss <- setdiff(pkgs, rownames(installed.packages()))
+if (length(miss)) install.packages(miss, repos = "https://cloud.r-project.org")
+```
+
+---
+*第 18 章 · R/Quarto · md + ipynb 融合*
