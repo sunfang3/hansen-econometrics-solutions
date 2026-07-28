@@ -36,6 +36,19 @@ Bruce E. Hansen《Econometrics》习题解答（按 Hansen 体系完整解题）
 
 解答位于 `docs/chXX/`。
 
+## 合集 HTML
+
+全部章节习题解答已合并为单一 HTML（含 **MathJax 3** 公式渲染）：
+
+- [`docs/Hansen_Econometrics_Exercises_Solutions.html`](docs/Hansen_Econometrics_Exercises_Solutions.html)
+
+重新生成：
+
+```bash
+python3 scripts/build_all_solutions_html.py
+```
+
+
 ## 数据
 
 教材数据请从 Hansen 官网下载：
