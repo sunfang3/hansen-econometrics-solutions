@@ -19,6 +19,7 @@ Bruce E. Hansen《Econometrics》习题解答（按 Hansen 体系完整解题）
 | **Ch.13** | **Generalized Method of Moments**（**13.1–13.28 全文**） | **455–460** | **`.md` / `.ipynb`** |
 | **Ch.14** | **Time Series**（**14.1–14.22 全文**） | **525–528** | **`.md` / `.ipynb`** |
 | **Ch.15** | **Multivariate Time Series**（**15.1–15.20 全文**） | **563–566** | **`.md` / `.ipynb`** |
+| **Ch.16** | **Non-Stationary Time Series**（**16.1–16.14 全文**） | **615–616** | **`.md` / `.ipynb`** |
 | Ch.29 | Machine Learning | 943 等 | `.md` / `.qmd` / `.html` |
 
 解答位于 `docs/chXX/`。
