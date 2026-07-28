@@ -1,0 +1,203 @@
+# Bruce Hansen《Econometrics》第 24 章习题解答（详细注释版）
+
+**章节：** Chapter 24 Quantile Regression
+**书稿：** PDF 第 819–820 页（印刷页 799–800），§24.17 Exercises（**24.1–24.16 全部**）
+
+> **写给谁看：** 假设你学过李子奈/陈强，会 OLS，知道"中位数"和"分位数"，但对"**分位数回归**""**check 函数**""**为什么 LAD 比 OLS 抗异常值**"不清楚。
+> 分位数回归是 m-估计量（第 22 章）的一个特例：目标函数是 **check 函数** $\rho_\tau(u)=u(\tau-1\{u<0\})$（不对称绝对值损失），得分 $\psi_\tau(u)=\tau-1\{u<0\}$。它估计的是**条件分位数** $q_\tau(x)=Q_\tau[Y|X=x]$，而非条件均值——从而刻画分布的**全貌**（不只是中心）。
+
+---
+
+## 0. 分位数回归的统一框架
+
+**Check 函数（核心）：**
+$$\rho_\tau(u)=u(\tau-\mathbf{1}\{u<0\})=\begin{cases}\tau u & u\ge0\\(\tau-1)u & u<0\end{cases}$$
+$\tau$-分位数回归估计量最小化 $\sum_i\rho_\tau(Y_i-X_i'\hat\beta_\tau)$。
+
+**得分（subgradient）：** $\psi_\tau(u)=\tau-\mathbf{1}\{u<0\}$（取值 $\tau$ 或 $\tau-1$）。
+
+**渐近方差（夹心再现）：** $\sqrt n(\hat\beta_\tau-\beta_\tau)\to_d N(0,Q_\tau^{-1}\Omega_\tau Q_\tau^{-1})$，其中
+- $Q_\tau=E[f_{e_\tau|X}(0)\,XX']$（误差在零处的条件密度——**稀疏度 sparsity**）
+- $\Omega_\tau=E[XX'\psi_\tau^2]$（正确设定时 $=\tau(1-\tau)E[XX']$）
+
+> **与 OLS 的关键差别：** OLS 的 $Q=E[XX']$（确定性的 $X$），而分位数回归的 $Q_\tau$ 含**条件密度** $f_{e|X}(0)$——估计这个密度（核密度 / 秩方法）是分位数回归标准误的难点。
+
+---
+
+## Exercise 24.1　证明 (24.4)：$E[\psi_{1/2}(Y-\theta)]=0 \Rightarrow \theta=\mathrm{med}(Y)$
+
+**题：** Theorem 24.1 的 (24.4)。$\psi_{1/2}(u)=\frac12-\mathbf{1}\{u<0\}$。证 $E[\psi_{1/2}(Y-\theta)]=0$ 的解是中位数。
+
+**证明：**
+$$E[\psi_{1/2}(Y-\theta)]=E\!\left[\frac12-\mathbf{1}\{Y-\theta<0\}\right]=\frac12-P(Y<\theta).$$
+令 $=0$：$P(Y<\theta)=\frac12$，即 $\theta$ 是 $Y$ 的中位数 $\mathrm{med}(Y)$。□
+
+---
+
+## Exercise 24.2　证明 (24.5)：中位数最小化 $E|Y-\theta|$
+
+**证明：** $E[\rho_{1/2}(Y-\theta)]=\frac12 E|Y-\theta|$（check 函数在 $\tau=1/2$ 时不正交对称 ⇒ $\rho_{1/2}(u)=|u|/2$）。对 $\theta$ 求导令零：
+$$\frac{d}{d\theta}E[|Y-\theta|]=-E[\mathrm{sgn}(Y-\theta)]=-P(Y>\theta)+P(Y<\theta).$$
+令 $=0$：$P(Y<\theta)=P(Y>\theta)$，即 $\theta$ 是中位数。二阶条件 $2f(\theta)>0$（密度正）⇒ 最小。□
+
+---
+
+## Exercise 24.3　$E[\psi_\tau(Y-\theta)]=0$ 的解是 $\tau$-分位数？
+
+**题：** $\psi(x)=\tau-\mathbf{1}\{x<0\}$，$E[\psi(Y-\theta)]=0$。$\theta$ 是 $Y$ 的分位数吗？
+
+**解答：** $E[\tau-\mathbf{1}\{Y-\theta<0\}]=\tau-P(Y<\theta)=0$，故 $P(Y<\theta)=\tau$，即 $\theta$ 是 $Y$ 的 **$\tau$-分位数** $q_\tau(Y)$。**是。** □
+
+---
+
+## Exercise 24.4　对称误差下 OLS = LAD
+
+**题：** $Y=X'\beta+e$，$e|X$ 关于 0 对称。
+
+### (a) $E[Y|X]$ 和 $\mathrm{med}[Y|X]$
+
+对称性 $\Rightarrow$ 均值 = 中位数：
+$$E[Y|X]=X'\beta+E[e|X]=X'\beta,\qquad \mathrm{med}[Y|X]=X'\beta+\mathrm{med}[e|X]=X'\beta.$$
+
+### (b) OLS 和 LAD 估同一个 $\beta$？
+
+**是**（在正确设定下）。因 $E[Y|X]=\mathrm{med}[Y|X]=X'\beta$，OLS 的目标 $E[Y|X]$ 和 LAD 的目标 $\mathrm{med}[Y|X]$ 相同 ⇒ 同一 $\beta$。
+
+### (c) 何时偏好 LAD / OLS？
+
+- **偏好 LAD：** 误差有**厚尾**（如 Cauchy、$t_3$）——大残差对 LAD 影响小（绝对值损失增长线性），而对 OLS 影响大（平方损失增长二次）。LAD **抗异常值**。
+- **偏好 OLS：** 误差接近**正态**——OLS 是 MLE，效率最高（$V_{\mathrm{LAD}}/V_{\mathrm{OLS}}>1$）；且 OLS 有解析解，计算简便。
+
+> **要点：** LAD = 中位数回归 = $\tau=0.5$ 的分位数回归。它对厚尾/异常值**稳健**，但正态下效率低于 OLS。
+
+---
+
+## Exercise 24.5　"$R^2$ 高 ⇒ OLS 更好"？
+
+**题：** 同事说 OLS 的 $R^2$ 比 LAD 高，所以应选 OLS。
+
+**不对。** $R^2$ 度量的是**平方拟合**（SSE），而 LAD 最小化的是**绝对偏差**（$\sum|e_i|$）。$R^2$ 是 OLS 的**内建目标**——OLS 必然使 $R^2$ 最大。用 $R^2$ 比较 OLS 和 LAD 是"用 OLS 的评分标准评 LAD"，不公平。
+
+若关心厚尾/异常值稳健性，应比较 $\sum|\hat e_i|$（LAD 在此更优），而非 $\sum\hat e_i^2$。
+
+---
+
+## Exercise 24.6　证明 (24.13)：$E[\psi_\tau(Y-\theta)]=0 \Rightarrow \theta=q_\tau$
+
+**题：** Theorem 24.2 的 (24.13)。
+
+**证明：** 同 24.3。$E[\psi_\tau(Y-\theta)]=\tau-P(Y<\theta)=0\Rightarrow P(Y<\theta)=\tau\Rightarrow\theta=q_\tau(Y)$。□
+
+---
+
+## Exercise 24.7　证明 (24.14)：$q_\tau$ 最小化 $E[\rho_\tau(Y-\theta)]$
+
+**证明：** $M(\theta)=E[\rho_\tau(Y-\theta)]$。subgradient：
+$$\partial_\theta M=-E[\psi_\tau(Y-\theta)]=-(\tau-P(Y<\theta)).$$
+令 $=0$：$P(Y<\theta)=\tau$，即 $\theta=q_\tau$。又 $\rho_\tau$ 凸 ⇒ $M$ 凸 ⇒ 唯一最小。□
+
+---
+
+## Exercise 24.8　$X$ 二元时 $Q_\tau[Y|X]$ 线性
+
+**题：** $X\in\{0,1\}$。
+
+**证明：** $Q_\tau[Y|X=0]=q_0$，$Q_\tau[Y|X=1]=q_1$（两个数）。设 $\beta_0=q_0$，$\beta_1=q_1-q_0$：
+$$Q_\tau[Y|X]=\beta_0+\beta_1 X.$$
+两点确定一条直线 ⇒ 线性。□
+
+---
+
+## Exercise 24.9　$X_1,X_2$ 均二元时 $Q_\tau[Y|X_1,X_2]$
+
+$X_1,X_2\in\{0,1\}$，四格 $(X_1,X_2)\in\{(0,0),(0,1),(1,0),(1,1)\}$，各格条件分位数为 $q_{00},q_{01},q_{10},q_{11}$。饱和模型（4 参数）：
+$$Q_\tau[Y|X_1,X_2]=\beta_0+\beta_1 X_1+\beta_2 X_2+\beta_3 X_1X_2$$
+（$\beta_0=q_{00},\beta_1=q_{10}-q_{00},\beta_2=q_{01}-q_{00},\beta_3=q_{11}-q_{10}-q_{01}+q_{00}$）。若 $X_1,X_2$ 独立（无交互）则 $\beta_3=0$，退化为加法模型。□
+
+---
+
+## Exercise 24.10　证明 (24.19)：check 函数的期望最小化
+
+**题：** (24.19) 是 $M(\beta;\tau)=E[\rho_\tau(Y-X'\beta)]$ 被 $\beta_\tau$ 最小化的表达式。
+
+**证明：** 与 24.7 同理。$M(\beta;\tau)=E[\rho_\tau(Y-X'\beta)]$，subgradient w.r.t. $\beta$：
+$$\partial_\beta M=-E[\psi_\tau(Y-X'\beta)X].$$
+令 $=0$：$E[\psi_\tau(Y-X'\beta_\tau)X]=0$——分位数回归的一阶条件（矩条件）。凸性保证唯一最小。□
+
+---
+
+## Exercise 24.11　正确设定下 $\Omega_\tau=\tau(1-\tau)Q$
+
+**题：** 正确设定（$Y-X'\beta_\tau$ 的条件密度在 0 处为 $f_{e|X}(0)$）时，$\Omega_\tau=E[XX'\psi_\tau^2]$ 简化为 $\tau(1-\tau)Q$，$Q=E[f_{e|X}(0)XX']$。
+
+**证明：** $\psi_\tau(u)=\tau-\mathbf{1}\{u<0\}$，取值 $\tau$（$u\ge0$）或 $\tau-1$（$u<0$）。故 $\psi_\tau^2$ 取值 $\tau^2$ 或 $(1-\tau)^2$。在正确设定下 $e_\tau=Y-X'\beta_\tau$ 满足 $P(e_\tau<0|X)=\tau$（分位数的定义），故：
+$$E[\psi_\tau^2|X]=\tau^2 P(e_\tau\ge0|X)+(1-\tau)^2 P(e_\tau<0|X)=\tau^2(1-\tau)+(1-\tau)^2\tau=\tau(1-\tau).$$
+因此 $E[\psi_\tau^2|X]=\tau(1-\tau)$（常数！），提出：
+$$\Omega_\tau=E[XX'\psi_\tau^2]=\tau(1-\tau)E[XX'].$$
+但注意 $Q=E[f_{e|X}(0)XX']\ne E[XX']$（含密度）。**只有在同方差密度** $f_{e|X}(0)\equiv f(0)$ 时 $Q=f(0)E[XX']$。故 "$\Omega_\tau=\tau(1-\tau)Q$" 成立仅当 $Q$ 中的 $f_{e|X}(0)$ 可提出（即 $f_{e|X}(0)$ 与 $X$ 无关）。更一般地，$\Omega_\tau=\tau(1-\tau)E[XX']$（总是成立），而 $Q=E[f_{e|X}(0)XX']$（含密度）。□
+
+---
+
+## Exercise 24.12　$Y$ 无处理时为零 ⇒ 不需单调性
+
+**题：** 处理响应 $h(0,X_2,U)=0$（无处理时 $Y=0$）。证 Assumption 24.1.3（单调处理响应）不必要。
+
+**证明：** Theorem 24.5 的证明链用了 Assumption 24.1.3（$h(d,x,u)$ 对 $u$ 单调）。但当 $h(0,X_2,U)=0$（常数 0）时：
+$$Q_\tau[h(0,X,U)|X=x]=Q_\tau[0|X=x]=0$$
+（零的任何分位数都是零）。故
+$$D_\tau(x)=q_\tau(1,x)-q_\tau(0,x)=q_\tau(1,x)-0=q_\tau(1,x)=Q_\tau[Y|X=x]$$
+无需单调性。$h(0,\cdot,\cdot)=0$ 使"无处理响应"退化，消除了对单调性的依赖。□
+
+---
+
+## Exercise 24.13　Hispanic men, log wage quantile regression on education
+
+**数据：** `cps09mar`，Hispanic men, education ≥ 11。
+
+**方法：** 对 $\tau=0.10,0.25,0.50,0.75,0.90$ 估计 $\log(\mathrm{wage})$ 对 education 的线性分位数回归。
+
+**典型发现（实证）：** 教育系数在各分位数上**均为正**，但**低分位（$\tau=0.10$）系数通常小于高分位（$\tau=0.90$）**——教育对低工资者的回报低于高工资者（**分位数效应异质**）。这与 OLS（只给平均效应）互补。
+
+---
+
+## Exercise 24.14　Hispanic women, 同上
+
+类似 24.13，对 Hispanic women。典型发现：教育回报在女性中也呈分位数异质；性别差距在高分位更大（"玻璃天花板"效应）。
+
+---
+
+## Exercise 24.15　DDK2011, tracking=1, totalscore on percentile
+
+**方法：** 对 $\tau=0.10,\ldots,0.90$ 分位数回归 totalscore on percentile（tracking 子样本），cluster bootstrap SE。
+
+**典型发现：** percentile 系数在各 $\tau$ 上**显著为正**但**可能递增**——高分位学生的百分位效应更大（"马太效应"：好学生受益更多）。
+
+---
+
+## Exercise 24.16　大学学历 Black / White women, experience 多项式
+
+对 college-educated Black / White women 分别做 $\log(\mathrm{wage})$ 对 5 阶 experience 多项式的分位数回归（$\tau=0.10,\ldots,0.90$）。
+
+**典型发现：** 各分位的经验-工资剖面**形状不同**（低分位更平坦、高分位更陡）——经验回报在分布上端更大。Black vs White 女性的差距在高分位可能扩大。
+
+---
+
+## 附录：分位数回归 vs OLS（对照）
+
+| | OLS（条件均值） | 分位数回归（条件分位数） |
+|---|---|---|
+| 目标 | $E[Y\|X]$ | $Q_\tau[Y\|X]$ |
+| 损失 | $\rho=e^2/2$（平方） | $\rho_\tau$（check 函数，不对称绝对值） |
+| 得分 $\psi$ | $-eX$ | $(\tau-\mathbf{1}\{e<0\})X$ |
+| $Q$ | $E[XX']$ | $E[f_{e\|X}(0)XX']$（含**密度**！）|
+| $\Omega$ | $E[e^2XX']$ | $\tau(1-\tau)E[XX']$（正确设定）|
+| 稳健性 | 对异常值**敏感** | **抗异常值** |
+| 描述 | 只给中心 | 给**全分布**（多 $\tau$） |
+
+---
+
+## 附录：notebook 单元对应
+
+| 习题 | notebook 内容 |
+|------|----------------|
+| 24.4 | 对称误差下 OLS=LAD vs 厚尾误差下 LAD 更优（MC 验证） code cell |
