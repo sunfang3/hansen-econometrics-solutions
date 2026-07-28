@@ -1,0 +1,274 @@
+# Hansen《Econometrics》第 18 章习题完整解答
+
+**章节：** Chapter 18 Difference in Differences  
+**书稿：** PDF 第 682–684 页（印刷页 662–664），§18.10 Exercises（**18.1–18.8 全部**）
+
+---
+
+## Exercise 18.1　个体 FE 与州级去均值变量的正交性
+
+记平衡面板：$i$ 为餐馆（或个人），属于州 $s(i)$，共 $T$ 期。州级去均值变量（如州×时间虚拟、州级政策）对每个州-时期在个体间为常数：  
+$W_{it}=w_{s(i),t}$。
+
+### (a) 平衡样本
+
+个体 within 变换 $\dot W_{it}=W_{it}-\bar W_i$。因 $W_{it}$ 仅依赖 $(s,t)$，且平衡时每个 $i$ 经历相同时间集合，
+$$
+\bar W_i=T^{-1}\sum_t w_{s(i),t}
+$$
+仅依赖州 $s(i)$，与餐馆在州内的身份无关。对任意两家同州餐馆 $i,j$，有 $\dot W_{it}=\dot W_{jt}$。  
+
+个体固定效应虚拟 $d_i$ 的 within 变换为 0（被完全吸收）。更关键的正交性：在含个体 FE 的回归中，对任意仅随 $(s,t)$ 变化的回归元 $W$，
+$$
+\sum_{i,t}\dot d_i\,\dot W_{it}=0
+$$
+（因 $\dot d_i\equiv0$ 或 Frisch–Waugh：个体 demean 后 $W$ 在州内仍为时间函数，与已去均值的个体常数正交）。  
+等价地：州级去均值变量落在“州×时间”空间中，与“个体相对州均值”的偏差正交。
+
+### (b) 非平衡样本
+
+**一般不成立。** 若不同个体的观测时期集合不同，则
+$$
+\bar W_i=T_i^{-1}\sum_{t\in S_i}w_{s(i),t}
+$$
+依赖 $S_i$。同州个体可有不同 $\bar W_i$，从而 $\dot W_{it}$ 在个体间不再相同；个体 FE 与州级变量的 within 变换一般 **相关**。
+
+### (c) 两式给出相同 $\hat\theta$
+
+$$
+Y_{it}=\beta_0+\beta_1\mathrm{State}_i+\beta_2\mathrm{Time}_t+\theta D_{it}+\varepsilon_{it}
+\tag{A}
+$$
+与
+$$
+Y_{it}=\theta D_{it}+u_i+\delta_t+\varepsilon_{it}
+\tag{B}
+$$
+在 **平衡** 样本且 $D_{it}$ 仅随州×时间变化（$D_{it}=\mathrm{State}_i\cdot\mathrm{Time}_t$）时：  
+
+- (A) 是州 FE + 时间 FE + $D$ 的饱和设定；  
+- (B) 用餐馆 FE 替代州 FE。  
+
+由 (a)，餐馆 FE 相对州级 demean 变量正交，Frisch–Waugh 下 $D$ 与时间效应的系数与仅用州 FE 时相同。故 $\hat\theta$ 相同（正文 (18.2) 与 (18.4)）。
+
+---
+
+## Exercise 18.2　省略时间效应的回归
+
+$T=2,N=2$（两州两期），$D_{it}=\mathrm{State}_i\cdot\mathrm{Time}_t$，估计
+$$
+Y_{it}=\beta_0+\beta_1\mathrm{State}_i+\theta D_{it}+\varepsilon_{it}
+$$
+（**无** $\mathrm{Time}$）。
+
+### (a) $\hat\theta$ 的代数式
+
+四个单元均值（饱和在 $\mathrm{State}$ 与 $D$ 上；PA 两期被约束为相同截距）：
+
+| | $\mathrm{Time}=0$ | $\mathrm{Time}=1$ |
+|--|--|--|
+| PA ($\mathrm{State}=0$) | $\beta_0$ | $\beta_0$ |
+| NJ ($\mathrm{State}=1$) | $\beta_0+\beta_1$ | $\beta_0+\beta_1+\theta$ |
+
+OLS 在各组样本量下拟合单元均值时：
+$$
+\hat\theta=\bar Y_{\mathrm{NJ},1}-\bar Y_{\mathrm{NJ},0}.
+$$
+（更一般：对 NJ 子样本做 $Y$ 对常数与 $\mathrm{Time}$ 的回归，斜率即 $\hat\theta$；PA 只识别 $\hat\beta_0$。）
+
+### (b) 仅依赖处理组
+
+由上式，$\hat\theta$ **只** 是新泽西处理前后之差，与宾州样本无关。
+
+### (c) 是否为 DiD？
+
+**不是。** 标准 DiD 为
+$$
+\theta^{\mathrm{DiD}}=(\bar Y_{\mathrm{NJ},1}-\bar Y_{\mathrm{NJ},0})-(\bar Y_{\mathrm{PA},1}-\bar Y_{\mathrm{PA},0}).
+$$
+本题 $\hat\theta$ 缺少对照组的时间差分，只是 **处理组 before–after（单一差分）**。
+
+### (d) 何时可作为处理效应？
+
+当且仅当 **对照组无时间趋势 / 处理组在无处理下的反事实不变**（$\mathbb{E}[\Delta Y\mid\mathrm{PA}]=0$ 且平行趋势退化为处理组水平稳定），例如：  
+- 无共同冲击、无趋势；或  
+- 理论保证 PA 的变化为零且可忽略。  
+
+在 Card–Krueger 类应用中 PA 就业明显下降，该估计 **不合适**。
+
+---
+
+## Exercise 18.3　内生处理与工具变量
+
+模型 $Y_{it}=\theta D_{it}+u_i+\delta_t+\varepsilon_{it}$，$Z_{it}\perp\varepsilon$ 但与 $D$ 相关。
+
+**估计：** 在双向固定效应下对 $D$ 做 **FE-IV / 2SLS**（§17.28）：  
+
+1. Within（或等价 LSDV）变换消去 $u_i,\delta_t$，得 $\ddot Y_{it}=\theta\ddot D_{it}+\ddot\varepsilon_{it}$；  
+2. 用 $\ddot Z_{it}$（及严格外生控制的 within）作 $\ddot D$ 的工具；  
+3. 2SLS / GMM 得 $\hat\theta$，标准误在个体（或州）层面 **cluster**。  
+
+识别需要：相关（第一阶段 $\ddot Z$ 预测 $\ddot D$）与外生（$Z$ 只通过 $D$ 影响 $Y$，且与 $\varepsilon$ 正交）。$Z$ 本身若仅随州×时间变化，需足够州/时期变异。
+
+---
+
+## Exercise 18.4　同质效应检验为何用 $N_2-1$、$N_1-1$ 个交互
+
+**处理同质：** 设 $N_2$ 个处理单位（如 NJ 三区）。在已含“处理×时间”（共同 $\theta$）与单位/时间 FE 时，再加入 **全部** $N_2$ 个“区×时间”会与共同处理效应 **完全共线**（处理区时间变化被重复参数化）。故只加 **$N_2-1$** 个区×时间交互，测量相对基准处理区的 **差异**；联合为 0 $\Leftrightarrow$ 同质 $\theta$。
+
+**对照同质：** $N_1$ 个对照单位的时间变化由共同 $\delta_t$（或共同对照趋势）刻画；加入全部 $N_1$ 个对照区×时间会与时间 FE 共线。只加 **$N_1-1$** 个交互，检验对照区之间时间路径是否相同。
+
+---
+
+## Exercise 18.5　威斯康星 Act10 虚构表
+
+| | 2001–2010 | 2011–2020 | $\Delta$ |
+|--|----------:|----------:|---------:|
+| Wisconsin | 15.23 | 16.72 | 1.49 |
+| Minnesota | 16.42 | 18.10 | 1.68 |
+
+### (a) DiD 点估计
+
+$$
+\hat\theta=(16.72-15.23)-(18.10-16.42)=1.49-1.68=\mathbf{-0.19}.
+$$
+（相对明尼苏达，威州工资增长约低 0.19。）
+
+### (b) 县域回归中的 $\hat\beta$
+
+回归 $\mathrm{wage}=\alpha+\beta\mathrm{Act10}+\gamma\mathrm{Wisconsin}+\delta\mathrm{Post2010}+e$ 为 $2\times2$ 饱和设定。若表中数字即各单元的县域简单平均（或每格权重一致），则
+$$
+\hat\beta=\hat\theta=\mathbf{-0.19}.
+$$
+
+### (c) $\hat\gamma$
+
+$\hat\gamma$ 为处理前威州相对明尼苏达的差距：
+$$
+\hat\gamma=15.23-16.42=\mathbf{-1.19}.
+$$
+
+---
+
+## Exercise 18.6　CK1994：最低限度工资与餐价
+
+**数据：** `CK1994`；$\mathrm{price}=\mathrm{priceentree}+\mathrm{pricefry}+\mathrm{pricesoda}$。  
+删除缺失价后，仅保留两期都有价格的门店（平衡面板）：**356 店 × 2 = 712**。  
+$\mathrm{state}=1$：NJ；$\mathrm{time}=1$：政策后；$D=\mathrm{state}\times\mathrm{time}$。SE 在 **store** 上 cluster。
+
+### (b) 类似 Table 18.1（餐价）
+
+| | NJ | PA | Diff |
+|--|---:|---:|-----:|
+| Before | 3.359 | 3.088 | 0.271 |
+| After | 3.425 | 3.054 | 0.371 |
+| Diff | 0.066 | −0.034 | **0.100** |
+
+**解读：** NJ 餐价上升约 \$0.07，PA 略降；DiD **+\$0.10**，与“提高最低工资推高价格”一致，且与就业 DiD 同号（价格↑、就业↑）。
+
+### (c)(d)(e) 回归
+
+$$
+\widehat{\mathrm{price}}=3.088+0.271\,\mathrm{State}-0.034\,\mathrm{Time}+0.100\,D
+$$
+（cluster SE：0.074, 0.084, 0.037, **0.044**）。
+
+州 FE + 时间、$D$：$\hat\theta=0.100$（0.044）。  
+餐馆 FE + 时间、$D$：$\hat\theta=0.100$（0.044）。
+
+### (f) 是否相同？
+
+**是**（平衡面板且 $D$ 仅州×时间）：与 18.1 / 正文就业回归平行，三种写法给出相同 $\hat\theta$。
+
+### (g) 类似 Table 18.2（分区）
+
+| | South NJ | Central NJ | North NJ | PA1 | PA2 |
+|--|--------:|----------:|---------:|----:|----:|
+| Before | 3.314 | 3.484 | 3.340 | 3.136 | 3.052 |
+| After | 3.375 | 3.480 | 3.432 | 3.072 | 3.040 |
+| Diff | 0.061 | −0.004 | 0.092 | −0.063 | −0.012 |
+
+NJ 分区涨价幅度不一（中央接近 0）；PA 两区均略降。
+
+### (h) 处理同质（$N_2-1=2$ 个 NJ 区×时间）
+
+餐馆 FE 回归加入 `centralj×time`、`northj×time`：  
+Wald $\chi^2_2\approx2.19$，$p\approx0.34$ → **不拒绝** 同质处理效应。
+
+### (i) 对照同质（$N_1-1=1$ 个 PA 区×时间）
+
+加入 `pa1×time`：$t\approx-0.61$，$p\approx0.54$ → **不拒绝** 同质对照趋势。
+
+---
+
+## Exercise 18.7　DS2004：一街之隔的威慑？
+
+**数据：** `DS2004`；剔除 7 月；`sameblock` = 受保护建筑所在街区；`oneblock` = 相距一个街区。
+
+### (a) 类似 Table 18.3：oneblock vs 更远
+
+| | One block away | Farther (>1 block) | Diff |
+|--|---------------:|-------------------:|-----:|
+| Pre (Apr–Jun) | 0.092 | 0.096 | −0.004 |
+| Post (Aug–Dec) | 0.096 | 0.107 | −0.011 |
+| Diff | 0.004 | 0.011 | **DiD ≈ −0.007** |
+
+（对照：sameblock 上 Pre 0.113 → Post 0.035，Diff −0.078，与正文 Table 18.3 一致。）
+
+### (b) 街区 + 月份 FE，双重处理
+
+$$
+\mathrm{thefts}_{it}=\theta_1(\mathrm{sameblock}_i\times\mathrm{Post}_t)+\theta_2(\mathrm{oneblock}_i\times\mathrm{Post}_t)+u_i+\delta_t+\varepsilon_{it}
+$$
+（7 月已删；cluster by block）。
+
+| | 估计 | SE | $t$ |
+|--|-----:|---:|----:|
+| sameblock × Post | **−0.088** | 0.030 | −2.91 |
+| oneblock × Post | **−0.007** | 0.016 | −0.43 |
+
+### (c) 结论
+
+同街区警察保护显著降低盗窃（约 −0.09，与正文 −0.087 一致）。  
+**一街之隔** 的效应接近 0 且不显著 → **威慑高度局部化**，基本不延伸到相邻街区。
+
+---
+
+## Exercise 18.8　BMN2016：啤酒 / 葡萄酒蓝法
+
+设定仿 (18.7)–(18.8)：州 FE + 年 FE；解释变量为周日可售小时、失业率、跨州流出；SE **cluster by state**。再估含 **州特定线性趋势** 的版本。
+
+### 啤酒 `logbeer`
+
+| | OnHours | OffHours | UR | OnOut | OffOut |
+|--|--------:|---------:|---:|------:|-------:|
+| 州+年 FE (18.7 型) | 0.0011 (0.0028) | 0.0030 (0.0019) | −0.0004 (0.0037) | 0.0044 (0.0049) | 0.0003 (0.0047) |
+| + 州线性趋势 (18.8 型) | −0.0013 (0.0021) | 0.0003 (0.0020) | −0.0052 (0.0027) | −0.0007 (0.0016) | −0.0004 (0.0028) |
+
+### 葡萄酒 `logwine`
+
+| | OnHours | OffHours | UR | OnOut | OffOut |
+|--|--------:|---------:|---:|------:|-------:|
+| 州+年 FE | 0.0059 (0.0037) | −0.0031 (0.0040) | −0.0048 (0.0061) | −0.0030 (0.0048) | 0.0055 (0.0071) |
+| + 州线性趋势 | 0.0031 (0.0027) | 0.0014 (0.0029) | −0.0021 (0.0048) | 0.0030 (0.0026) | 0.0041 (0.0048) |
+
+### 解读
+
+- **啤酒：** 周日营业小时系数小且不显著；与正文烈酒中 on-premise 显著不同，啤酒本已较易获得，蓝法边际影响弱。加州趋势后 on-hours 仍接近 0。  
+- **葡萄酒：** on-premise 小时在无州趋势时约为 0.006（边缘），加趋势后减弱；off-premise 不显著。  
+- **共同信息：** 趋势设定改变点估计（与正文烈酒 OnHours 从 0.011→0 的故事同类）——州异质趋势与政策变量相关时，忽略趋势会 **遗漏变量偏误**。失业率系数为负（亲周期）在部分设定中更清晰。
+
+---
+
+## 小结
+
+| 题 | 要点 |
+|:--:|------|
+| 18.1–18.2 | 平衡面板下个体 FE 与州级变量；省略时间效应 ≠ DiD |
+| 18.3–18.4 | FE-IV；同质检验用 $N_j-1$ 个交互 |
+| 18.5 | 2×2 表与饱和回归 $\hat\beta=\mathrm{DiD}$ |
+| 18.6 | CK 餐价 DiD≈+\$0.10；FE 写法等价；分区同质检验不拒绝 |
+| 18.7 | 警察威慑同街区显著，一街区外不显著 |
+| 18.8 | 啤/酒蓝法；州趋势敏感 |
+
+数值依赖当前 `CK1994` / `DS2004` / `BMN2016` 样本；cluster 层级为 store / block / state。
