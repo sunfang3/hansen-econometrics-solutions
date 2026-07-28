@@ -23,6 +23,7 @@ Bruce E. Hansen《Econometrics》习题解答（按 Hansen 体系完整解题）
 | **Ch.17** | **Panel Data**（**17.1–17.18 全文**） | **667–669** | **`.md` / `.ipynb`** |
 | **Ch.18** | **Difference in Differences**（**18.1–18.8 全文**） | **682–684** | **`.md` / `.ipynb`** |
 | **Ch.19** | **Nonparametric Regression**（**19.1–19.11 全文**） | **718–719** | **`.md` / `.ipynb`** |
+| **Ch.20** | **Series Regression**（**20.1–20.18 全文**） | **755–758** | **`.md` / `.ipynb`** |
 | Ch.29 | Machine Learning | 943 等 | `.md` / `.qmd` / `.html` |
 
 解答位于 `docs/chXX/`。
@@ -33,7 +34,7 @@ Bruce E. Hansen《Econometrics》习题解答（按 Hansen 体系完整解题）
 
 - https://users.ssc.wisc.edu/~bhansen/econometrics/
 
-常用子集：`cps09mar`、`Invest1993`、`Nerlove1963`、`MRW1992`、`DDK2011`、`AJR2001`、`Card1995`、`AK1991`、`FRED-QD`、`FRED-MD`、`Kilian2009`、`AB1991`、`CK1994`、`DS2004`、`BMN2016`、`RR2010`。
+常用子集：`cps09mar`、`Invest1993`、`Nerlove1963`、`MRW1992`、`DDK2011`、`AJR2001`、`Card1995`、`AK1991`、`FRED-QD`、`FRED-MD`、`Kilian2009`、`AB1991`、`CK1994`、`DS2004`、`BMN2016`、`RR2010`、`CHJ2004`、`AL1999`。
 
 Notebook 中数据路径指向本地 `hansen/econometrics/data/...`（该目录被 `.gitignore` 忽略，需自行下载）。
 
