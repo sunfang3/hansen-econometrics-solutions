@@ -1,169 +1,291 @@
-# Hansen《Econometrics》第 9 章习题解答
+# Bruce Hansen《Econometrics》第 9 章习题解答（详细注释版）
 
-**章节：** Chapter 9 Hypothesis Testing  
-**书稿：** PDF p270–276（印刷页 250–256），§9.24 Exercises  
+**章节：** Chapter 9 Hypothesis Testing
+**书稿：** PDF p270–276（印刷页 250–256），§9.24 Exercises
+**数值验证：** `Hansen_Ch09_Exercises_Solutions.ipynb`（Exercise 9.25–9.29 有可运行代码）
 
-计算：`Hansen_Ch09_Exercises_Solutions.ipynb`
-
----
-
-## Exercise 9.1
-
-$\bar R^2$ 升 iff 新回归元 $|t|>1$（同方差 SE）。由 $\bar R^2=1-\frac{n-1}{n-k}\frac{\mathrm{SSE}}{\mathrm{SST}}$ 差分即得。
+> **写给谁看：** 假设你学过李子奈/陈强，会做 $t$ 检验、$F$ 检验、看 $p$ 值，但对"**Wald/LR/LM 三大检验是什么关系**""**$p$ 值到底什么意思**""**为什么大样本下什么都能拒绝**"理得不够清。
+> Hansen 第 9 章把假设检验**严格建立在第 7 章渐近正态性 + 第 8 章约束估计**之上：检验的核心问题是"**$\hat\theta$ 离假设值 $\theta_0$ 有多远，用标准误作单位**"。
 
 ---
 
-## Exercise 9.2
+## 0. 读题前必看：本章到底在讲什么
 
-**(a)** $\sqrt{n}((\hat\beta_2-\hat\beta_1)-(\beta_2-\beta_1))\to_d N(0,V_1+V_2)$。  
-**(b)** $W=n(\hat\beta_2-\hat\beta_1)'(\hat V_1+\hat V_2)^{-1}(\hat\beta_2-\hat\beta_1)$。  
-**(c)** $H_0$ 下 $\to_d\chi^2_k$。
+**承上启下：**
+- 第 7 章：$\sqrt n(\hat\beta-\beta)\to_d N(0,V_\beta)$（估计的渐近分布）。
+- 第 8 章：约束 $R'\beta=c$ 为真时如何**估计**。
+- **第 9 章：约束 $R'\beta=c$（或 $r(\beta)=\theta_0$）是否为真？如何**检验**？**
 
----
+**核心直觉（一句话）：** Wald 统计量衡量"**估计值偏离零假设几个标准误**"——偏离越远（标准化后越大），越该拒绝 $H_0$。
 
-## Exercise 9.3–9.4
+$$W=(\hat\theta-\theta_0)'\hat V_{\hat\theta}^{-1}(\hat\theta-\theta_0)\ \xrightarrow{H_0}\ \chi^2_q.$$
 
-**(a)** 双侧等尾 ⇒ 渐近水平 $\alpha$。  
-**(b)** **差检验**：在备择 $|\theta|$ 大时 $T$ 大应拒绝，但规则在 $|T|$ 很小时也拒绝（无功效方向错误）。应只拒绝大的 $|T|$/$W$。
+- $q=1$（单个约束）时，$W=T^2$（$t$ 统计量的平方），$\chi^2_1$ 即 $|Z|^2$。
+- 拒绝域在**右尾**（大值 = 偏离 $H_0$ 远）；**小 $W$ 意味支持 $H_0$**（见 Ex 9.19）。
 
----
+> **和本科对照：** 李子奈主要讲 $t$、$F$、显著性水平、$p$ 值；陈强系统讲 **Wald/LR/LM 三大检验**和稳健推断。Hansen 的贡献：从渐近理论严格推出 $t\to$Wald$\to F\to$LR$\to$LM，强调 **CI 与检验的对偶**，并反复警示多重检验、"大样本拒绝一切"、非线性 Wald 的不唯一性等陷阱。
 
-## Exercise 9.5
+**三大检验（trinity，务必记表）：** 都检验 $H_0:R'\beta=c$（$q$ 个约束），都在 $H_0$ 下渐近 $\chi^2_q$，但"用了什么"不同：
 
-$H_0:\beta_1-\beta_2=0$：Wald $W=(\hat\beta_1-\hat\beta_2)'\widehat{\mathrm{Var}}^{-1}(\cdot)$ 或约束回归 $X_1+X_2$ 合并。
+| 检验 | 用了什么 | 直觉 | 公式（线性、同方差） |
+|---|---|---|---|
+| **Wald** | 仅无约束 $\hat\beta$ | $\hat\beta$ 离约束多远 | $W=(R'\hat\beta-c)'(R'\hat V_\beta R)^{-1}(R'\hat\beta-c)$ |
+| **LR（似然比）** | 约束+无约束 | 两个 SSE 之差 | $LR=n\log(\tilde\sigma^2/\hat\sigma^2)$ |
+| **LM/Score** | 仅约束 $\tilde\beta$ | 约束残差"还想动"多远 | 由约束残差构造 |
 
----
+三者**渐近等价**（同一 $\chi^2_q$ 极限），有限样本下不同。现代实证最常用 **Wald**（无需估约束模型）。
 
-## Exercise 9.6
+**五个核心工具（做题反复用）：**
 
-不同意。多重检验下 20 个 $t$ 中出现 $|t|\approx2.5$ 并不稀有；未校正族错误率；“关键”需理论/联合检验/样本外。
+1. **$t$ 检验**（1 个约束）：$T=(\hat\theta-\theta_0)/\mathrm{se}(\hat\theta)\to_d N(0,1)$；双侧拒绝 $|T|>1.96$（5%）。
+2. **Wald**（$q$ 个约束）：$W\to_d\chi^2_q$；拒绝 $W>\chi^2_{q,1-\alpha}$。
+3. **CI–检验对偶**：拒绝 $H_0:\theta=\theta_0$（水平 $\alpha$）⇔ $\theta_0\notin$ $1-\alpha$ 置信区间。
+4. **$p$ 值**：能拒绝的最小 $\alpha$；$t$ 检验 $p=2(1-\Phi(|T|))$。
+5. **功效（power）**：$P(\text{拒绝}\mid H_1\text{真})$；**一致检验** ⇒ 对固定备择功效→1。
 
----
-
-## Exercise 9.7 / 9.22
-
-$H_0:E[Y\mid X=40]=20$ 即 $\beta_1+40\beta_2+1600\beta_3+\cdots=20$（按设定）。  
-构造 $R'\beta=20$ 的 $t$/Wald。
-
----
-
-## Exercise 9.8
-
-$Y=X_1'\gamma_1+(X_2-X_1)'\gamma_2+u$ 与原模型再参数化：$\beta_2=\gamma_2$，$\beta_1=\gamma_1-\gamma_2$。  
-检验 $\gamma_2=0$ **等价于** $\beta_2=0$。
-
----
-
-## Exercise 9.9
-
-证据混合：可能功效不足、总体异质、I/II 类错误。应看效应量、CI、效力、预注册；不宜单次“不能拒绝”否定前一拒绝。
+**三个易犯的错（本章反复警示）：**
+- **多重检验**（9.6）：做 20 个 $t$ 检验，即使全为零也期望 ~1 个"显著"——别数据挖掘。
+- **"大样本拒绝一切"**（9.13）：对**固定非零**备择功效→1，故巨大 $n$ 下微小偏离也显著——**统计显著 ≠ 经济显著**，要报告效应量与 CI。
+- **非线性 Wald 的不唯一性**（9.10、§9.17）：同一假设的不同参数化（如 $\sigma^2=1$ vs $\sigma=1$）可能给不同 Wald 值——因为 delta method 线性化在不同点不同。
 
 ---
 
-## Exercise 9.10
+## 1. 记号与概念速查（对照李子奈/陈强）
 
-**(a)** $T=(\hat\sigma^2-1)/\sqrt{\hat V/n}$。  
-**(b)** $\sqrt{n}(\hat\sigma-\sigma)\to_d N(0,V/(4\sigma^2))$。  
-**(c)** $T_\sigma=(\hat\sigma-1)/\mathrm{se}$。  
-**(d)** $H_0$ 在 $\sigma>0$ 时集合相同；有限样本统计量不同，可给出不同决策。
+| Hansen 记号 | 中文/本科说法 | 一句话解释 |
+|---|---|---|
+| $H_0:R'\beta=c$ | 原假设/零假设 | $q$ 个线性约束 |
+| $H_1$ | 备择假设 | 约束不成立 |
+| $T=(\hat\theta-\theta_0)/\mathrm{se}$ | $t$ 统计量 | 1 约束；$\to_d N(0,1)$ |
+| $W$ | Wald 统计量 | $q$ 约束；$\to_d\chi^2_q$ |
+| $F$ | $F$ 统计量 | 同方差、有限样本；$\to\chi^2_q/q$ |
+| $\alpha$ | 显著性水平 / size | $P(\text{I 类错误})$ 的上界 |
+| $p$ 值 | $p$-value | 能拒绝的最小 $\alpha$ |
+| $1-\beta$ | 功效 / power | $P(\text{拒绝}\mid H_1)$ |
+| $\chi^2_{q,1-\alpha}$ | 卡方临界值 | Wald 拒绝阈值 |
 
----
-
-## Exercise 9.11
-
-错误。经验进入线性与平方项，应 **联合** $H_0:\beta_{\mathrm{exp}}=\beta_{\mathrm{exp}^2}=0$（2 个约束）。
-
----
-
-## Exercise 9.12
-
-不完全正确。更大 $n$ 提高功效，但若 $H_0$ 真，拒绝概率 → $\alpha$ 而非 1；仅当真备择时功效 →1。
-
----
-
-## Exercise 9.13
-
-指固定非零备择下功效→1。对真 $H_0$ 并不成立。解释：统计显著≠实际显著；大样本宜报告 CI/效应。
+**Wald 的两种等价写法（别被 $n$ 绕晕）：**
+- 用**有限样本方差** $\hat V_{\hat\theta}$（= $\hat R'\hat V_\beta\hat R$，$\hat\beta$ 的协方差矩阵估计经 delta）：$W=(\hat\theta-\theta_0)'\hat V_{\hat\theta}^{-1}(\hat\theta-\theta_0)$。
+- 用**渐近方差** $\hat V_\theta$（$\sqrt n(\hat\theta-\theta)\to N(0,V_\theta)$）：$W=n(\hat\theta-\theta_0)'\hat V_\theta^{-1}(\hat\theta-\theta_0)$。
+两者数值相同（$\hat V_{\hat\theta}=\hat V_\theta/n$）。
 
 ---
 
-## Exercise 9.14
+## 2. 预备记号
 
-**(a)** $\hat C=R'\hat\beta\pm1.96\sqrt{R'\hat V R}$。  
-**(b)** 标准对偶：$\theta_0\notin\hat C\Leftrightarrow|T|>1.96$。
-
----
-
-## Exercise 9.15
-
-**(a)** $B=100$ 时 $\hat p\sim$ 约 $\mathrm{Bin}/B$，$\mathrm{se}\approx\sqrt{0.05\cdot0.95/100}\approx0.022$；7% 与 5% 差不显著。  
-**(b)** $B=1000$，$\mathrm{se}\approx0.007$，7% 显示略超拒。
+模型 $Y=X\beta+e$，$\hat\beta$ 无约束 OLS，$\hat V_\beta$ 其协方差估计（如同方差 $\hat\sigma^2(X'X)^{-1}$、异方差 HC0–HC3）。
+约束 $H_0:R'\beta=c$，$R$ 为 $k\times q$。$\hat\theta=R'\hat\beta$，$\widehat{\mathrm{var}}(\hat\theta)=R'\hat V_\beta R$。
+Wald：$W=(R'\hat\beta-c)'(R'\hat V_\beta R)^{-1}(R'\hat\beta-c)\to_d\chi^2_q$。
 
 ---
 
-## Exercise 9.16
+## 主题一：把经济问题翻译成检验（$R'\beta=c$）
 
-**(a)** $\hat\theta=n^{-1}\sum(e_{1i}^2-e_{2i}^2)$。  
-**(b)** $\sqrt{n}(\hat\theta-\theta)\to_d N(0,\mathrm{var}(e_1^2-e_2^2))$。  
-**(c)** 样本方差。  
-**(d)** $|\sqrt{n}\hat\theta/\hat s|>z_{1-\alpha/2}$。  
-**(e)** 未发现拟合差异，非证明两模型等价。
+> 套路：把"某个经济假设"写成对系数的**线性或非线性约束**，再套 $t$/Wald。
 
----
+### Exercise 9.5　检验 $\beta_1=\beta_2$
 
-## Exercise 9.17
+**约束：** $H_0:\beta_1-\beta_2=0$（$q=1$，若 $\beta_1,\beta_2$ 为向量则 $q$ 维）。
 
-**(a)** $H_0:\beta_2=\beta_4=\beta_5=0$（所有含 $X_2$ 的项）。  
-**(b)** 3 维 Wald。  
-**(c)** $\chi^2_3$。  
-**(d)** $W>\chi^2_{3,1-\alpha}$ 拒绝。
+**做法：** $\hat\theta=\hat\beta_1-\hat\beta_2$，其方差 $\mathrm{var}(\hat\beta_1)+\mathrm{var}(\hat\beta_2)-2\mathrm{cov}(\hat\beta_1,\hat\beta_2)$（**别忘了协方差项**！见 Ch7 Ex 7.17）。Wald $=\hat\theta'\widehat{\mathrm{var}}^{-1}\hat\theta\to_d\chi^2_q$。或用约束回归（合并 $X_1+X_2$）做 $F$。
 
----
+> **和本科对照：** 这是**等系数检验**（如"男女教育回报是否相同"），陈强 `test` 命令实现。
 
-## Exercise 9.18
+### Exercise 9.7 / 9.22　检验 40 岁工人期望工资 = \$20
 
-**(a)** $\gamma$ 为 $e$ 对 $Z$ 投影系数。  
-**(b)** $\mathrm{plim}=(E[ZZ'])^{-1}E[Ze]$。  
-**(c)** 常规 $W=\tilde\gamma'(Z'Z)\cdots$。  
-**(d)** $E[ZX']=0$ 时两阶段可忽略，标准 $\chi^2$。  
-**(e)** $E[ZX']\neq0$ 时 $\hat e$ 与 $Z$ 相关，极限非标准，需调整。
+**约束：** 设 $m(x)=E[Y\mid X=x]=\beta_0+\beta_1x+\beta_2x^2+\cdots$（$x$=年龄）。检验 $H_0:m(40)=20$，即
+$$\beta_0+40\beta_1+1600\beta_2+\cdots=20.$$
+这是**单个线性约束** $R'\beta=20$，$R=(1,40,1600,\ldots)'$。构造 $t$ 统计量 $T=(\hat m(40)-20)/\mathrm{se}(\hat m(40))$，$\mathrm{se}=\sqrt{R'\hat V_\beta R}$（Ch7 Ex 7.18）。$|T|>1.96$ 则拒绝。
 
----
+> **要点：** 检验"回归函数在某点的值 = 某数" = 一个线性约束的 $t$ 检验。
 
-## Exercise 9.19
+### Exercise 9.11　经验是否影响工资——必须联合检验
 
-**(a)** $\mathrm{df}=1$。  
-**(b)** 小 $W$ 落在左尾，**不拒绝** $H_0$；假设检验只拒绝右尾大值。
+**错误做法：** 只看 `experience` 系数的 $t$ 检验。
 
----
+**正确做法：** 经验通过 `exp` **和** `exp²` 两项进入，要排除"经验的影响"须联合检验
+$$H_0:\beta_{\mathrm{exp}}=\beta_{\mathrm{exp}^2}=0\quad(2\text{ 个约束}),$$
+用 2 维 Wald（或 $F$），$\to_d\chi^2_2$。
 
-## Exercise 9.20
+> **和本科对照：** 变量以**多项式/交互项**进入时，排除它要**联合**检验所有相关系数，不能逐个看 $t$。
 
-同方差下 $F=\frac{(106-100)/3}{100/(50-8)}\approx0.84$，不显著。需同方差/嵌套假定；异方差宜用稳健 Wald（信息不足精确算）。
+### Exercise 9.17　从二次回归中排除 $X_2$
 
----
+模型 $Y=\alpha+\beta_1X_1+\beta_2X_2+\beta_3X_1^2+\beta_4X_2^2+\beta_5X_1X_2+e$。排除 $X_2$ ⇒ 检验所有含 $X_2$ 的项：
+- **(a)** $H_0:\beta_2=\beta_4=\beta_5=0$（3 个约束：$X_2$、$X_2^2$、$X_1X_2$）。
+- **(b)** 3 维 Wald。
+- **(c)** $\chi^2_3$。
+- **(d)** 拒绝若 $W>\chi^2_{3,1-\alpha}$（如 5% 临界值 7.815）。
 
-## Exercise 9.21
+> **要点：** 同 9.11——"排除一个变量"= 把它所有出现的形式（线性、平方、交互）一起置零。
 
-$H_0:\beta_1\beta_4-\beta_2\beta_3=0$，delta 法 Wald 1 维。
+### Exercise 9.21　检验 $\beta_1/\beta_2=\beta_3/\beta_4$（非线性）
 
----
+**约束：** $H_0:\beta_1\beta_4-\beta_2\beta_3=0$（交叉相乘，去分母避免 $\beta_2=0$ 奇点）。**1 个非线性约束**。
 
-## Exercise 9.23
+**做法：** delta-method Wald。$r(\beta)=\beta_1\beta_4-\beta_2\beta_3$，梯度 $\nabla r=(\beta_4,-\beta_3,-\beta_2,\beta_1)'$，$\hat V_{\hat\theta}=\nabla'\hat V_\beta\nabla$，$W=r(\hat\beta)^2/\hat V_{\hat\theta}\to_d\chi^2_1$。
 
-$\hat p=0.07$，$B=200$，$\mathrm{se}\approx\sqrt{0.05\cdot0.95/200}\approx0.015$；0.07 与 0.05 差约 1.3 se，**证据不足断定超拒**；结论不完整。
+> **和本科对照：** 比例/乘积约束用 **delta-method Wald**（Ch7 工具）。陈强 `testnl`/`nlcom`。
 
 ---
 
-## Exercise 9.24（Monte Carlo 设计）
+## 主题二：$t$ 检验、置信区间与对偶
 
-**(a)** $\alpha$ 只进截距，斜率/$\theta=e^\beta$ 的 $t$ 对 $\alpha$ 不变。  
-**(b)** $\hat\beta$ 近似无偏；$\hat\theta=e^{\hat\beta}$ 有限样本有 Jensen 偏。  
-**(c)** 大样本双侧 10% 尾概率约 0.05；小样本 $T_\theta$ 可能校准差。
+### Exercise 9.1　调整 $R^2$ 上升 ⇔ 新变量 $|t|>1$
+
+**结论：** 加入回归元 $X_{k+1}$ 后，Theil 调整 $R^2$ $\bar R^2=1-\frac{n-1}{n-k}\frac{SSE}{SST}$ **上升**当且仅当该变量的 $|t_{k+1}|>1$（同方差 SE）。
+
+**证明（差分）：** 加入 $X_{k+1}$ 使 $SSE$ 减少 $\Delta SSE=\hat\beta_{k+1}^2/[(X'X)^{-1}]_{k+1,k+1}=\hat\beta_{k+1}^2\cdot$（即 $\hat\beta_{k+1}^2/s^2(\hat\beta_{k+1})\cdot s^2=t_{k+1}^2 s^2$），同时 $k$ 增加 1。代入 $\Delta\bar R^2$ 的表达式，化简得 $\Delta\bar R^2>0\Leftrightarrow t_{k+1}^2>1\Leftrightarrow|t_{k+1}|>1$。
+
+> **和本科对照：** 调整 $R^2$ 给新增变量设了"**$|t|>1$ 的门槛**"才纳入——这就是它惩罚多余变量的机制（普通 $R^2$ 加任何变量都升，见 Ch3 Ex 3.16）。
+
+### Exercise 9.8　重参数化下检验的不变性
+
+**题：** 论文估 $Y=X_1'\hat\gamma_1+(X_2-X_1)'\hat\gamma_2+u$，检验 $\gamma_2=0$。是否等价于检验 $\beta_2=0$（原模型 $Y=X_1'\beta_1+X_2'\beta_2+e$）？
+
+**等价。** 重参数化关系：$\beta_2=\gamma_2$，$\beta_1=\gamma_1-\gamma_2$。故 $\gamma_2=0\Leftrightarrow\beta_2=0$，是同一约束。Wald 对线性重参数化**不变**。
+
+> **警示：** Wald 对**线性**重参数化不变，但对**非线性**参数化不一定（见 9.10、§9.17）。
+
+### Exercise 9.10　检验 $\sigma^2=1$ vs $\sigma=1$（非线性不唯一性）
+
+**(a)** 由 Ex 7.8，$\sqrt n(\hat\sigma^2-\sigma^2)\to_d N(0,V)$。$t$ 统计量 $T=(\hat\sigma^2-1)/\sqrt{\hat V/n}$。
+
+**(b)** delta method（$g(x)=\sqrt x$，$g'(\sigma)=1/(2\sigma)$）：
+$$\sqrt n(\hat\sigma-\sigma)\to_d N\big(0,V/(4\sigma^2)\big).$$
+
+**(c)** $T_\sigma=(\hat\sigma-1)/\mathrm{se}(\hat\sigma)$。
+
+**(d)** **零假设相同**（$\sigma^2=1\Leftrightarrow\sigma=1$，因 $\sigma>0$），但**统计量不同**（$T$ vs $T_\sigma$），有限样本可给**不同决策**。这正是非线性 Wald 的不唯一性。
+
+> **和本科对照：** 同一假设用不同参数化（$\sigma^2$ vs $\sigma$）可能给不同结论——因为 delta method 在不同点线性化。实践中大样本下差别消失。
+
+### Exercise 9.14　CI–检验对偶
+
+**(a)** $\theta=R'\beta$（1 约束）的 95% 渐近 CI：
+$$\hat C=R'\hat\beta\pm 1.96\sqrt{R'\hat V_\beta R}.$$
+
+**(b)** 对偶："$\theta_0\notin\hat C$"⇔"$|T(\theta_0)|>1.96$"⇔"5% 水平拒绝 $H_0:\theta=\theta_0$"。故"拒绝 $\theta_0$"=" $\theta_0$ 落在 95% CI 之外"。
+
+> **和本科对照：** 陈强强调的 **CI 与检验对偶**。看 CI 是否包含假设值，等价于做检验。
+
+### Exercise 9.19　小 Wald 值的含义
+
+$W=0.34$，$n=500$，检验 $H_0:\beta_2=0$（$\beta_2$ 标量）。
+
+- **(a)** df $=1$（1 个约束）。
+- **(b)** $W=0.34$ **很小**。$\chi^2_1$ 的 1% 分位约 0.00016，故 $0.34>$ 该分位（"否，不小于 1% 分位"）。**但 Wald 在右尾拒绝**——小 $W$ 意味 $\hat\beta_2$ 离 0 很近（标准化后），是**支持 $H_0$** 的强证据。**不应拒绝。**
+
+> **要点（易错）：** $\chi^2$/$F$/Wald 检验**在右尾拒绝**（大值=偏离 $H_0$）。小值不是"显著"，而是"非常符合 $H_0$"。
 
 ---
 
-## Exercise 9.25（Invest1993，1987，$n=1028$）
+## 主题三：Wald 与 $F$
+
+### Exercise 9.2　两独立样本，$\beta_1=\beta_2$
+
+- **(a)** 独立 ⇒ 方差相加：$\sqrt n((\hat\beta_2-\hat\beta_1)-(\beta_2-\beta_1))\to_d N(0,V_1+V_2)$。
+- **(b)** Wald：$W=n(\hat\beta_2-\hat\beta_1)'(\hat V_1+\hat V_2)^{-1}(\hat\beta_2-\hat\beta_1)$。
+- **(c)** $H_0$ 下 $W\to_d\chi^2_k$。
+
+> **和本科对照：** 这是**结构稳定性/Chow 检验**（两组系数是否相同）的大样本版。两独立估计之差的方差 = 方差之和（无协方差项，因独立）——对比 9.5（同一回归内，需协方差）。
+
+### Exercise 9.16　两非嵌套模型的拟合比较
+
+$\sigma_1^2=E[e_1^2]$，$\sigma_2^2=E[e_2^2]$（$e$ 假设可观测）。$\theta=\sigma_1^2-\sigma_2^2$。
+
+- **(a)** $\hat\theta=n^{-1}\sum(e_{1i}^2-e_{2i}^2)$。
+- **(b)** CLT：$\sqrt n(\hat\theta-\theta)\to_d N(0,\mathrm{var}(e_1^2-e_2^2))$。
+- **(c)** 用 $(e_{1i}^2-e_{2i}^2)$ 的样本方差估渐近方差。
+- **(d)** $|\sqrt n\hat\theta/\hat s|>z_{1-\alpha/2}$ 则拒绝 $H_0:\sigma_1^2=\sigma_2^2$。
+- **(e)** 接受 $H_0$ ⇒ **无证据说两模型拟合不同**，**不等于证明两模型等价**。
+
+> **和本科对照：** 非嵌套模型比较（Vuong 检验类）。"**不能拒绝 ≠ 接受**"——零假设只是"未被否定"。
+
+### Exercise 9.18　残差对 $Z$ 回归（生成回归元/两步）
+
+- **(a)** $\gamma$ = $e$ 对 $Z$ 的**总体投影系数**。
+- **(b)** $\mathrm{plim}\tilde\gamma=(E[ZZ'])^{-1}E[Ze]$。
+- **(c)** 忽略两步的标准 Wald：$W=\tilde\gamma'(Z'Z\text{ 类})^{-1}\tilde\gamma$。
+- **(d)** 若 $E[ZX']=0$：$\hat e$ 与 $Z$ 不相关（经 $X$ 的通道关闭），两步可忽略，$W\to_d\chi^2$ 标准。
+- **(e)** 若 $E[ZX']\ne0$：$\hat e=e-X(\hat\beta-\beta)$ 含 $X$，与 $Z$ 相关 ⇒ **非标准极限**，需调整（生成回归元的推断问题，Pagan）。
+
+> **和本科对照：** "生成回归元"（用第一步估计做第二步回归元）的推断——通常无害（Ch7 Ex 7.22），但在 $E[ZX']\ne0$ 时退化。
+
+### Exercise 9.20　用 $R^2$/SSE 算 $F$（嵌套模型）
+
+短回归 $SSE_R=106$（5 系数），长回归 $SSE_U=100$（8 系数），$n=50$，$q=3$。
+
+$$F=\frac{(SSE_R-SSE_U)/q}{SSE_U/(n-k)}=\frac{(106-100)/3}{100/(50-8)}=\frac{2}{2.38}\approx0.84.$$
+不显著（$F<1$，远小于 $F_{3,42}$ 临界值 ~2.8）。
+
+**需要的假设：** 同方差 + 嵌套。异方差下应用稳健 Wald（不能直接用此 $F$）。
+
+> **和本科对照：** 嵌套模型比较的 $F$（陈强 `test`）。从 $R^2$ 也能算：$F=\frac{(R^2_U-R^2_R)/q}{(1-R^2_U)/(n-k)}$。
+
+---
+
+## 主题四：检验的陷阱与概念（讨论题）
+
+### Exercise 9.3 / 9.4　"双尾都拒绝"的差检验
+
+规则"拒绝若 $|T|<c_1$ **或** $|T|>c_2$"（$c_1,c_2$ 为 $|Z|$ 的 $\alpha/2$ 与 $1-\alpha/2$ 分位）。
+
+- **(a)** size $=\alpha$（两尾概率相加恰为 $\alpha$）。
+- **(b)** **坏检验。** 备择 $H_1:\theta\ne0$ 下 $|T|$ 应**大**；但此规则在 $|T|$ **小**时也拒绝——而 $|T|$ 小在 $H_1$ 下**概率低**（功效差）。把拒绝概率浪费在了"备择下 unlikely"的区域。**好检验应在备择下更可能的区域拒绝**（Neyman–Pearson 思想）。
+
+> **要点：** 拒绝域应设在"$H_1$ 下统计量更可能取值"的地方。
+
+### Exercise 9.6　多重检验（20 个 $t$，一个 ~2.5）
+
+**不同意。** 即便 20 个变量真系数全为 0，在 5% 水平下做 20 个独立 $t$ 检验，**期望**出现 ~1 个"显著"（族错误率 FWER $\approx 1-0.95^{20}\approx 64%$）。"`studytime` 显著"很可能是**假发现**。
+
+**正确做法：** Bonferroni 校正、联合 $F$ 检验、或**预先指定**假设（避免 data snooping）。
+
+> **和本科对照：** 多重检验/数据挖掘问题。现代实证强调 **pre-registration** 和**多重比较校正**。
+
+### Exercise 9.9　两研究结论矛盾（一拒绝一不拒绝）
+
+可能原因：功效不足（第二研究 $n$ 小）、总体异质、I/II 类错误。应看**效应量、CI、功效**，而非单次"不能拒绝"否定前人。预注册、元分析更稳。
+
+> **和本科对照：** 复现性危机。显著性是随机变量，会因抽样波动翻转。
+
+### Exercise 9.12　"更多数据就会拒绝"——对吗？
+
+**部分错。** 更大 $n$ 提高**对固定备择的功效**。但若 $H_0$ **真**，拒绝概率 $\to\alpha$（5%），**不是** 1。更多数据帮发现**真实**效应，不保证拒绝。
+
+> **要点：** 功效针对 $H_1$；真零假设下大样本也只是 5% 拒绝。
+
+### Exercise 9.13　"大样本下任何假设都被拒绝"
+
+指**一致性**：对**固定非零**备择，功效→1。故巨大 $n$ 下**任意小的偏离**都"统计显著"。这正说明 **统计显著 ≠ 经济/实际显著**——大样本应报告**效应量与 CI**，而非仅 $p$ 值。
+
+> **和本科对照：** 陈强/现代计量强调：大样本下关注**效应大小**，不要被 $p<0.05$ 带偏。
+
+### Exercise 9.15　蒙特卡洛 size 估计 7%（$B=100$ vs $1000$）
+
+- **(a)** $B=100$：$\hat p\sim\text{Bin}(100,0.05)/100$，$\mathrm{se}(\hat p)\approx\sqrt{0.05\cdot0.95/100}\approx0.022$。7% 距 5% 仅 ~1 se ⇒ **不能断定过度拒绝**。**不同意**同事。
+- **(b)** $B=1000$：$\mathrm{se}\approx0.007$，7% 距 5% ~3 se ⇒ **确实过度拒绝**。
+
+> **要点：** MC 估计本身有抽样误差；$B$ 要够大才能判断 size 是否偏离。
+
+### Exercise 9.23　$T\to\chi^2_3$，$\hat p=0.07$，$B=200$
+
+$\mathrm{se}(\hat p)\approx\sqrt{0.05\cdot0.95/200}\approx0.015$；0.07 距 0.05 约 1.3 se ⇒ **证据不足断定 oversized**。结论**不完整**（需更大 $B$ 或置信区间）。
+
+---
+
+## 主题五：实证与蒙特卡洛
+
+### Exercise 9.24（蒙特卡洛，$\theta=e^\beta$）
+
+- **(a)** $\alpha$ 只进截距；$\hat\beta$、$\hat\theta=e^{\hat\beta}$ 的 $t$/SE 对 $\alpha$ **不变**（平移 $Y$ 不改斜率与 SE）。
+- **(b)** $\hat\beta$ 近似无偏；$\hat\theta=e^{\hat\beta}$ **有限样本有偏**（Jensen：$E[e^{\hat\beta}]>e^{E[\hat\beta]}$，因指数凸）。
+- **(c)** 大样本双侧 $P(T_\beta>1.645)\approx 0.05$（10% 双侧的每尾）；小样本 $T_\theta$ 校准可能略差（因 $\hat\theta$ 的 Jensen 偏与非线性 SE）。
+
+> **和本科对照：** MC 验证渐近理论；非线性估计量的 Jensen 偏差。
+
+### Exercise 9.25（Invest1993，1987，$n=1028$）
 
 |  | $\hat\beta$ | HC3 SE | 95% CI |
 |--|------------:|-------:|--------|
@@ -172,41 +294,67 @@ $\hat p=0.07$，$B=200$，$\mathrm{se}\approx\sqrt{0.05\cdot0.95/200}\approx0.01
 | D | 0.0123 | 0.0072 | [−0.002, 0.026] |
 | int | 0.101 | 0.0074 | [0.086, 0.115] |
 
-- $H_0:C=D=0$：Wald≈2.99，$\chi^2_2$ $p\approx0.22$ **不拒绝**  
-- $H_0:Q=0$：Wald≈2.42，$p\approx0.12$ **不拒绝**  
-- 与 Tobin $q$（仅 Q 显著、C,D=0）**不完全一致**（Q 也不显著）。  
-- 六项二次/交互联合 Wald≈5.70，$p\approx0.46$ **不拒绝** 线性。
+- $H_0:C=D=0$（Tobin $q$ 理论：仅 Q 重要）：Wald≈2.99，$\chi^2_2$，$p\approx0.22$ **不拒绝**。
+- $H_0:Q=0$：Wald≈2.42，$p\approx0.12$ **不拒绝**。
+- **与理论不完全一致**：理论预测 Q 显著、C=D=0；实证中 Q 也不显著。
+- 六项二次/交互联合 Wald≈5.70，$\chi^2_6$，$p\approx0.46$ **不拒绝**线性（足够线性设定）。
+
+### Exercise 9.26（Nerlove，$n=145$）
+
+- **(a)** $\widehat{\log C}=-3.53+0.720\log Q+0.436\log P_L-0.220\log P_K+0.427\log P_F$。
+- **(b)** $H_0:\beta_3+\beta_4+\beta_5=1$：成本对要素价格**一次齐次**（同比例涨价 $\Rightarrow$ 同比例涨成本；无货币幻觉）。
+- **(c)(d)** CLS/EMD 施加齐次（Ch8 工具）。
+- **(e)(f)** Wald≈0.59，$p\approx0.44$ **不拒绝**齐次；MD 统计量（$W=V^{-1}$）与 Wald **相同**（线性约束下三者等价）。
+
+> **和本科对照：** Cobb-Douglas 成本函数的**齐次性检验**是经典约束检验。Ch8（约束估计）+ Ch9（约束检验）成对出现。
+
+### Exercise 9.27（MRW，$n=98$）
+
+$\hat\beta\approx(-0.288,0.524,-0.506,0.231,3.02)$。$H_0:\beta_I+\beta_n+\beta_S=0$（Solow 增长理论约束）：Wald≈0.74，$p\approx0.39$ **不拒绝**。
+
+### Exercise 9.28（非西班牙裔黑人，$n=4949$）
+
+- **(a)** 子样本固定种族 ⇒ 省略 race 虚拟；保留 edu/exp/female/婚姻/地区。
+- **(b)** "婚姻不影响工资"= 所有婚姻虚拟（相对从未结婚）系数为 0：**6 个约束**。
+- **(c)** Wald≈40.1，$\chi^2_6$，$p\approx4\times10^{-7}$。
+- **(d)** **强烈拒绝**——婚姻显著影响工资。
+
+### Exercise 9.29（白人+黑人，$n=39242$）
+
+四组（白男/白女/黑男/黑女）教育回报交互约 (0.117, 0.119, 0.112, 0.128)。共同回报 $H_0$：Wald≈5.65，$\chi^2_3$，$p\approx0.13$ **不拒绝**——教育回报四组无显著差异。
+
+> **和本科对照：** 交互项 + Wald 检验"某效应是否跨组相同"（陈强 `test`）。
 
 ---
 
-## Exercise 9.26（Nerlove，$n=145$）
+## 附录 A：检验统计量速查
 
-**(a)** $\widehat{\log C}=-3.53+0.720\log Q+0.436\log P_L-0.220\log P_K+0.427\log P_F$  
-**(b)** $H_0:\beta_3+\beta_4+\beta_5=1$：成本对要素价格 **一次齐次**（无货币幻觉/规模价格）。  
-**(c)(d)** CLS/EMD 施加齐次。  
-**(e)(f)** Wald≈0.59，$p\approx0.44$ **不拒绝** 齐次；MD 统计量在 $W=V^{-1}$ 时与 Wald 相同。
+| 检验 | 约束数 | 统计量 | $H_0$ 下极限 | 拒绝域 |
+|---|---|---|---|---|
+| $t$ | 1 | $T=(\hat\theta-\theta_0)/\mathrm{se}$ | $N(0,1)$ | $|T|>z_{1-\alpha/2}$ |
+| Wald | $q$ | $W=(\hat\theta-\theta_0)'\hat V^{-1}(\hat\theta-\theta_0)$ | $\chi^2_q$ | $W>\chi^2_{q,1-\alpha}$ |
+| $F$（同方差） | $q$ | $F=\frac{(SSE_R-SSE_U)/q}{SSE_U/(n-k)}$ | $F_{q,n-k}\to\chi^2_q/q$ | $F>F_{q,n-k,1-\alpha}$ |
+| LR（正态） | $q$ | $LR=n\log(\tilde\sigma^2/\hat\sigma^2)$ | $\chi^2_q$ | $LR>\chi^2_{q,1-\alpha}$ |
 
----
-
-## Exercise 9.27（MRW，$N=1$，$n=98$）
-
-$\hat\beta\approx(-0.288,0.524,-0.506,0.231,3.02)$  
-$H_0:\beta_I+\beta_n+\beta_S=0$：Wald≈0.74，$p\approx0.39$ **不拒绝** Solow 约束。
+**关系：** $q=1$ 时 Wald$=T^2$；$\chi^2_1=Z^2$。大样本 $F\to$Wald$/q$，$t_{n-k}\to N(0,1)$。
 
 ---
 
-## Exercise 9.28（非西班牙裔黑人，$n=4949$）
+## 附录 B：检验的"五步法"（做题套路）
 
-**(a)** 子样本固定种族 ⇒ 省略 race 虚拟；可用 edu/exp/女/婚姻/地区。  
-**(b)** 婚姻虚拟（相对从未结婚）系数全 0：**6 个约束**。  
-**(c)** Wald≈40.1，$\chi^2_6$，$p\approx4\times10^{-7}$。  
-**(d)** **拒绝**“婚姻不影响工资”。
-
----
-
-## Exercise 9.29（白人+黑人，$n=39242$）
-
-四组教育回报交互：约 (0.117, 0.119, 0.112, 0.128)。  
-共同回报 $H_0$：Wald≈5.65，$\chi^2_3$，$p\approx0.13$ **不拒绝** 共同教育回报。
+1. **把经济问题翻译成约束** $H_0:R'\beta=c$（线性）或 $r(\beta)=\theta_0$（非线性）。数清约束个数 $q$。
+2. **选检验**：1 约束用 $t$；$q$ 约束用 Wald（异方差用 HC，同方差可用 $F$）。
+3. **算统计量**：$T$ 或 $W$（非线性用 delta method 求 $\nabla r$）。
+4. **定临界值/算 $p$**：$N(0,1)$、$\chi^2_q$、或 $F_{q,n-k}$。
+5. **结论**：拒绝⇒数据不支持 $H_0$；不拒绝⇒无证据反对（**非证明 $H_0$ 真**）。报告效应量与 CI。
 
 ---
+
+## 附录 C：notebook 单元对应
+
+| 习题 | notebook 内容 |
+|------|----------------|
+| 9.25 | Invest1993 回归 + Wald（C=D=0, Q=0, 6 项非线性）code cell |
+| 9.26 | Nerlove Cobb-Douglas + 齐次性 Wald code cell |
+| 9.27 | MRW + Solow 约束 Wald code cell |
+| 9.28–9.29 | CPS 婚姻 Wald + 教育回报交互 Wald code cell |
