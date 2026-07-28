@@ -1,4 +1,5 @@
 ## Shared helpers for Hansen chapter QMD (R toolset)
+## Data paths are resolved relatively from getwd() (docs/chXX or repo root); no absolute paths.
 
 hansen_repo_root <- function() {
   cands <- c("../..", "..", ".", "../../..")
