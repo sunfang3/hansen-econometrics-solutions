@@ -1,0 +1,30 @@
+project:
+  type: book
+  output-dir: _output
+
+book:
+  title: "Hansen《Econometrics》详细中文学习笔记"
+  subtitle: "沿原书顺序阅读：对象、识别、估计、推断与逐步推导"
+  author: "中文学习笔记"
+  date: last-modified
+  chapters:
+    - index.qmd
+
+lang: zh-CN
+bibliography: ../presentation/references.bib
+execute:
+  enabled: false
+
+crossref:
+  chapters: true
+
+format:
+  html:
+    theme: cosmo
+    css: styles/notes.css
+    toc: true
+    toc-depth: 3
+    number-depth: 3
+    html-math-method: mathjax
+    code-copy: true
+    link-external-newwindow: true

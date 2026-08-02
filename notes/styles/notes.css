@@ -1,0 +1,66 @@
+:root {
+  --notes-ink: #202b33;
+  --notes-muted: #5a6872;
+  --notes-paper: #fffdfa;
+  --notes-blue: #245b78;
+  --notes-green: #2d6a4f;
+  --notes-gold: #9a6700;
+  --notes-red: #a23b3b;
+}
+
+body {
+  color: var(--notes-ink);
+  background: var(--notes-paper);
+  line-height: 1.72;
+}
+
+h1, h2, h3 {
+  color: #193447;
+}
+
+.bridge,
+.book-map,
+.dimension-check,
+.derivation,
+.common-error,
+.formula-card {
+  border-left: 0.28rem solid var(--notes-blue);
+  border-radius: 0.25rem;
+  margin: 1.15rem 0;
+  padding: 0.85rem 1rem;
+  background: #f4f8fb;
+}
+
+.book-map {
+  border-left-color: var(--notes-gold);
+  background: #fff8e8;
+}
+
+.dimension-check {
+  border-left-color: var(--notes-green);
+  background: #eff8f2;
+}
+
+.derivation {
+  border-left-color: #6b4fa1;
+  background: #f7f3fb;
+}
+
+.common-error {
+  border-left-color: var(--notes-red);
+  background: #fff2f1;
+}
+
+.formula-card {
+  border-left-color: #4b708b;
+  background: #f7fafc;
+}
+
+table {
+  font-size: 0.94rem;
+}
+
+.source-page {
+  color: var(--notes-muted);
+  font-size: 0.9rem;
+}
