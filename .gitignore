@@ -1,4 +1,5 @@
 *.pdf
 hansen/
+__pycache__/
 presentation/_output/
 presentation/.quarto/

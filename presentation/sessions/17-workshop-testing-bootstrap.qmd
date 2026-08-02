@@ -1,0 +1,230 @@
+---
+title: "第 17 次工作坊：检验与 Bootstrap"
+subtitle: "区间、学生化统计量与零假设下 wild bootstrap"
+author: "Hansen《Econometrics》中文全年课程"
+date: last-modified
+session-number: 17
+session-type: "工作坊"
+semester: 1
+duration: 90
+chapters: "Ch.9–10"
+book-pages: "221–305"
+pdf-pages: "241–325"
+---
+
+## 本次工作坊的任务
+
+- 构造 pairs bootstrap 斜率区间
+- 在 $H_0$ 下构造 wild bootstrap 检验
+- 区分估计分布与检验参考分布
+
+::: {.notes}
+说明本工作坊承接的位置：把检验语言落实为可重复的重抽样算法。强调今天评价的是设定理由与解释闭环，不只是代码是否运行。
+:::
+
+## 先修检查
+
+- 会解释 percentile 区间
+- 知道学生化统计量
+- 理解检验必须在 $H_0$ 下校准
+
+::: {.notes}
+让学生先写出估计对象、关键假设和预期诊断。若只会说软件命令，先回到相应主课。
+:::
+
+## 研究问题
+
+异方差小样本中，斜率区间和 $H_0:\beta=0$ 的检验应模拟哪个分布？
+
+::: {.notes}
+先把问题翻译成可估计对象。要求学生说清结果变量、处理/解释变量和目标总体。
+:::
+
+## 数据状态与复现方式
+
+::: {.data-status}
+固定种子 20260802，自生成 $n=80$；$B=1999$。示例输出由 base R 预计算，未依赖外部数据。
+:::
+
+::: {.notes}
+明确本页是模拟、教材数据还是预计算结果。指出数据缺失时的可观察提示，不让空表静默出现。
+:::
+
+## 样本与筛选
+
+$n=80$ 独立观测。奇数 $B=1999$ 便于尾概率排序；Monte Carlo 最小正 $p$ 值约为 $1/(B+1)=0.0005$。
+
+::: {.notes}
+逐项说明保留/删除观测的理由，并追问筛选后结论适用于哪个总体。
+:::
+
+## 变量变换
+
+$X\sim N(0,1)$；$Y=1+0.45X+\sqrt{0.5+X^2}u$。异方差但 $E[u\mid X]=0$。
+
+::: {.notes}
+把每个变换连接到经济单位或随机过程性质，避免把对数、差分、标准化当成无意义预处理。
+:::
+
+## 模型与识别
+
+斜率是正确线性 CEF 参数。Pairs bootstrap 用于估计分布；检验零斜率时，受约束模型只含常数。
+
+::: {.notes}
+先写总体模型与识别条件，再看样本估计命令。要求学生指出最不可检验的条件。
+:::
+
+## 估计量
+
+基准 OLS 斜率 $\hat\beta$；pairs bootstrap 重抽 $(Y_i,X_i)$；wild bootstrap 固定 $X$，对受约束残差乘 Rademacher 权重。
+
+::: {.notes}
+逐步把估计公式与代码对象对应；检查维数、投影或矩条件。
+:::
+
+## 标准误、聚类与临界值
+
+区间展示 percentile 作为直观起点；检验用受约束 wild bootstrap 的 t 统计量。生产分析应优先学生化和合适小样本修正。
+
+::: {.notes}
+让学生先根据抽样结构选择推断，再显示课程选择；严禁按显著性挑标准误。
+:::
+
+## 执行流程
+
+基准估计 → pairs 区间 → 受约束拟合 → wild 样本 → 每次重算 t → 尾概率。
+
+::: {.notes}
+按输入—变换—估计—诊断—输出走一遍，明确每一步失败时应看到什么。
+:::
+
+## R 代码：数据与设定
+
+~~~r
+set.seed(20260802)
+n <- 80L
+B <- 1999L
+x <- rnorm(n)
+y <- 1 + 0.45 * x + rnorm(n) * sqrt(0.5 + x^2)
+fit <- lm(y ~ x)
+~~~
+
+::: {.notes}
+代码默认不在 Quarto 构建中执行。逐行解释固定种子、样本量和变量生成/读取。
+:::
+
+## R 代码：估计与输出
+
+~~~r
+bstar <- replicate(B, {
+  ii <- sample.int(n, n, replace = TRUE)
+  coef(lm(y[ii] ~ x[ii]))[2]
+})
+ci <- quantile(bstar, c(0.025, 0.975))
+
+fit0 <- lm(y ~ 1)
+t_obs <- coef(summary(fit))[2, 3]
+t_star <- replicate(B, {
+  yb <- fitted(fit0) + resid(fit0) * sample(c(-1, 1), n, TRUE)
+  coef(summary(lm(yb ~ x)))[2, 3]
+})
+p_boot <- (1 + sum(abs(t_star) >= abs(t_obs))) / (B + 1)
+~~~
+
+::: {.notes}
+先预测输出列和符号，再运行。提醒保存 sessionInfo 与关键样本计数。
+:::
+
+## 示例输出
+
+| 量 | 预计算值 |
+|---|---:|
+| OLS 斜率 | 0.661 |
+| 常规 OLS SE | 0.135 |
+| pairs percentile 95% CI | [0.337, 0.978] |
+| 观察 t | 4.899 |
+| 受约束 wild bootstrap $p$ | 0.0005（加一修正） |
+
+::: {.notes}
+这是固定种子预计算输出。逐列解释点估计、SE/区间、样本或簇数；不要只读星号。
+:::
+
+## 诊断
+
+比较无约束和受约束 bootstrap 的 $T^*$ 分布中心；检查少量极端 $X$ 是否支配区间。$p=0.0005$ 只表示在 1999 次中未出现更极端值，不等于真实概率为零。
+
+::: {.notes}
+逐个诊断说明它能发现什么、不能证明什么。把最危险的失败模式写在板书右侧。
+:::
+
+## 敏感性分析
+
+改用 HC1 学生化 t；把 Rademacher 权重换 Mammen 权重；改变 $B$ 并报告 Monte Carlo 误差。
+
+::: {.notes}
+只改变一个有争议设定，比较估计对象是否变化；不要把无目的规格搜索称为稳健性。
+:::
+
+## 常见错误：错在哪里
+
+::: {.misconception}
+用无约束 pairs bootstrap 的斜率分布直接给零假设检验临界值，会把估计信号带进参考分布。
+:::
+
+::: {.notes}
+让学生定位错误发生在样本、识别、估计、方差还是解释层；给出一项能真正修正错误的动作。
+:::
+
+## 课堂检查题
+
+::: {.checkpoint}
+为什么 bootstrap $p$ 值常写 $(1+\#\{|T_b^*|\ge|T|\})/(B+1)$，而不是简单除以 $B$？
+:::
+
+::: {.notes}
+留 3 分钟先独立写设定和理由，再两人互查。答案必须包含方法与原因，只有命令名不给分。
+:::
+
+## 检查题解答与诊断
+
+::: {.checkpoint}
+把观察统计量与 $B$ 个模拟统计量视为 $B+1$ 个可交换值，加一修正避免有限 $B$ 时报告零 $p$ 值，并给有效的 Monte Carlo 检验校准。
+:::
+
+::: {.notes}
+按错误类型回看：若说只是四舍五入，回到 Monte Carlo 检验；若忽略双侧绝对值，回到备择定义。要求学生修改原答案，而不是只听讲。
+:::
+
+## 工作坊小结
+
+- 区间模拟估计分布，检验模拟零假设分布
+- 重抽单位和权重必须匹配异方差/依赖
+- 有限 B 的 p 值也有离散和 Monte Carlo 误差
+
+::: {.notes}
+请学生用“对象—设定—估计—推断—限制”五句话口头提交结果，任何一步缺失都不算复现完成。
+:::
+
+## 复现任务与阅读
+
+- Hansen Ch.9–10：书内 221–305 页，PDF 241–325 页。
+- Ch.10 习题解答：仓库 docs/ch10/Hansen_Ch10_Exercises_Solutions.md。
+- 在线阅读：[Ch.10 习题解答](https://github.com/sunfang3/hansen-econometrics-solutions/blob/master/docs/ch10/Hansen_Ch10_Exercises_Solutions.md)。
+- 本次提交：提交两种 bootstrap 分布图、区间和受约束检验说明
+
+::: {.notes}
+明确提交物包括代码、数字表和设定说明。提醒教材数据不进入 Git，只提交可复现路径和脚本。
+:::
+
+## 备查与延伸
+
+- BCa 区间
+- percentile-t
+- wild cluster bootstrap
+
+::: {.notes}
+主线结束后按班级进度选择一项。其余作为研究方向阅读，避免压缩前面的诊断和解释时间。
+:::
+
+<!-- GENERATED from presentation/scripts/generate_sessions.py -->
+<!-- CONTENT_KEY: workshop-17 -->
