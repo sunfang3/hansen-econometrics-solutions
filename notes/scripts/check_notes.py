@@ -23,6 +23,7 @@ EXPECTED = {
 }
 SCOPES = {
     "appendices": {"appendix-a.qmd", "appendix-b.qmd"},
+    "chapters-1-2": {"ch01.qmd", "ch02.qmd"},
     "chapters": {f"ch{i:02d}.qmd" for i in range(1, 7)},
     "foundation": set(EXPECTED),
 }
@@ -82,6 +83,22 @@ def check_file(path: Path, minimum_sections: int, prefix: str, minimum_chinese: 
     return issues
 
 
+def check_rendered_file(path: Path, prefix: str) -> list[str]:
+    issues: list[str] = []
+    output = NOTES / "_output" / f"{path.stem}.html"
+    if not output.exists():
+        return [error(path, "MISSING_RENDER", f"渲染产物不存在：{output.relative_to(ROOT)}。")]
+    source = path.read_text(encoding="utf-8")
+    html = output.read_text(encoding="utf-8")
+    for chapter, number in ANCHOR.findall(source):
+        anchor_id = f"hansen-eq-{chapter.lower()}-{number}"
+        if f'id="{anchor_id}"' not in html:
+            issues.append(error(path, "MISSING_RENDERED_ANCHOR", f"HTML 中没有公式锚点 {anchor_id}。"))
+    if f'data-number="{prefix}.1"' not in html:
+        issues.append(error(path, "CHAPTER_NUMBER", f"渲染后首节没有沿用原书编号 {prefix}.1。"))
+    return issues
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -90,12 +107,20 @@ def main() -> int:
         default="foundation",
         help="检查附录、Ch.1–6，或整个基础阶段（默认）。",
     )
+    parser.add_argument(
+        "--rendered",
+        action="store_true",
+        help="同时检查 _output 中的公式锚点与章节编号；应先运行 quarto render notes。",
+    )
     args = parser.parse_args()
     issues: list[str] = []
     for name, requirements in EXPECTED.items():
         if name not in SCOPES[args.scope]:
             continue
-        issues.extend(check_file(NOTES / name, *requirements))
+        path = NOTES / name
+        issues.extend(check_file(path, *requirements))
+        if args.rendered and path.exists():
+            issues.extend(check_rendered_file(path, requirements[1]))
     for message in issues:
         print(message)
     if issues:

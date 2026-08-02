@@ -1,0 +1,687 @@
+---
+title: "条件期望与投影"
+subtitle: "从分布描述、最佳预测到因果解释的边界"
+hansen-chapter: "Chapter 2"
+book-pages: "14–61"
+pdf-pages: "34–81"
+status: "完整初稿"
+---
+
+::: {.book-map}
+**原书位置与本章路线**　对应 Hansen Chapter 2（书内 pp. 14–61；PDF pp. 34–81）。路线分四段：2.1–2.14 从联合分布构造条件期望、误差与条件方差；2.15–2.17 说明何时 CEF 可线性表示；2.18–2.29 在 CEF 未必线性时定义最佳线性投影并研究系数；2.30–2.33 把预测对象与因果、存在性和识别严格区分。
+:::
+
+::: {.bridge}
+**本科桥接**　本科“总体回归函数”对应这里的 conditional expectation function（CEF）。但 Hansen 进一步区分：$\mathbb E(e\mid X)=0$ 来自 CEF 分解，而 $\mathbb E(Xe)=0$ 只刻画线性投影；前者推出后者，后者一般推不回前者。回归系数是否有因果意义又是第三个问题，需要额外识别假设。
+:::
+
+## 导言（Introduction）
+
+最小二乘通常被称为回归，但本章先不讨论如何用样本估计，而是说明总体上究竟要估计什么。给定结果变量 $Y$ 和条件变量 $X$，条件期望 $m(X)=\mathbb E(Y\mid X)$ 是平方损失下的最佳预测；当 $m$ 不是线性函数时，$X'\beta$ 只是最佳线性近似。
+
+这个顺序很重要：先定义总体对象，下一章才用样本类比构造估计量。若一开始就把软件输出的直线当作“真实模型”，就看不见函数形式错设、投影权重和因果识别之间的差异。
+
+::: {.formula-card}
+**全章对象地图**
+
+| 对象 | 定义问题 | 误差性质 | 是否自动因果 |
+|---|---|---|---|
+| CEF $m(X)$ | 在所有 $X$ 的函数中怎样最好地预测 $Y$？ | $\mathbb E(e\mid X)=0$ | 否 |
+| 线性投影 $X'\beta$ | 在所有线性函数中怎样最好地预测 $Y$？ | $\mathbb E(Xe)=0$ | 否 |
+| 潜在结果效应 | 同一个体把 $D$ 从 0 改为 1，结果怎样变？ | 由结构模型与识别假设决定 | 是定义上的因果对象 |
+
+三个对象可能数值相同，但原因不同。线性 CEF 使前两者重合；CIA 等识别条件才可能把 CEF 差异与第三者联系起来。
+:::
+
+## 工资分布（The Distribution of Wages）
+
+工资不能由一个数字完整描述，要用分布函数 $F(u)=\Pr(\text{wage}\le u)$；连续时密度为 $f(u)=F'(u)$。随机不是说工资没有原因，而是研究者在抽取并观察某个人之前不知道其数值，把样本视作总体分布的实现。
+
+均值是线性算子，便于代数和预测；中位数对尾部扰动更稳健。工资水平右偏且厚尾，少数极高工资会把算术均值拉高。取自然对数后分布通常更对称，因此工资回归常用 $\log(\text{wage})$。分位数 $q_\alpha$ 则回答“有 $\alpha$ 比例人口工资不超过多少”，不能被均值完全替代。
+
+## 条件期望（Conditional Expectation）
+
+条件期望是子总体的平均。例如按性别、种族分组，$\mathbb E[\log(\text{wage})\mid\text{group}]$ 为每组一个数。原书男性与女性平均对数工资之差写为
+
+::: {#hansen-eq-2-1}
+$$
+\mathbb E[\log(\text{wage})\mid\text{man}]
+-\mathbb E[\log(\text{wage})\mid\text{woman}]
+=3.05-2.81=0.24.
+\tag{2.1}
+$$
+:::
+
+这只是分布描述，尚无因果含义。组间差异可能来自教育、职业、经验、选择或歧视等多条机制。条件期望擅长把复杂分布压缩成可比较的中心位置，却不会自行给出经济模型或机制解释。
+
+## 对数与百分比（Logs and Percentages）
+
+对正数 $a,b$，若 $p=100(a-b)/b$ 是以 $b$ 为基准的百分比变化，则精确恒等式为
+
+::: {#hansen-eq-2-2}
+$$
+\log a-\log b=\log\!\left(1+\frac p{100}\right).
+\tag{2.2}
+$$
+:::
+
+使用局部近似
+
+::: {#hansen-eq-2-3}
+$$
+\log(1+x)\simeq x
+\tag{2.3}
+$$
+:::
+
+才得到 $p\simeq100(\log a-\log b)$。因此 0.24 对数点近似 24%，但精确百分比是 $100(e^{0.24}-1)$。差异较大时必须用精确换算。
+
+更细的一层是：两个“平均对数”之差对应几何均值的百分比差，而不是算术均值的百分比差。因为 $\exp\{\mathbb E(\log Y)\}$ 是几何均值。解释半对数回归系数时，应说近似比较几何均值；不要含糊地把所有“平均工资”当作同一个对象。
+
+## 条件期望函数（Conditional Expectation Function）
+
+把多个条件变量堆成 $k\times1$ 向量
+
+::: {#hansen-eq-2-4}
+$$
+X=(X_1,X_2,\ldots,X_k)'.
+\tag{2.4}
+$$
+:::
+
+CEF 写为 $m(x)=\mathbb E(Y\mid X=x)$。对每个固定 $x$，$m(x)$ 是一个数；让 $x$ 在支持集上变化，得到函数；把随机变量 $X$ 代入又得到随机变量 $m(X)$。这三种视角不可混淆。
+
+“给定 $X=x$ 的理想子总体平均”是直观解释。若 $X$ 包含教育、经验和性别，CEF 比只按性别分组更细；但加入条件变量同时改变了估计对象，不能把不同条件集下的 CEF 当作同一个函数。
+
+## 连续变量（Continuous Variables）
+
+若 $(Y,X)$ 有联合密度 $f(y,x)$，$X$ 的边际密度为 $f_X(x)=\int f(y,x)dy$。在 $f_X(x)>0$ 处，条件密度是归一化切片：
+
+::: {#hansen-eq-2-5}
+$$
+f_{Y\mid X}(y\mid x)=\frac{f(y,x)}{f_X(x)}.
+\tag{2.5}
+$$
+:::
+
+分母保证对 $y$ 积分等于 1。CEF 是该条件密度的一阶矩：
+
+::: {#hansen-eq-2-6}
+$$
+m(x)=\mathbb E(Y\mid X=x)
+=\int_{-\infty}^{\infty}y f_{Y\mid X}(y\mid x)\,dy.
+\tag{2.6}
+$$
+:::
+
+连续 $X$ 下事件 $X=x$ 往往概率为零，所以不能把条件期望简单理解为有限样本中“恰好等于 $x$ 的人”的平均。条件密度或正规条件分布给出严格定义；2.31 还会说明更一般的存在性。
+
+## 迭代期望定律（Law of Iterated Expectations）
+
+简单形式为 $\mathbb E\{\mathbb E(Y\mid X)\}=\mathbb E(Y)$：先求各组平均，再按组概率加权，回到总体平均。一般形式为 $\mathbb E\{\mathbb E(Y\mid X_1,X_2)\mid X_1\}=\mathbb E(Y\mid X_1)$，也就是外层保留较小信息集。
+
+条件化时，$X$ 的函数可当作已知量提出：
+
+::: {#hansen-eq-2-7}
+$$
+\mathbb E\{g(X)Y\mid X\}
+=g(X)\mathbb E(Y\mid X).
+\tag{2.7}
+$$
+:::
+
+再取无条件期望可得
+
+::: {#hansen-eq-2-8}
+$$
+\mathbb E\{g(X)Y\}
+=\mathbb E[g(X)\mathbb E(Y\mid X)].
+\tag{2.8}
+$$
+:::
+
+条件是相关绝对矩存在。以后证明正交矩条件时，典型路线就是先条件于 $X$，把 $g(X)$ 提出，再利用条件均值为零。
+
+## CEF 误差（CEF Error）
+
+定义 $e=Y-m(X)$，于是原书的 CEF 分解为
+
+::: {#hansen-eq-2-9}
+$$
+Y=m(X)+e.
+\tag{2.9}
+$$
+:::
+
+逐步取条件期望：$\mathbb E(e\mid X)=\mathbb E(Y\mid X)-\mathbb E(m(X)\mid X)=m(X)-m(X)=0$。再用迭代期望得 $\mathbb E(e)=0$。对任何可积 $h(X)e$，由 [式 (2.7)](#hansen-eq-2-7) 得 $\mathbb E[h(X)e]=0$。
+
+最后一条值得完整展开：
+
+$$
+\mathbb E[h(X)e]
+=\mathbb E\{\mathbb E[h(X)e\mid X]\}
+=\mathbb E\{h(X)\mathbb E(e\mid X)\}
+=0.
+$$
+
+第一步是迭代期望，第二步是 conditioning theorem，第三步才用条件均值零。因而 CEF 误差不仅与 $X$ 本身不相关，还与 $X^2$、虚拟变量、样条等任何满足可积条件的函数正交。
+
+::: {.common-error}
+**不要把均值独立写成完全独立。**　$\mathbb E(e\mid X)=0$ 只说误差条件均值不随 $X$ 变化；条件方差、偏度和整个分布仍可随 $X$ 变化。例如 $e=Xu$、$u\perp X$ 且 $\mathbb E u=0$ 时，条件方差与 $X^2$ 成比例。
+:::
+
+## 仅截距模型（Intercept-Only Model）
+
+没有解释变量时，最佳常数预测就是 $\mu=\mathbb E(Y)$，分解为 $Y=\mu+e$、$\mathbb E(e)=0$。这不是“没有模型”，而是以总体均值预测每个观测。
+
+它提供一个基准：加入 $X$ 后若平方预测误差下降，说明条件信息改善了预测。样本中只含截距的 OLS 等于样本均值，下一章会看到这是同一总体结论的样本类比。
+
+## 回归方差（Regression Variance）
+
+CEF 误差无条件方差写为 $\sigma^2=\mathbb E(e^2)$，衡量 $Y$ 中未由 $m(X)$ 解释的平均平方波动。条件集变化时，$m$ 与 $e$ 都变化，所以“误差方差”必须连同条件变量一起理解。
+
+加入更多条件信息不会增加最小平方预测误差：$\operatorname{var}[Y-\mathbb E(Y\mid X_1,X_2)]\le\operatorname{var}[Y-\mathbb E(Y\mid X_1)]\le\operatorname{var}(Y)$。这不表示新增变量有因果作用，只表示更大的信息集至少可以选择忽略新变量，因此预测空间不会变差。
+
+## 最佳预测（Best Predictor）
+
+任意基于 $X$ 的预测写作 $g(X)$，均方预测误差为
+
+::: {#hansen-eq-2-10}
+$$
+\mathbb E[(Y-g(X))^2].
+\tag{2.10}
+$$
+:::
+
+代入 $Y=m(X)+e$ 并展开：交叉项 $\mathbb E[e\{m(X)-g(X)\}]=0$，所以
+
+$$
+\mathbb E[(Y-g(X))^2]
+=\mathbb E(e^2)+\mathbb E[(m(X)-g(X))^2].
+$$
+
+第二项非负，只有 $g(X)=m(X)$（几乎处处）时为零。故 CEF 是所有可测函数中的最佳平方损失预测。这里“最佳”依赖损失函数；若改用绝对损失，最佳预测通常是条件中位数。
+
+## 条件方差（Conditional Variance）
+
+$\sigma^2(x)=\operatorname{var}(e\mid X=x)=\mathbb E(e^2\mid X=x)$ 描述给定 $x$ 后的剩余离散程度，也是 $\operatorname{var}(Y\mid X=x)$。无条件回归方差是它的平均：$\sigma^2=\mathbb E[\sigma^2(X)]$。
+
+全方差公式 $\operatorname{var}(Y)=\mathbb E\{\operatorname{var}(Y\mid X)\}+\operatorname{var}\{\mathbb E(Y\mid X)\}$ 把总波动分为组内和组间。原书还把误差标准化为
+
+::: {#hansen-eq-2-11}
+$$
+u=\frac{e}{\sigma(X)}.
+\tag{2.11}
+$$
+:::
+
+只要 $\sigma(X)>0$，便有 $\mathbb E(u\mid X)=0$、$\operatorname{var}(u\mid X)=1$，且 $Y=m(X)+\sigma(X)u$。平均结构和尺度结构因此可分开研究。
+
+## 同方差与异方差（Homoskedasticity and Heteroskedasticity）
+
+同方差指条件方差 $\sigma^2(x)$ 不随 $x$ 变化；异方差指它依赖 $x$。无条件方差按定义就是一个常数，因此“方差随观测变化”是容易混淆的旧式说法，准确对象必须是条件方差。
+
+现实中异方差应视为常态：收入较高群体的离散程度可能更大，企业规模不同也可能带来不同误差波动。同方差在理论中常用于简化，不代表它是默认经验事实。估计系数与推断方差应分开：某些条件下 OLS 系数仍有良好性质，但同方差标准误会错。
+
+## 回归导数（Regression Derivative）
+
+连续变量的边际效应是 $\partial m(x)/\partial x_j$；二元变量则是 $m(1,x_{-j})-m(0,x_{-j})$。把各分量组合成 $\nabla m(x)$。所谓“其他不变”只固定已经放进 $X$ 的变量，不会自动固定遗漏的能力、偏好或环境。
+
+更重要的是，回归导数描述条件平均怎样变化，而不是同一人的实际结果怎样变化。要把它解释为因果效应，需保证改变处理时未观测因素的相关分布保持适当不变；2.30 会给出条件独立这一充分条件。
+
+## 线性 CEF（Linear CEF）
+
+为把截距并入向量，可令最后一个回归量恒为 1：
+
+::: {#hansen-eq-2-12}
+$$
+X=(X_1,\ldots,X_{k-1},1)'.
+\tag{2.12}
+$$
+:::
+
+线性 CEF 为
+
+::: {#hansen-eq-2-13}
+$$
+m(x)=x'\beta.
+\tag{2.13}
+$$
+:::
+
+于是 $Y=X'\beta+e$、$\mathbb E(e\mid X)=0$。若原始变量连续且未经变换，$\beta_j$ 是固定其他分量时的回归导数。线性指对参数线性；是否对原始变量线性要另行检查。
+
+## 含非线性效应的线性 CEF（Linear CEF with Nonlinear Effects）
+
+可把平方、交互项和样条作为新的回归量。原书二变量二次 CEF 为
+
+::: {#hansen-eq-2-14}
+$$
+m(x_1,x_2)=x_1\beta_1+x_2\beta_2+x_1^2\beta_3+x_2^2\beta_4+x_1x_2\beta_5+\beta_6.
+\tag{2.14}
+$$
+:::
+
+它对 $\beta$ 线性，却对 $(x_1,x_2)$ 非线性。边际效应为 $\partial m/\partial x_1=\beta_1+2x_1\beta_3+x_2\beta_5$，所以不能把 $\beta_1$ 单独叫作“$x_1$ 的效应”。交互项 $\beta_5$ 表示一个变量的边际效应如何随另一变量变化，而非孤立的第三种处理。
+
+## 含虚拟变量的线性 CEF（Linear CEF with Dummy Variables）
+
+二元变量编码必须明确。原书一种性别编码为
+
+::: {#hansen-eq-2-15}
+$$
+X_1=
+\begin{cases}
+0,&\text{男性},\\
+1,&\text{女性}.
+\end{cases}
+\tag{2.15}
+$$
+:::
+
+若 $\mathbb E(Y\mid X_1)=\beta_1X_1+\beta_2$，截距 $\beta_2$ 是男性均值，斜率 $\beta_1$ 是女性减男性的均值差。反向编码不会改变拟合均值，却改变截距、斜率的符号和解释。
+
+两个二元变量的完整 CEF 需要主效应与交互项；$p$ 个二元变量的饱和模型最多有 $2^p$ 个单元格参数。分类变量有 $J$ 类时，在含截距模型中通常放 $J-1$ 个虚拟变量，遗漏类是基准。若把全部 $J$ 个虚拟变量和截距同时放入，会精确共线。
+
+## 最佳线性预测（Best Linear Predictor）
+
+当 CEF 未知或非线性时，在所有 $X'b$ 中选择均方误差最小者。假设 $\mathbb E(Y^2)<\infty$、$\mathbb E\lVert X\rVert^2<\infty$ 且 $Q_{XX}=\mathbb E(XX')$ 正定。目标为
+
+::: {#hansen-eq-2-17}
+$$
+S(\beta)=\mathbb E[(Y-X'\beta)^2],
+\tag{2.17}
+$$
+:::
+
+::: {#hansen-eq-2-18}
+$$
+\beta=\arg\min_{b\in\mathbb R^k}S(b).
+\tag{2.18}
+$$
+:::
+
+展开目标：
+
+::: {#hansen-eq-2-19}
+$$
+S(\beta)=\mathbb E(Y^2)-2\beta'\mathbb E(XY)+\beta'\mathbb E(XX')\beta.
+\tag{2.19}
+$$
+:::
+
+求梯度并令零得正规方程
+
+::: {#hansen-eq-2-20}
+$$
+0=\frac{\partial S(\beta)}{\partial\beta}
+=-2\mathbb E(XY)+2\mathbb E(XX')\beta.
+\tag{2.20}
+$$
+:::
+
+::: {#hansen-eq-2-21}
+$$
+Q_{XY}=Q_{XX}\beta,
+\tag{2.21}
+$$
+:::
+
+正定性保证唯一解
+
+::: {#hansen-eq-2-22}
+$$
+\beta=\{\mathbb E(XX')\}^{-1}\mathbb E(XY).
+\tag{2.22}
+$$
+:::
+
+::: {.dimension-check}
+$Q_{XX}$ 为 $k\times k$，$Q_{XY}$ 为 $k\times1$，故 $\beta$ 为 $k\times1$。逆矩阵必须写在 $Q_{XY}$ 左侧，矩阵乘法不能凭标量直觉换序。
+:::
+
+为何驻点一定是全局唯一最小值？目标的 Hessian 是 $2Q_{XX}$。正定性意味着对任意非零方向 $a$ 都有 $a'Q_{XX}a>0$，所以目标沿每个方向都严格凸。也可配方：令 $\beta_0=Q_{XX}^{-1}Q_{XY}$，则 $S(b)=S(\beta_0)+(b-\beta_0)'Q_{XX}(b-\beta_0)$；第二项在且仅在 $b=\beta_0$ 时为零。这同时解释了可逆性、识别和唯一最优为何是同一正定条件的三个表述。
+
+定义投影误差 $e=Y-X'\beta$，可写
+
+::: {#hansen-eq-2-24}
+$$
+Y=X'\beta+e,
+\tag{2.24}
+$$
+:::
+
+并由正规方程得到
+
+::: {#hansen-eq-2-25}
+$$
+\mathbb E(Xe)=0.
+\tag{2.25}
+$$
+:::
+
+若 $X$ 含常数，则其中一个矩条件是 $\mathbb E(e)=0$。注意 [式 (2.25)](#hansen-eq-2-25) 只保证与所列回归量线性正交，不保证 $\mathbb E(e\mid X)=0$。
+
+## 最佳线性预测的例子（Illustrations of Best Linear Predictor）
+
+原书用工资说明投影如何近似 CEF。二元变量若包含全部交互，线性式可饱和表示 CEF；删掉交互后，系数变成跨单元格加权的平均差异。教育的单一直线在较高教育段拟合尚可，在低教育段偏差明显；加入九年教育节点的线性样条允许两侧斜率不同。经验—工资关系呈先升后降，二次项比单一直线更贴近 CEF。
+
+这些图告诉我们：增加变换项不是为了机械提高 $R^2$，而是让近似具有足够形状。应比较拟合曲线与数据支持区间，并报告边际效应随 $x$ 的变化；单独解释平方项系数通常没有直接经济含义。
+
+## 线性预测误差方差（Linear Predictor Error Variance）
+
+把 $Q_{YY}=\mathbb E(Y^2)$、$Q_{YX}=\mathbb E(YX')$ 代入投影系数，误差方差化为
+
+::: {#hansen-eq-2-36}
+$$
+\sigma^2
+=Q_{YY}-Q_{YX}Q_{XX}^{-1}Q_{XY}
+\equiv Q_{YY\cdot X}.
+\tag{2.36}
+$$
+:::
+
+第二项是线性投影解释的平方成分，必非负，所以最小预测误差不超过 $\mathbb E(Y^2)$。这个表达也预告分块矩阵的 Schur complement 记号；不要把 $Q_{YY\cdot X}$ 误读成普通条件方差，它是线性投影误差的无条件二阶矩。
+
+## 回归系数（Regression Coefficients）
+
+把常数单独写成
+
+::: {#hansen-eq-2-37}
+$$
+Y=X'\beta+\alpha+e.
+\tag{2.37}
+$$
+:::
+
+取期望得 $\alpha=\mu_Y-\mu_X'\beta$；去均值后为
+
+::: {#hansen-eq-2-38}
+$$
+Y-\mu_Y=(X-\mu_X)'\beta+e.
+\tag{2.38}
+$$
+:::
+
+因此
+
+::: {#hansen-eq-2-39}
+$$
+\alpha=\mu_Y-\mu_X'\beta,
+\tag{2.39}
+$$
+:::
+
+::: {#hansen-eq-2-40}
+$$
+\beta=\operatorname{var}(X)^{-1}\operatorname{cov}(X,Y).
+\tag{2.40}
+$$
+:::
+
+单回归时这退化为协方差除以解释变量方差；多元时 $\operatorname{var}(X)^{-1}$ 同时调整回归量间相关性，不能逐分量分别套单回归公式。
+
+## 回归量子向量（Regression Sub-Vectors）
+
+把回归量和系数分块：
+
+::: {#hansen-eq-2-41}
+$$
+X=\begin{pmatrix}X_1\\X_2\end{pmatrix},
+\tag{2.41}
+$$
+:::
+
+::: {#hansen-eq-2-42}
+$$
+Y=X_1'\beta_1+X_2'\beta_2+e.
+\tag{2.42}
+$$
+:::
+
+若 $X_1$ 为 $k_1\times1$、$X_2$ 为 $k_2\times1$，则 $Q_{11}$ 为 $k_1\times k_1$、$Q_{12}$ 为 $k_1\times k_2$。利用分块逆可写 $\beta_1=Q_{11\cdot2}^{-1}Q_{1Y\cdot2}$，其中点号表示先线性净化 $X_2$。这一结构是 FWL 定理、局部识别和分块协方差公式的共同原型。
+
+## 系数分解（Coefficient Decomposition）
+
+为解释 $\beta_1$，先把标量 $X_1$ 投影到其他回归量 $X_2$，令 $X_1=X_2'\gamma_2+u_1$。$u_1$ 是 $X_1$ 中不能被 $X_2$ 线性预测的部分。随后
+
+$$
+\beta_1=\frac{\mathbb E(u_1Y)}{\mathbb E(u_1^2)}.
+$$
+
+所以多元回归的 $X_1$ 系数等于用“净化后的 $X_1$”解释 $Y$ 的单投影系数。这给“控制 $X_2$ 后”的准确线性代数含义：控制不是把 $X_2$ 固定为某个值，而是从 $X_1$ 中剔除与 $X_2$ 线性相关的部分。
+
+## 遗漏变量偏误（Omitted Variable Bias）
+
+长投影含 $(X_1,X_2)$，短投影只含 $X_1$：
+
+::: {#hansen-eq-2-45}
+$$
+Y=X_1'\gamma_1+u.
+\tag{2.45}
+$$
+:::
+
+把长式代入短式正规方程可得 $\gamma_1=\beta_1+\Gamma_{12}\beta_2$。偏差项同时需要两件事：遗漏变量对 $Y$ 的长回归系数 $\beta_2$ 非零，以及 $X_2$ 能被 $X_1$ 线性预测（$\Gamma_{12}\ne0$）。任一为零，短长系数相同。
+
+推导不要跳步。短投影系数是 $\gamma_1=Q_{11}^{-1}\mathbb E(X_1Y)$。把长式 $Y=X_1'\beta_1+X_2'\beta_2+e$ 代入，得到
+
+$$
+\mathbb E(X_1Y)=Q_{11}\beta_1+Q_{12}\beta_2+\mathbb E(X_1e).
+$$
+
+长投影正交性使最后一项为零，再左乘 $Q_{11}^{-1}$，即 $\gamma_1=\beta_1+Q_{11}^{-1}Q_{12}\beta_2$。这里所谓“偏误”是两个总体投影系数之差，并不是在讨论有限样本估计量的抽样偏差。
+
+教育—工资例中，若能力提高工资且与教育正相关，遗漏能力会使教育系数向上移动。但这是线性投影的方向判断，不自动证明真实因果偏误。更重要的是，在短、中、长三个嵌套模型里，多加一组控制并不保证系数必然更接近长模型目标；不同遗漏项可能抵消或放大。
+
+## 最佳线性近似（Best Linear Approximation）
+
+另一种定义是直接近似 CEF：令 $d(\beta)=\mathbb E[(m(X)-X'\beta)^2]$，选择
+
+::: {#hansen-eq-2-46}
+$$
+\beta=\arg\min_{b\in\mathbb R^k}d(b).
+\tag{2.46}
+$$
+:::
+
+一阶条件给出
+
+::: {#hansen-eq-2-47}
+$$
+\beta=\{\mathbb E(XX')\}^{-1}\mathbb E[Xm(X)].
+\tag{2.47}
+$$
+:::
+
+由迭代期望，$\mathbb E[Xm(X)]=\mathbb E[X\mathbb E(Y\mid X)]=\mathbb E(XY)$，因此
+
+::: {#hansen-eq-2-48}
+$$
+\beta=\{\mathbb E(XX')\}^{-1}\mathbb E(XY).
+\tag{2.48}
+$$
+:::
+
+所以最佳线性预测与对 CEF 的密度加权最佳平方近似是同一个 $\beta$。权重来自 $X$ 的边际分布：数据密集处对近似影响更大。
+
+## 向均值回归（Regression to the Mean）
+
+Galton 研究父母与子女身高时发现，极端父母的子女平均更接近总体均值。简单投影为
+
+::: {#hansen-eq-2-49}
+$$
+Y=X\beta+\alpha+e.
+\tag{2.49}
+$$
+:::
+
+若两代均值、方差相同，$\beta=\operatorname{corr}(X,Y)$，通常绝对值小于 1，预测值是总体均值与父母身高的加权组合。
+
+“向均值回归”不表示总体方差随代际收缩。事实上 $\operatorname{var}(Y)=\beta^2\operatorname{var}(X)+\operatorname{var}(e)$；$|\beta|<1$ 不能单独推出 $\operatorname{var}(Y)<\operatorname{var}(X)$。按初期极端表现分组再看后期平均，天然会看到回归均值，不能据此宣称真实收敛。
+
+## 反向回归（Reverse Regression）
+
+反向投影写为
+
+::: {#hansen-eq-2-50}
+$$
+X=Y\beta^*+\alpha^*+e^*.
+\tag{2.50}
+$$
+:::
+
+它必须重新按最小平方预测定义。把前向式除以 $\beta$ 所得
+
+::: {#hansen-eq-2-51}
+$$
+X=Y\frac1\beta-\frac\alpha\beta-\frac e\beta
+\tag{2.51}
+$$
+:::
+
+虽是代数恒等式，却一般不是 $X$ 对 $Y$ 的投影，因为新“误差”未必与 $Y$ 正交。投影方向改变，正规方程也改变；不能像反解确定性函数那样反解回归。
+
+## 最佳线性投影的局限（Limitations of the Best Linear Projection）
+
+线性 CEF 必然是线性投影，因为条件均值零推出线性正交；反向不成立。例若 $Y=X+X^2$、$X\sim N(0,1)$，CEF 为 $x+x^2$，但含截距线性投影为 $X+1$；误差 $X^2-1$ 与 $X$ 不相关，却完全由 $X$ 决定。
+
+当 CEF 非线性时，投影系数还依赖 $X$ 的边际分布。两个群体即使共享同一 CEF，只因 $X$ 分布落在不同区间，也可能得到不同线性斜率。因此跨群体比较投影系数前，应先检查函数形状与共同支持，不能立刻解释为结构差异。
+
+## 随机系数模型（Random Coefficient Model）
+
+随机系数模型 $Y=X'\eta$ 让个体效应 $\eta$ 在人口中异质。若 $\eta\perp X$，令 $\beta=\mathbb E\eta$、$\Sigma=\operatorname{var}(\eta)$，则
+
+$$
+\mathbb E(Y\mid X)=X'\beta,
+\qquad
+\operatorname{var}(Y\mid X)=X'\Sigma X.
+$$
+
+所以它蕴含线性 CEF，却通常异方差。$\beta$ 是个体随机系数的均值，而个体真实效应是 $\eta$。若 $\eta$ 与 $X$ 相关，条件均值不再简单等于 $X'\mathbb E\eta$；独立假设是推导的关键，不应隐藏。
+
+## 因果效应（Causal Effects）
+
+令二元处理 $D$、未观测特征 $U$，结构关系为
+
+::: {#hansen-eq-2-52}
+$$
+Y=h(D,U).
+\tag{2.52}
+$$
+:::
+
+潜在结果为 $Y(0)=h(0,U)$、$Y(1)=h(1,U)$，个体因果效应定义为
+
+::: {#hansen-eq-2-53}
+$$
+C(U)=Y(1)-Y(0)=h(1,U)-h(0,U).
+\tag{2.53}
+$$
+:::
+
+同一人只能观察一种处理状态，另一个潜在结果是反事实，所以个体效应通常不可观测。平均因果效应 ACE 是 $\mathbb E[C(U)]$。处理若随机分配，$D\perp U$，处理组与对照组的均值差等于 ACE；若选择处理与 $U$ 相关，均值差混入选择差异。
+
+加入协变量后写成
+
+::: {#hansen-eq-2-54}
+$$
+Y=h(D,X,U).
+\tag{2.54}
+$$
+:::
+
+条件独立假设（CIA）要求 $D\perp U\mid X$。它使给定 $X=x$ 时处理组与未处理组有同一个 $U$ 分布，于是
+
+::: {#hansen-eq-2-55}
+$$
+m(1,x)-m(0,x)=\operatorname{ACE}(x).
+\tag{2.55}
+$$
+:::
+
+逐步看：左边各自对同一个 $f(u\mid x)$ 积分，作差后被积函数正是 $h(1,x,u)-h(0,x,u)$。若 CIA 失败，两组使用不同 $U$ 分布，等号断裂。CIA 是识别假设，不能由回归拟合优度检验出来；还需共同支持，使每个相关 $x$ 下两种处理都有可能出现。
+
+更明确地说，观测回归函数本来是
+
+$$
+m(d,x)=\int h(d,x,u)f(u\mid D=d,X=x)\,du.
+$$
+
+CIA 唯一改变的是把条件密度替换成 $f(u\mid X=x)$，使 $d=1$ 与 $d=0$ 的积分可在同一权重下相减。它不要求 $U$ 与 $X$ 独立，也不要求处理效应同质。若 $\operatorname{ACE}(x)$ 随 $x$ 变化，无条件 ACE 还要按目标人口的 $X$ 分布加权；一个未含充分交互项的线性回归系数未必恰等于该简单人口平均。
+
+## 条件期望的存在与唯一性（Existence and Uniqueness）*
+
+离散求和和连续密度积分只是便于直观理解的特例。一般地，只要 $\mathbb E|Y|<\infty$，就存在关于 $X$ 可测的函数 $m(X)$，使对每个可测集合 $\mathcal X$，
+
+::: {#hansen-eq-2-57}
+$$
+\mathbb E[\mathbf1\{X\in\mathcal X\}Y]
+=\mathbb E[\mathbf1\{X\in\mathcal X\}m(X)].
+\tag{2.57}
+$$
+:::
+
+它只在“几乎处处”意义下唯一：概率为零的 $x$ 集合上怎样修改不影响任何概率陈述。这解释了为什么连续变量某个孤立点上的 CEF 数值可能没有可识别内容，而支持集上的整体函数仍有意义。
+
+## 识别（Identification）*
+
+参数识别是说：在允许的分布集合 $\mathcal F$ 内，观测分布 $F$ 唯一决定参数 $\theta$，即存在映射 $\theta=g(F)$。这是一条总体层面的逻辑性质，与样本量、标准误或优化算法无关。
+
+若 $\mathbb E|Y|<\infty$，均值和 CEF（几乎处处）被观测分布识别。删失例说明识别也可能失败：只观察 $Y^*=\min(Y,\tau)$ 时，阈值以上尾部形状未知，原变量均值通常无法从 $Y^*$ 分布唯一恢复。假设完整正态分布可实现参数识别，但这是依靠不可直接验证的参数限制；未被删失区间内的某些分位数则可能无需参数假设即可识别。
+
+判断识别可做“两个世界”检验：尝试构造两个不同的潜在分布或参数值，使它们产生完全相同的观测分布。若能构造，数据即使无限多也无法区分二者，参数不识别；若在所列假设下任何两个相同观测分布都必须给出相同参数，才识别。删失均值之所以失败，正是因为可以任意改变阈值以上的尾部而不改变 $Y^*$，却会改变 $\mathbb E(Y)$。
+
+::: {.common-error}
+**识别不等于估计。**　识别问“无限多数据知道分布后，参数是否唯一”；估计问“有限样本怎样逼近参数”；推断问“逼近有多不确定”。矩阵不可逆可能直接导致线性投影系数不识别，而估计量方差很大只是弱信息，不必然等于完全不识别。
+:::
+
+## 技术证明（Technical Proofs）*
+
+本节的证明可按共同路线重建。
+
+1. 迭代期望：把条件期望写成对条件密度的积分，再乘边际密度，利用 $f(y\mid x)f_X(x)=f(y,x)$。
+2. CEF 误差矩：对 $e=Y-m(X)$ 用 Minkowski，再用条件 Jensen 说明 $m(X)$ 的 $r$ 阶矩由 $Y$ 的 $r$ 阶矩控制。
+3. 增加信息降低误差方差：先用条件 Jensen 证明条件均值方差随信息增加，再用正交分解反推误差方差下降。
+
+关键正交分解是
+
+::: {#hansen-eq-2-62}
+$$
+\operatorname{var}(Y)
+=\operatorname{var}[Y-\mathbb E(Y\mid X)]
++\operatorname{var}[\mathbb E(Y\mid X)].
+\tag{2.62}
+$$
+:::
+
+为什么没有协方差项？令 $e=Y-\mathbb E(Y\mid X)$、$u=\mathbb E(Y\mid X)-\mathbb E(Y)$；$u$ 是 $X$ 的函数，故 $\mathbb E(eu)=\mathbb E[u\mathbb E(e\mid X)]=0$。每一个等号都依赖已说明的可积性与条件化性质。
+
+## 习题阅读指南（Exercises）
+
+原书 2.1–2.22 覆盖四类能力。第一类用迭代期望、条件方差与 Poisson 例子巩固 CEF；第二类（2.10–2.14）专门辨析条件均值零、线性正交与独立，作答必须给反例或推导，不能只写真假；第三类计算最佳线性预测并与 CEF 比较；第四类研究共线、最佳线性近似、遗漏变量与异方差。
+
+建议解题统一写法：先指出题目问 CEF 还是投影；写出可用条件；若需推出矩条件，明确使用哪一次迭代期望；若命题为假，构造满足前提却违反结论的最小反例。实证前应能不看书解释以下单向链条：
+
+$$
+\text{线性 CEF}
+\Longrightarrow \mathbb E(e\mid X)=0
+\Longrightarrow \mathbb E(Xe)=0
+\Longrightarrow \text{线性投影},
+$$
+
+而反向箭头一般不成立。
+
+例如判断“$\mathbb E(Xe)=0$ 是否推出 $\mathbb E(e\mid X)=0$”，不能说“看起来不够强”。应构造 $X\sim N(0,1)$、$e=X^2-1$：由对称性 $\mathbb E(Xe)=\mathbb E(X^3-X)=0$，但 $e$ 是 $X$ 的确定函数，所以 $\mathbb E(e\mid X)=X^2-1\ne0$。一个反例同时展示了线性正交只排除了与 $X$ 的一阶线性关系。
+
+::: {.book-map}
+**章末自检**
+
+1. 能否区分 $m(x)$、$m(X)$ 与一个样本估计值各是什么对象？
+2. 能否从 CEF 误差定义逐步推出 $\mathbb E[h(X)e]=0$？
+3. 为什么最佳线性预测误差正交于 $X$，却不必条件均值为零？
+4. 能否说明平方项或交互项存在时，为什么单个系数不等于边际效应？
+5. 能否从长回归推导 $\gamma_1-\beta_1=\Gamma_{12}\beta_2$ 并解释两个因子？
+6. CIA 在 [式 (2.55)](#hansen-eq-2-55) 的哪一步被使用？共同支持为何仍需要另行说明？
+7. 能否用一句话分别定义识别、估计和推断？
+:::

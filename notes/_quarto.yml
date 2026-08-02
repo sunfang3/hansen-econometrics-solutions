@@ -9,6 +9,10 @@ book:
   date: last-modified
   chapters:
     - index.qmd
+    - part: "第一部分　回归"
+      chapters:
+        - ch01.qmd
+        - ch02.qmd
   appendices:
     - appendix-a.qmd
     - appendix-b.qmd

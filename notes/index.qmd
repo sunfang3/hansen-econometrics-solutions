@@ -1,6 +1,4 @@
----
-title: "阅读说明与进度"
----
+# 阅读说明与进度 {.unnumbered}
 
 ## 这套笔记面向谁 {.unnumbered}
 
@@ -29,10 +27,12 @@ hansen/manuscripts/Econometrics_Hansen_manuscript.pdf
 笔记中的 Hansen 原书编号公式使用“原编号 + 稳定锚点”：
 
 ~~~markdown
+::: {#hansen-eq-2-9}
 $$
 Y=m(X)+e.
 \tag{2.9}
-$$ {#hansen-eq-2-9}
+$$
+:::
 ~~~
 
 正文引用写成：
