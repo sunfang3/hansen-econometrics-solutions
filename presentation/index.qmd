@@ -1,0 +1,124 @@
+---
+title: "Hansen《Econometrics》全年课程"
+subtitle: "从本科计量到研究生计量：40 次、每次 90 分钟"
+author: "中文教学讲义"
+date: last-modified
+format:
+  html:
+    theme:
+      - cosmo
+      - styles/course.scss
+    toc: true
+    toc-depth: 2
+    html-math-method: mathjax
+    link-external-newwindow: true
+---
+
+## 课程使命
+
+这套讲义面向已经学过李子奈、陈强或 Wooldridge 入门计量经济学、但第一次系统学习研究生计量理论的学生。目标不是把 Hansen 的公式重新排版，而是补齐三个本科阶段容易被压缩的环节：
+
+1. 从“会套 OLS 公式”转向“先定义总体对象、识别条件和估计目标”；
+2. 从有限样本直觉转向概率极限、渐近分布与稳健推断；
+3. 从独立横截面回归转向 IV/GMM、时间序列、面板、非参数、非线性和机器学习。
+
+课程以 Hansen 2021 年 3 月 11 日修订的公开书稿为主线 [@hansen2021econometrics]。书稿原文允许个人和教学用途复制，但禁止商业印刷；本项目以转述、推导、页码导航和原创教学例子为主。
+
+## 课程结构
+
+| 项目 | 安排 |
+|---|---|
+| 总课次 | 40 次，每次 90 分钟 |
+| 主课 | 32 次：概念、定理、条件核对与逐步推导 |
+| 工作坊 | 8 次：推导复盘、Monte Carlo、R 实证与诊断 |
+| 第一学期 | 第 01–20 次：回归、现代推断、多方程与 IV |
+| 第二学期 | 第 21–40 次：GMM、依赖数据、面板、非/半参数与现代方法 |
+| 全书覆盖 | Ch.1–29、Appendix A、Appendix B，分层而非逐页等深度 |
+
+详细周历、章节页码和掌握门槛见 [全年教学大纲](syllabus.html)。
+
+## 建议的学习顺序
+
+::: {.bridge}
+**第一次进入课程：** 先完成第 01 次的诊断，再阅读矩阵和概率补充讲义。不要因为“本科讲过矩阵”就直接跳过；研究生计量真正要求的是看见一个式子就能说出每个对象的维数、随机性和极限角色。
+:::
+
+1. [矩阵代数补充](supplements/01-matrix-algebra.html)
+2. [概率、条件期望与不等式](supplements/02-probability-conditioning.html)
+3. [渐近工具箱](supplements/03-asymptotic-toolkit.html)
+4. [本科记号到 Hansen 记号](supplements/04-notation-map.html)
+5. [R、数据与可复现性](supplements/05-r-data-reproducibility.html)
+6. [阅读与练习导航](supplements/06-reading-exercise-guide.html)
+
+## 两学期入口
+
+### 第一学期
+
+- [第 01 次：课程导论与学习诊断](sessions/01-course-orientation.html)
+- [第 02 次：矩阵代数 I](sessions/02-matrix-algebra-i.html)
+- [第 03 次：矩阵代数 II](sessions/03-matrix-algebra-ii.html)
+- [第 04 次：概率与条件化](sessions/04-probability-conditioning.html)
+- [第 05 次：CEF 与线性投影](sessions/05-cef-and-projection.html)
+- [第 06 次：最小二乘代数](sessions/06-least-squares-algebra.html)
+- [第 07 次：工作坊——矩阵、投影与 OLS](sessions/07-workshop-matrix-ols.html)
+- [第 08 次：OLS 有限样本理论](sessions/08-ols-finite-sample.html)
+- [第 09 次：稳健与聚类标准误](sessions/09-robust-and-clustered-se.html)
+- [第 10 次：正态回归与渐近过渡](sessions/10-normal-regression-transition.html)
+- [第 11 次：渐近工具箱](sessions/11-asymptotic-toolkit.html)
+- [第 12 次：工作坊——有限样本与渐近推断](sessions/12-workshop-finite-vs-asymptotic.html)
+- [第 13 次：OLS 渐近理论](sessions/13-ols-asymptotics.html)
+- [第 14 次：约束估计与最小距离](sessions/14-restrictions-minimum-distance.html)
+- [第 15 次：假设检验](sessions/15-hypothesis-testing.html)
+- [第 16 次：重抽样方法](sessions/16-resampling-methods.html)
+- [第 17 次：工作坊——检验与 Bootstrap](sessions/17-workshop-testing-bootstrap.html)
+- [第 18 次：多元回归](sessions/18-multivariate-regression.html)
+- [第 19 次：工具变量 I](sessions/19-instrumental-variables-i.html)
+- [第 20 次：工作坊——IV 与识别](sessions/20-workshop-iv-identification.html)
+
+### 第二学期
+
+- [第 21 次：工具变量 II](sessions/21-instrumental-variables-ii.html)
+- [第 22 次：广义矩估计](sessions/22-gmm.html)
+- [第 23 次：时间序列基础](sessions/23-time-series-foundations.html)
+- [第 24 次：时间序列回归与 HAC](sessions/24-time-series-regression-hac.html)
+- [第 25 次：工作坊——时间序列](sessions/25-workshop-time-series.html)
+- [第 26 次：VAR 与 SVAR](sessions/26-var-svar.html)
+- [第 27 次：单位根](sessions/27-unit-roots.html)
+- [第 28 次：协整](sessions/28-cointegration.html)
+- [第 29 次：工作坊——VAR、单位根与协整](sessions/29-workshop-var-unit-root.html)
+- [第 30 次：面板 FE 与 RE](sessions/30-panel-fe-re.html)
+- [第 31 次：动态面板 GMM](sessions/31-dynamic-panel-gmm.html)
+- [第 32 次：双重差分](sessions/32-difference-in-differences.html)
+- [第 33 次：工作坊——面板与 DiD](sessions/33-workshop-panel-did.html)
+- [第 34 次：非参数与级数回归](sessions/34-nonparametric-and-series.html)
+- [第 35 次：断点回归](sessions/35-regression-discontinuity.html)
+- [第 36 次：M 估计与非线性最小二乘](sessions/36-m-estimators-nls.html)
+- [第 37 次：分位数与离散选择](sessions/37-quantile-discrete-choice.html)
+- [第 38 次：删失与样本选择](sessions/38-censoring-selection.html)
+- [第 39 次：模型选择与机器学习](sessions/39-model-selection-machine-learning.html)
+- [第 40 次：工作坊——全年综合](sessions/40-workshop-integration.html)
+
+## 课堂与课后如何配合
+
+课堂课件只承载一条可讲、可追问的主线。完整习题解答仍位于仓库 `docs/chXX/`；每次课末会给出对应路径和在线阅读链接。带星技术证明、模型变体和第二个经验例子放在课件末尾“备查与延伸”或六份补充讲义中。
+
+::: {.takeaway}
+判断自己是否真正掌握，不看“读完多少页”，而看能否回答四个问题：估计对象是什么？识别靠什么？估计量为什么收敛？标准误为什么有效？
+:::
+
+## 构建与讲者视图
+
+在仓库根目录运行：
+
+```bash
+quarto render presentation
+```
+
+教师版备注输出：
+
+```bash
+quarto render presentation --profile instructor
+```
+
+打开任一 RevealJS 课件后，按 `S` 打开讲者视图，按 `R` 切换滚动阅读，按 `E` 进入打印视图。更完整的构建和数据说明见 `presentation/README.md`。
+

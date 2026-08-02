@@ -1,0 +1,14 @@
+format:
+  html:
+    theme:
+      - cosmo
+      - ../styles/course.scss
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    number-sections: true
+    code-copy: true
+    code-fold: show
+    html-math-method: mathjax
+    link-external-newwindow: true
+

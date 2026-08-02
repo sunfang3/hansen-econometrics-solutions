@@ -1,0 +1,311 @@
+---
+title: "补充讲义 3：渐近理论工具箱"
+subtitle: "收敛、WLLN、CLT、Slutsky、delta method 与线性化"
+date: last-modified
+---
+
+## 0. 渐近理论解决什么问题
+
+有限样本精确分布通常需要强假设，例如正态、同方差和简单独立结构。渐近理论问：当样本量增大，估计量是否靠近目标？适当标准化后是否有稳定的近似分布？
+
+两条主线必须分开：
+
+$$
+\hat\theta\xrightarrow{p}\theta_0
+\quad\text{解决一致性，}
+$$
+
+$$
+\sqrt n(\hat\theta-\theta_0)\xrightarrow{d}N(0,V)
+\quad\text{解决标准误、区间和检验。}
+$$
+
+只有一致性，没有收敛速度和极限分布，通常还不能做常规推断。
+
+## 1. 依概率收敛
+
+定义：对任意 $\varepsilon>0$，若
+
+$$
+P(|X_n-c|>\varepsilon)\to0,
+$$
+
+则 $X_n\xrightarrow{p}c$。它说“偏离 $c$ 固定距离的概率趋于零”，不是说每条样本路径都单调靠近 $c$。
+
+估计量一致性写作
+
+$$
+\hat\theta_n\xrightarrow{p}\theta_0.
+$$
+
+这里 $\theta_0$ 必须先由总体对象和识别条件定义；不能先有估计公式，再把其概率极限随意称为“真值”。
+
+## 2. 依分布收敛
+
+若 $X_n$ 的分布函数在极限分布连续点收敛到 $X$ 的分布函数，则
+
+$$
+X_n\xrightarrow{d}X.
+$$
+
+依概率收敛到常数会推出依分布收敛到该常数，但依分布收敛一般不推出依概率收敛。
+
+CLT 的典型形式是
+
+$$
+\frac{1}{\sqrt n}\sum_{i=1}^n(X_i-\mu)
+\xrightarrow{d}N(0,\sigma^2).
+$$
+
+注意 CLT 作用于中心化和 $\sqrt n$ 标准化后的和，而 WLLN 作用于样本均值本身。
+
+## 3. 弱大数定律
+
+若 $X_i$ i.i.d.、$E|X_i|<\infty$，则
+
+$$
+\bar X_n=\frac1n\sum_{i=1}^nX_i\xrightarrow{p}\mu=E[X_i].
+$$
+
+计量中常把总体矩替换为样本矩：
+
+$$
+\frac1nX'X=\frac1n\sum_{i=1}^nX_iX_i'\xrightarrow{p}E[X_iX_i']=Q.
+$$
+
+矩阵收敛可以逐元素理解。若每个元素都满足 LLN，固定维数矩阵整体依概率收敛。
+
+## 4. 连续映射定理
+
+若 $X_n\xrightarrow{p}X$ 且 $g$ 在 $X$ 处连续，则
+
+$$
+g(X_n)\xrightarrow{p}g(X).
+$$
+
+因此若 $\hat Q\xrightarrow{p}Q$ 且 $Q$ 非奇异，矩阵求逆在 $Q$ 附近连续：
+
+$$
+\hat Q^{-1}\xrightarrow{p}Q^{-1}.
+$$
+
+“$Q$ 非奇异”不能省略。如果极限矩阵奇异，逆可能爆炸，这正是弱识别和多重共线附近的不稳定来源。
+
+## 5. Slutsky 定理
+
+若 $X_n\xrightarrow{d}X$，$Y_n\xrightarrow{p}c$，则
+
+$$
+X_n+Y_n\xrightarrow{d}X+c,
+\quad
+X_nY_n\xrightarrow{d}cX,
+\quad
+\frac{X_n}{Y_n}\xrightarrow{d}\frac Xc\quad(c\ne0).
+$$
+
+它允许把未知方差用一致估计量替换。例如
+
+$$
+\frac{\sqrt n(\hat\theta-\theta_0)}{\hat s}
+=
+\frac{\sqrt n(\hat\theta-\theta_0)}{s}
+\cdot\frac{s}{\hat s}
+\xrightarrow{d}N(0,1)\cdot1.
+$$
+
+## 6. 中心极限定理
+
+若 $X_i$ i.i.d.、$E[X_i]=\mu$、$\operatorname{var}(X_i)=\sigma^2<\infty$，则
+
+$$
+\sqrt n(\bar X_n-\mu)
+=\frac1{\sqrt n}\sum_{i=1}^n(X_i-\mu)
+\xrightarrow{d}N(0,\sigma^2).
+$$
+
+向量版本：若 $Z_i\in\mathbb R^k$，$E[Z_i]=0$，$E[Z_iZ_i']=\Omega$，则
+
+$$
+\frac1{\sqrt n}\sum_{i=1}^nZ_i
+\xrightarrow{d}N(0,\Omega).
+$$
+
+回归中令 $Z_i=X_ie_i$，便得到 OLS 得分和的极限分布。
+
+## 7. OLS 渐近正态的完整链条
+
+模型写成 $Y_i=X_i'\beta+e_i$。OLS 代数恒等式为
+
+$$
+\hat\beta-\beta=(X'X)^{-1}X'e.
+$$
+
+乘以 $\sqrt n$ 并按 LLN/CLT 的尺度重写：
+
+$$
+\sqrt n(\hat\beta-\beta)
+=
+\left(\frac1n\sum_{i=1}^nX_iX_i'\right)^{-1}
+\left(\frac1{\sqrt n}\sum_{i=1}^nX_ie_i\right).
+$$
+
+第一项由 LLN 和连续映射：
+
+$$
+\hat Q^{-1}\xrightarrow{p}Q^{-1},
+\qquad Q=E[X_iX_i']>0.
+$$
+
+第二项由向量 CLT：
+
+$$
+\frac1{\sqrt n}\sum X_ie_i
+\xrightarrow{d}N(0,\Omega),
+\qquad
+\Omega=E[X_iX_i'e_i^2].
+$$
+
+Slutsky 合并：
+
+$$
+\boxed{
+\sqrt n(\hat\beta-\beta)
+\xrightarrow{d}N(0,Q^{-1}\Omega Q^{-1})
+}.
+$$
+
+每个前提都有角色：$E[X_ie_i]=0$ 负责中心在零；矩存在负责 LLN/CLT；$Q>0$ 负责识别和可逆；随机抽样负责最简单的跨观测独立。
+
+## 8. Delta method
+
+若
+
+$$
+\sqrt n(\hat\theta-\theta_0)\xrightarrow{d}N(0,V)
+$$
+
+且 $g$ 在 $\theta_0$ 可微，梯度 $G=\nabla g(\theta_0)$，则一阶 Taylor 展开给出
+
+$$
+g(\hat\theta)-g(\theta_0)
+=G'(\hat\theta-\theta_0)+r_n,
+$$
+
+其中 $\sqrt n r_n\xrightarrow{p}0$。因此
+
+$$
+\sqrt n\{g(\hat\theta)-g(\theta_0)\}
+\xrightarrow{d}N(0,G'VG).
+$$
+
+若 $g'(\theta_0)=0$，一阶 delta method 退化，必须使用二阶展开或其他标准化；不能机械报告零渐近方差。
+
+## 9. 随机阶数符号
+
+- $X_n=O_p(1)$：随机序列在概率意义下有界。
+- $X_n=o_p(1)$：$X_n\xrightarrow{p}0$。
+- $X_n=O_p(a_n)$：$X_n/a_n=O_p(1)$。
+- $X_n=o_p(a_n)$：$X_n/a_n\xrightarrow{p}0$。
+
+常用运算：
+
+$$
+O_p(a_n)O_p(b_n)=O_p(a_nb_n),
+\qquad
+o_p(a_n)O_p(b_n)=o_p(a_nb_n).
+$$
+
+例如 $\hat\theta-\theta_0=O_p(n^{-1/2})$ 表示根号 $n$ 收敛速度。
+
+## 10. 渐近线性表示
+
+许多估计量可写成
+
+$$
+\sqrt n(\hat\theta-\theta_0)
+=\frac1{\sqrt n}\sum_{i=1}^n\psi(W_i)+o_p(1),
+$$
+
+其中 $\psi$ 是影响函数，$E[\psi(W_i)]=0$。一旦得到这条表示，CLT 直接给
+
+$$
+\sqrt n(\hat\theta-\theta_0)
+\xrightarrow{d}N(0,E[\psi\psi']).
+$$
+
+OLS、GMM、M 估计、分位数回归和双重机器学习的推断都可以在这条统一语言下理解。
+
+## 11. M 估计的一阶展开骨架
+
+若 $\hat\theta$ 最小化 $Q_n(\theta)$，内部解满足
+
+$$
+\nabla Q_n(\hat\theta)=0.
+$$
+
+在 $\theta_0$ 展开：
+
+$$
+0=\nabla Q_n(\theta_0)
++\nabla^2Q_n(\widetilde\theta)(\hat\theta-\theta_0).
+$$
+
+整理：
+
+$$
+\sqrt n(\hat\theta-\theta_0)
+=-\{\nabla^2Q_n(\widetilde\theta)\}^{-1}
+\sqrt n\nabla Q_n(\theta_0).
+$$
+
+这再次呈现“收敛到常数的 Hessian 逆 × 满足 CLT 的得分”结构。研究生计量的大量渐近推导只是这条骨架的不同实例。
+
+## 12. 时间序列下哪里改变
+
+时间序列观测通常不独立。LLN/CLT 仍可能成立，但极限方差包含所有自协方差：
+
+$$
+\Omega=\sum_{j=-\infty}^{\infty}\Gamma(j),
+\qquad
+\Gamma(j)=E[Z_tZ_{t-j}'].
+$$
+
+HAC 估计量正是在估计这个长期方差。若序列含单位根，部分和的尺度与极限对象改变：
+
+$$
+\frac1{\sqrt T}\sum_{t=1}^{\lfloor Tr\rfloor}e_t
+\Rightarrow \sigma W(r),
+$$
+
+极限是布朗运动过程而非单个正态随机变量。DF/ADF 的非标准临界值由此产生。
+
+## 13. 常见错误
+
+::: {.misconception}
+**错误 1：** “样本大就一定近似正态。”需要先有适用的 CLT；厚尾、强依赖、弱识别和参数在边界都可能破坏普通近似。
+:::
+
+::: {.misconception}
+**错误 2：** “一致估计量就是无偏估计量。”无偏是每个固定 $n$ 的期望性质；一致是 $n\to\infty$ 的概率性质，二者互不等价。
+:::
+
+::: {.misconception}
+**错误 3：** “Slutsky 可以把任何未知量换成估计量。”替换量必须一致收敛到适当常数，且分母极限不能为零。
+:::
+
+## 14. 自检题
+
+1. 说明 WLLN 与 CLT 在 OLS 渐近正态证明中分别控制哪一项。
+2. 若 $Q$ 奇异，连续映射到矩阵逆为什么不能使用？
+3. 从 $\sqrt n(\hat\beta-\beta)\to_dN(0,V)$ 推导 $\exp(\hat\beta_j)$ 的渐近方差。
+4. 为什么单位根回归不能继续使用普通时间序列 CLT？
+5. 写出一个 M 估计一阶展开，并标出“曲率”和“随机得分”两部分。
+
+## 15. 对应阅读
+
+- Hansen Ch.6：书内 155–161 页，PDF 175–181 页。
+- Hansen Ch.7：书内 162–195 页，PDF 182–215 页。
+- Hansen Appendix B：书内 966–985 页，PDF 986–1005 页。
+- 逐步习题解答：仓库 docs/ch07/Hansen_Ch07_Exercises_Solutions.md。
+- 在线阅读：[Ch.7 习题解答](https://github.com/sunfang3/hansen-econometrics-solutions/blob/master/docs/ch07/Hansen_Ch07_Exercises_Solutions.md)。
+

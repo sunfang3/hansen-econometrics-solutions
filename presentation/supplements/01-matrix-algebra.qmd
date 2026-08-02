@@ -1,0 +1,323 @@
+---
+title: "补充讲义 1：计量经济学所需的矩阵代数"
+subtitle: "从维数检查到投影、FWL 与矩阵微分"
+date: last-modified
+---
+
+## 0. 为什么要重新学矩阵
+
+本科教材常把矩阵写法当成“把很多求和压成一行”。在 Hansen 中，矩阵还有三个更重要的作用：
+
+1. **说明识别：** $E[XX']$ 可逆意味着回归元没有总体完全共线；$E[ZX']$ 的秩决定 IV 能否识别参数。
+2. **说明几何：** OLS 是把 $Y$ 投影到 $X$ 的列空间；FWL 是先从两个变量中同时剔除控制变量方向。
+3. **说明推断：** 渐近方差、GMM 权重、VAR 伴随矩阵和面板工具矩阵都依赖清楚的维数。
+
+::: {.takeaway}
+矩阵推导的第一步不是“想用哪个公式”，而是把每个对象的维数写在旁边。维数不对，后面的经济解释一定不对。
+:::
+
+## 1. 向量、矩阵与维数
+
+令第 $i$ 个观测的回归元为 $X_i\in\mathbb R^k$，把它约定为 $k\times1$ 列向量。样本设计矩阵为
+
+$$
+X=
+\begin{bmatrix}
+X_1'\\
+\vdots\\
+X_n'
+\end{bmatrix}
+\in\mathbb R^{n\times k},
+\qquad
+Y=(Y_1,\ldots,Y_n)'\in\mathbb R^{n\times1}.
+$$
+
+因此：
+
+| 对象 | 维数 | 含义 |
+|---|---:|---|
+| $X'X$ | $k\times k$ | 回归元样本二阶矩的 $n$ 倍 |
+| $X'Y$ | $k\times1$ | 回归元与因变量样本交叉矩的 $n$ 倍 |
+| $(X'X)^{-1}X'Y$ | $k\times1$ | OLS 系数向量 |
+| $X(X'X)^{-1}X'$ | $n\times n$ | 投影矩阵 $P_X$ |
+| $I_n-P_X$ | $n\times n$ | 零化矩阵 $M_X$ |
+
+### 维数检查的顺序
+
+对于 $ABC$，先检查相邻的“内维”是否相同：
+
+$$
+\underset{n\times k}{X}
+\underset{k\times k}{(X'X)^{-1}}
+\underset{k\times n}{X'}
+\quad\Rightarrow\quad n\times n.
+$$
+
+不要只看最终能否相乘。还要问：最终得到的是标量、参数向量，还是对样本向量实施变换的算子？
+
+## 2. 线性组合、列空间与秩
+
+$Xb$ 是 $X$ 的 $k$ 个列向量的线性组合，所以所有可能的拟合值构成
+
+$$
+\mathcal C(X)=\{Xb:b\in\mathbb R^k\},
+$$
+
+称为 $X$ 的列空间。若 $\operatorname{rank}(X)=k$，则 $k$ 个列向量线性无关，$X'X$ 正定且可逆。
+
+逐步证明 $X'X$ 正定：任取非零 $a\in\mathbb R^k$，
+
+$$
+a'X'Xa=(Xa)'(Xa)=\|Xa\|^2.
+$$
+
+若 $X$ 满列秩，则 $a\ne0\Rightarrow Xa\ne0$，所以 $\|Xa\|^2>0$。于是 $X'X>0$，从而可逆。
+
+::: {.misconception}
+“样本量 $n>k$”只给可逆性提供了可能，不保证 $X'X$ 可逆。若一列是其他列的精确线性组合，即使 $n$ 很大仍然完全共线。
+:::
+
+## 3. 转置、逆与分块矩阵
+
+最常用的规则是
+
+$$
+(AB)'=B'A',
+\qquad
+(AB)^{-1}=B^{-1}A^{-1},
+\qquad
+(A^{-1})'=(A')^{-1}.
+$$
+
+注意乘积转置和求逆都会**倒序**。这是因为要保持恒等关系，例如
+
+$$
+(AB)(B^{-1}A^{-1})=AIA^{-1}=I.
+$$
+
+将 $X=[X_1\ X_2]$ 分块后，正规方程写成
+
+$$
+\begin{bmatrix}
+X_1'X_1 & X_1'X_2\\
+X_2'X_1 & X_2'X_2
+\end{bmatrix}
+\begin{bmatrix}
+\hat\beta_1\\
+\hat\beta_2
+\end{bmatrix}
+=
+\begin{bmatrix}
+X_1'Y\\
+X_2'Y
+\end{bmatrix}.
+$$
+
+这不是装饰：消去第一行中的 $\hat\beta_1$，就会得到 FWL 定理。
+
+## 4. 二次型、正定性与加权距离
+
+标量 $a'Aa$ 称为二次型。若对所有 $a\ne0$ 都有 $a'Aa>0$，则 $A$ 正定。若只有 $a'Aa\ge0$，则半正定。
+
+在 GMM 和最小距离中，目标函数常写成
+
+$$
+Q_n(\theta)=g_n(\theta)'W_n g_n(\theta).
+$$
+
+这里 $g_n(\theta)\in\mathbb R^m$，所以 $W_n$ 必须是 $m\times m$。当 $W_n>0$ 时，$Q_n(\theta)\ge0$，且只有 $g_n(\theta)=0$ 时距离才为零。
+
+本科的“残差平方和”是同一结构的特例：
+
+$$
+\sum_{i=1}^n e_i^2=e'e=e'I_ne.
+$$
+
+## 5. 正交投影矩阵
+
+OLS 拟合值为
+
+$$
+\hat Y=X\hat\beta=X(X'X)^{-1}X'Y=P_XY,
+$$
+
+其中
+
+$$
+P_X=X(X'X)^{-1}X'.
+$$
+
+### 性质 1：对称
+
+$$
+P_X'=\{X(X'X)^{-1}X'\}'
+=X\{(X'X)^{-1}\}'X'
+=X(X'X)^{-1}X'=P_X,
+$$
+
+因为 $X'X$ 对称，其逆也对称。
+
+### 性质 2：幂等
+
+$$
+\begin{aligned}
+P_X^2
+&=X(X'X)^{-1}X'X(X'X)^{-1}X'\\
+&=X(X'X)^{-1}\underbrace{(X'X)}_{\text{中间抵消}}(X'X)^{-1}X'\\
+&=X(X'X)^{-1}X'=P_X.
+\end{aligned}
+$$
+
+幂等的含义是：投影一次后已经位于 $\mathcal C(X)$，再投影不会改变。
+
+### 性质 3：保留 $X$ 的列空间
+
+$$
+P_XX=X(X'X)^{-1}X'X=X.
+$$
+
+更一般地，只要 $v=Xa\in\mathcal C(X)$，就有 $P_Xv=v$。
+
+## 6. 零化矩阵与残差正交
+
+定义
+
+$$
+M_X=I_n-P_X.
+$$
+
+则残差
+
+$$
+\hat e=Y-\hat Y=(I_n-P_X)Y=M_XY.
+$$
+
+利用 $P_XX=X$，
+
+$$
+M_XX=(I_n-P_X)X=X-X=0.
+$$
+
+因此
+
+$$
+X'\hat e=X'M_XY=(M_XX)'Y=0.
+$$
+
+这就是正规方程的几何含义：残差与 $X$ 的每一列都正交。若 $X$ 含常数列，正交条件还推出 $\sum_i\hat e_i=0$。
+
+## 7. Frisch–Waugh–Lovell 定理
+
+考虑
+
+$$
+Y=X_1\beta_1+X_2\beta_2+e.
+$$
+
+目标是只求 $\hat\beta_2$。从关于 $\beta_1$ 的正规方程开始：
+
+$$
+X_1'(Y-X_1\hat\beta_1-X_2\hat\beta_2)=0.
+$$
+
+解得
+
+$$
+\hat\beta_1=(X_1'X_1)^{-1}X_1'(Y-X_2\hat\beta_2).
+$$
+
+代回关于 $\beta_2$ 的正规方程，并把 $I-P_{X_1}=M_{X_1}$ 收集出来：
+
+$$
+X_2'M_{X_1}(Y-X_2\hat\beta_2)=0.
+$$
+
+所以
+
+$$
+\boxed{
+\hat\beta_2=(X_2'M_{X_1}X_2)^{-1}X_2'M_{X_1}Y
+}.
+$$
+
+令 $\widetilde X_2=M_{X_1}X_2$、$\widetilde Y=M_{X_1}Y$，上式就是将 $\widetilde Y$ 对 $\widetilde X_2$ 回归。
+
+::: {.bridge}
+本科“控制其他变量不变”在矩阵语言中不是一句口号，而是先从 $Y$ 和目标解释变量 $X_2$ 中同时剔除 $X_1$ 能解释的方向，再比较剩余部分。
+:::
+
+## 8. 迹、Kronecker 积与向量化
+
+迹为对角元素之和：$\operatorname{tr}(A)=\sum_i a_{ii}$。两个常用性质是
+
+$$
+\operatorname{tr}(AB)=\operatorname{tr}(BA),
+\qquad
+x'Ax=\operatorname{tr}(Axx').
+$$
+
+若 $P$ 是对称幂等矩阵，其特征值只有 0 或 1，因此
+
+$$
+\operatorname{tr}(P)=\operatorname{rank}(P).
+$$
+
+这解释了 OLS 中“拟合消耗 $k$ 个自由度”：$\operatorname{tr}(P_X)=k$，$\operatorname{tr}(M_X)=n-k$。
+
+Kronecker 积 $A\otimes B$ 把每个 $a_{ij}$ 替换成块 $a_{ij}B$。在 SUR、VAR 与面板堆叠中，常用
+
+$$
+\operatorname{vec}(ABC)=(C'\otimes A)\operatorname{vec}(B).
+$$
+
+第一次遇到时不要背结论：先写 $A,B,C$ 维数，再检查右侧 Kronecker 矩阵是否能乘上 $\operatorname{vec}(B)$。
+
+## 9. 计量中够用的矩阵微分
+
+令 $b\in\mathbb R^k$，$A$ 为常数矩阵：
+
+$$
+\frac{\partial(a'b)}{\partial b}=a,
+\qquad
+\frac{\partial(b'Ab)}{\partial b}=(A+A')b.
+$$
+
+若 $A$ 对称，第二式化为 $2Ab$。因此 OLS 目标
+
+$$
+S(b)=(Y-Xb)'(Y-Xb)
+$$
+
+展开为
+
+$$
+S(b)=Y'Y-2b'X'Y+b'X'Xb,
+$$
+
+梯度为
+
+$$
+\frac{\partial S(b)}{\partial b}=-2X'Y+2X'Xb.
+$$
+
+令梯度为零即得 $X'X\hat\beta=X'Y$。这条路线以后会原样推广到 NLS、极大似然和 GMM，只是目标函数不再是简单二次型。
+
+## 10. 自检题
+
+1. 若 $X$ 为 $n\times k$、$Z$ 为 $n\times m$，写出 $Z'X$、$X'P_ZX$ 和 $(Z'Z)^{-1}Z'X$ 的维数。
+2. 证明 $M_X$ 对称、幂等，并说明 $P_XM_X=0$。
+3. 为什么 $P_X$ 的第 $i$ 个对角元 $h_{ii}$ 位于 $[0,1]$？它与杠杆值有什么关系？
+4. 用 FWL 说明含常数项回归的斜率等于去均值后的 $Y$ 对去均值后的 $X$ 的回归斜率。
+5. 在 $g'Wg$ 中，若 $W$ 不是正定，会出现什么问题？
+
+### 简答提示
+
+第 1 题依次为 $m\times k$、$k\times k$、$m\times k$。第 2 题直接展开 $I-P_X$。第 3 题利用 $h_{ii}=e_i'P_Xe_i=\|P_Xe_i\|^2$ 以及正交投影不扩大长度。第 4 题令 $X_1=1_n$。第 5 题的“距离”可能为负或在非零方向上等于零，最小化和识别解释都会失效。
+
+## 11. 对应阅读
+
+- Hansen Appendix A：书内 945–965 页，PDF 965–985 页。
+- Hansen Ch.3：书内 62–96 页，PDF 82–116 页。
+- 逐步习题解答：仓库 docs/ch03/Hansen_Ch03_Exercises_Solutions.md。
+- 在线阅读：[Ch.3 习题解答](https://github.com/sunfang3/hansen-econometrics-solutions/blob/master/docs/ch03/Hansen_Ch03_Exercises_Solutions.md)。
+

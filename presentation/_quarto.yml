@@ -1,0 +1,17 @@
+project:
+  type: default
+  output-dir: _output
+  render:
+    - index.qmd
+    - syllabus.qmd
+    - sessions/*.qmd
+    - supplements/*.qmd
+
+lang: zh-CN
+bibliography: references.bib
+execute:
+  enabled: false
+  echo: true
+  warning: false
+  error: false
+

@@ -1,2 +1,4 @@
 *.pdf
 hansen/
+presentation/_output/
+presentation/.quarto/

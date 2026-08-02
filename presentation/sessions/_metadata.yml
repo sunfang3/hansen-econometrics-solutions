@@ -1,0 +1,31 @@
+format:
+  revealjs:
+    theme:
+      - default
+      - ../styles/course.scss
+    width: 1280
+    height: 720
+    margin: 0.06
+    center: false
+    slide-level: 2
+    slide-number: c/t
+    show-slide-number: all
+    controls: true
+    controls-layout: bottom-right
+    navigation-mode: linear
+    progress: true
+    history: true
+    hash: true
+    menu: true
+    transition: fade
+    background-transition: fade
+    incremental: false
+    auto-stretch: false
+    html-math-method: mathjax
+    preview-links: auto
+    pdf-separate-fragments: false
+    pdf-max-pages-per-slide: 1
+    footer: "Hansen《Econometrics》全年课程 · 中文教学讲义"
+
+title-slide-attributes:
+  data-background-color: "#f7f4ed"
