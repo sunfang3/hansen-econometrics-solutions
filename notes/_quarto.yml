@@ -21,6 +21,8 @@ book:
         - ch06.qmd
         - ch07.qmd
         - ch08.qmd
+        - ch09.qmd
+        - ch10.qmd
   appendices:
     - appendix-a.qmd
     - appendix-b.qmd

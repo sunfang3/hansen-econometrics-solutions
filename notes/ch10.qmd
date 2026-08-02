@@ -1,0 +1,581 @@
+---
+title: "重抽样方法"
+subtitle: "Jackknife、Bootstrap、置信区间与检验"
+hansen-chapter: "Chapter 10"
+book-pages: "257–305"
+pdf-pages: "277–325"
+status: "完整初稿"
+---
+
+::: {.book-map}
+**原书位置与本章路线**　对应 Hansen Chapter 10（书内 pp. 257–305；PDF pp. 277–325）。10.1–10.5 从删除一个观测的 Jackknife 出发；10.6–10.12 区分原抽样分布与条件于样本的 Bootstrap 分布；10.13–10.20讨论方差估计、Percentile/BC/BCa/Percentile-$t$ 区间及高阶改进；10.21–10.24转向检验；10.25–10.30落实重复次数、随机种子、回归、Wild 与聚类 Bootstrap；10.31给出技术证明所需的关键界；10.32是习题路线。
+:::
+
+::: {.bridge}
+**本科桥接**　本科课程通常把“估计量近似正态”当作推断终点。本章换一个视角：用样本的经验分布近似未知总体，再从经验分布反复抽样来近似统计量的抽样分布。Bootstrap 不是把同一批数据“变多”，也不能修复识别错误；它是在既定识别条件下，换一种估计有限样本分布的方法。
+:::
+
+## 引言（Introduction）
+
+此前有两条推断路线。精确分布在正态同方差线性模型中很干净，却依赖较强假设；渐近理论允许异方差和复杂估计量，但把有限样本分布近似为极限分布，误差大小通常未知。重抽样提供第三条计算路线：让样本自身给出分布形状的信息。
+
+本章区分三类方法。Jackknife 依次删除一个观测，主要估计方差；Bootstrap 从原样本有放回抽取与原样本同样大小的伪样本，可估方差、区间和检验临界值；Subsampling 无放回抽取较小子样本，原书只提及而不展开。计算量不是理论细节：一次估计很慢时，$B=10{,}000$ 次重新估计可能成为主要成本。
+
+## 引导例子（Example）
+
+原书沿用第 3.7 节的 $n=20$ 小样本工资回归，研究四个估计量：教育斜率 $\hat\beta_1$、截距 $\hat\beta_2$、误差方差 $\hat\sigma^2$，以及大学教育水平下的期望工资。若 $e$ 与教育独立且 $e\sim N(0,\sigma^2)$，则
+
+$$
+\mu=E[\operatorname{wage}\mid\operatorname{education}=16]
+=\exp(16\beta_1+\beta_2+\sigma^2/2).
+$$
+
+最后一步使用正态变量的矩母函数 $E\{\exp(e)\}=\exp(\sigma^2/2)$。自然估计量是 $\hat\mu=\exp(16\hat\beta_1+\hat\beta_2+\hat\sigma^2/2)$。这个例子很适合比较方法：前三个估计量较常规，$\hat\mu$ 是非线性函数，Delta 法需要先推联合极限分布并计算梯度，重抽样则只需在每个伪样本重新执行同一估计程序。
+
+## Jackknife 方差估计（Jackknife Estimation of Variance）
+
+设 $\hat\theta\in\mathbb R^q$ 使用全部 $n$ 个独立观测计算；$\hat\theta_{(-i)}$ 表示删去第 $i$ 个观测后，用完全相同规则计算的估计量，$\bar\theta_{(-\cdot)}=n^{-1}\sum_i\hat\theta_{(-i)}$。Tukey 的 Jackknife 协方差估计为
+
+::: {#hansen-eq-10-1}
+$$
+\widehat V_{\hat\theta}^{\mathrm{jack}}
+=\frac{n-1}{n}\sum_{i=1}^n
+(\hat\theta_{(-i)}-\bar\theta_{(-\cdot)})
+(\hat\theta_{(-i)}-\bar\theta_{(-\cdot)})'.
+\tag{10.1}
+$$
+:::
+
+比例因子不是随意修正。以样本均值为例，删除第 $i$ 个观测后
+
+::: {#hansen-eq-10-2}
+$$
+\bar Y_{(-i)}
+=\frac{1}{n-1}\sum_{j\ne i}Y_j
+=\frac{n}{n-1}\bar Y-\frac{1}{n-1}Y_i.
+\tag{10.2}
+$$
+:::
+
+先对 $i$ 求平均可得 $n^{-1}\sum_i\bar Y_{(-i)}=\bar Y$，再相减得到 $\bar Y_{(-i)}-\bar Y=(\bar Y-Y_i)/(n-1)$。把它代入 [式 (10.1)](#hansen-eq-10-1)：
+
+::: {#hansen-eq-10-3}
+$$
+\widehat V_{\bar Y}^{\mathrm{jack}}
+=\frac1n\left\{\frac1{n-1}\sum_{i=1}^n
+(Y_i-\bar Y)(Y_i-\bar Y)'\right\}.
+\tag{10.3}
+$$
+:::
+
+大括号正是单个观测协方差的无偏估计，所以 [式 (10.3)](#hansen-eq-10-3) 与通常的 $\widehat{\operatorname{var}}(\bar Y)$ 完全相同。这解释了 $(n-1)/n$ 的缩放。
+
+OLS 的删除一个观测公式为
+
+::: {#hansen-eq-10-4}
+$$
+\hat\beta_{(-i)}
+=\hat\beta-(X'X)^{-1}X_i\tilde e_i,
+\qquad
+\tilde e_i=\frac{\hat e_i}{1-h_{ii}}.
+\tag{10.4}
+$$
+:::
+
+这里 $X_i\in\mathbb R^k$，$h_{ii}=X_i'(X'X)^{-1}X_i$ 是杠杆值。高杠杆观测的删除效应通过 $(1-h_{ii})^{-1}$ 被放大。代入 Jackknife 公式得到
+
+::: {#hansen-eq-10-5}
+$$
+\widehat V_{\hat\beta}^{\mathrm{jack}}
+=\frac{n-1}{n}\widehat V_{\hat\beta}^{\mathrm{HC3}}
+-(n-1)(X'X)^{-1}\tilde\mu\tilde\mu'(X'X)^{-1},
+\quad
+\tilde\mu=\frac1n\sum_iX_i\tilde e_i.
+\tag{10.5}
+$$
+:::
+
+第二项通常较小，故 Jackknife 与 HC3 接近。对 $\hat\theta=r(\hat\beta)$ 作均值展开，又有 $\hat\theta_{(-i)}\simeq\hat\theta-\hat R'(X'X)^{-1}X_i\tilde e_i$；于是 Jackknife 自动产生近似的 Delta 法协方差，却不要求使用者显式求 $r$ 的导数。这也是它特别适合复杂但光滑的两步统计量的原因。
+
+## Jackknife 例子（Example）
+
+原书表 10.1 列出 20 组删除一个观测的结果。四个 Jackknife 标准误分别为 $0.032,0.514,0.046,2.39$，相应渐近标准误为 $0.031,0.493,0.043,2.29$。两组接近并不证明二者有限样本都正确，但说明解析方差公式和删除敏感度给出了相似的不确定性尺度。
+
+实证复核时不应只看最终标准误，还应画出或排序 $\hat\theta_{(-i)}$。若某一个删除值远离其余值，平均后的标准误可能掩盖估计由单个观测驱动的事实。对非线性统计量，每次必须从删除后的原始数据重新估计全部中间步骤，不能只删除最终向量的一个元素。
+
+## 聚类观测的 Jackknife（Jackknife for Clustered Observations）
+
+组内相关时，独立抽样单位是 cluster 而非单个观测。应删除整个第 $g$ 组，计算 $\hat\theta_{(-g)}$，并把 [式 (10.1)](#hansen-eq-10-1) 中的 $n$ 换成组数 $G$：
+
+$$
+\widehat V_{\hat\theta}^{\mathrm{jack}}
+=\frac{G-1}{G}\sum_{g=1}^G
+(\hat\theta_{(-g)}-\bar\theta_{(-\cdot)})
+(\hat\theta_{(-g)}-\bar\theta_{(-\cdot)})'.
+$$
+
+逐人删除会破坏原依赖结构，并把有效样本量错误当成总观测数。Delete-cluster Jackknife 渐近等价于使用删除组预测误差的 cluster-robust 协方差。其代价是重新估计 $G$ 次；其额外价值是直观展示“删掉哪一组会改变结论”。
+
+## Bootstrap 算法（The Bootstrap Algorithm）
+
+非参数 Bootstrap 的基本算法如下：从索引集合 $\{1,\ldots,n\}$ 独立、有放回抽取 $n$ 次，形成第 $b$ 个伪样本；在该样本上按原程序计算 $\hat\theta_b^*$；重复 $b=1,\ldots,B$。必须整行抽取 $(Y_i,X_i)$，否则会破坏原样本的联合分布。
+
+一个原观测至少出现一次的概率是
+
+::: {#hansen-eq-10-6}
+$$
+P(\text{某观测进入 Bootstrap 样本})
+=1-\left(1-\frac1n\right)^n
+\longrightarrow1-e^{-1}\simeq0.632.
+\tag{10.6}
+$$
+:::
+
+所以一份典型伪样本只包含约 $63.2\%$ 的不同原观测，其余位置由重复观测占据。这不是信息损失漏洞，而是有放回抽样模拟经验分布随机抽样的必然结果。不同 $b$ 的伪样本应相互独立；同一伪样本内，重复的索引应保留其整行变量。
+
+## Bootstrap 方差与标准误（Bootstrap Variance and Standard Errors）
+
+令 $\bar\theta^*=B^{-1}\sum_b\hat\theta_b^*$。Bootstrap 协方差是这些复制估计量的样本协方差：
+
+::: {#hansen-eq-10-7}
+$$
+\widehat V_{\hat\theta}^{\mathrm{boot}}
+=\frac1{B-1}\sum_{b=1}^B
+(\hat\theta_b^*-\bar\theta^*)
+(\hat\theta_b^*-\bar\theta^*)'.
+\tag{10.7}
+$$
+:::
+
+标量标准误为平方根。这里有两种误差：原样本导致的统计误差，以及有限 $B$ 导致的 Monte Carlo 误差。增加 $B$ 只减少第二种，不能弥补 $n$ 小、弱识别或模型错误。
+
+把 Bootstrap 标准误塞入 $\hat\theta\pm z_{1-\alpha/2}s^{\mathrm{boot}}$ 得 normal-approximation interval，但它仍强迫区间对称，通常不是 Bootstrap 区间的优先选择。原书表 10.2 中三类标准误大体接近；这种比较应作为诊断，而不是“多数票决定哪个正确”。
+
+## Percentile 区间（Percentile Interval）
+
+令 $q_\alpha^*$ 为 $\{\hat\theta_b^*\}_{b=1}^B$ 的经验 $\alpha$ 分位数。Percentile 区间直接取
+
+::: {#hansen-eq-10-8}
+$$
+C^{\mathrm{pc}}
+=\left[q_{\alpha/2}^*,q_{1-\alpha/2}^*\right].
+\tag{10.8}
+$$
+:::
+
+它不需标准误，并能保留偏斜和参数边界。若 $m$ 严格单调，$m(\theta)$ 的区间就是对 [式 (10.8)](#hansen-eq-10-8) 两端施加 $m$（递减时交换端点），称 transformation-respecting。于是 $\sigma^2$ 区间开平方正好得到 $\sigma$ 区间；普通 Delta 区间一般没有这种性质。
+
+分位数估计也有 Monte Carlo 误差，尤其尾部分位数由少量复制决定。$B=1000$ 的 2.5% 尾部只有约 25 个复制落在其下，端点可能明显抖动。
+
+## Bootstrap 分布（The Bootstrap Distribution）
+
+设单个观测 $W$ 的未知分布为 $F$，样本量为 $n$ 时 $\hat\theta$ 的分布写成 $G_n(u,F)=P_F(\hat\theta\le u)$。经验分布 $F_n$ 在每个 $W_i$ 上赋概率 $1/n$。理想 Bootstrap 分布定义为
+
+::: {#hansen-eq-10-9}
+$$
+G_n^*(u)=G_n(u,F_n).
+\tag{10.9}
+$$
+:::
+
+逻辑有两层：先用 $F_n$ 代替未知 $F$，再用 $B$ 次模拟近似通常无法解析计算的 $G_n(u,F_n)$。第一层误差随 $n$ 变化，第二层误差随 $B$ 变化，不能混为一谈。
+
+可以把它画成两个“世界”。现实抽样世界以 $F$ 为真、参数为 $\theta$，数据随机；Bootstrap 世界条件于已经观察到的数据，以 $F_n$ 为真、相应参数通常为 $\hat\theta$，伪样本随机。因此带星号的概率 $P^*$、期望 $E^*$ 都是给定原数据后的条件对象。
+
+## Bootstrap 观测的分布（The Distribution of the Bootstrap Observations）
+
+对从样本抽到的 $Y^*$，每个 $Y_i$ 的条件概率为 $1/n$，故
+
+::: {#hansen-eq-10-10}
+$$
+E^*(Y^*)=\sum_{i=1}^nY_i\frac1n=\bar Y,
+\tag{10.10}
+$$
+:::
+
+而
+
+::: {#hansen-eq-10-11}
+$$
+\operatorname{var}^*(Y^*)
+=\frac1n\sum_{i=1}^nY_iY_i'-\bar Y\bar Y'
+=\widehat\Sigma.
+\tag{10.11}
+$$
+:::
+
+注意 $\widehat\Sigma$ 这里使用分母 $n$，因为它是经验分布 $F_n$ 的真实方差，不是在现实世界中追求无偏的总体方差估计。类似地，$Y^*$ 的每个原点矩、中心矩和累积量分别等于原样本对应的经验矩。
+
+## Bootstrap 样本均值的分布（The Distribution of the Bootstrap Sample Mean）
+
+令 $\bar Y^*=n^{-1}\sum_iY_i^*$。条件独立性给出
+
+::: {#hansen-eq-10-12}
+$$
+E^*(\bar Y^*)=\bar Y,
+\tag{10.12}
+$$
+:::
+
+以及
+
+::: {#hansen-eq-10-13}
+$$
+\operatorname{var}^*(\bar Y^*)=\frac1n\widehat\Sigma.
+\tag{10.13}
+$$
+:::
+
+这正对应现实世界中的 $E(\bar Y)=\mu$ 与 $\operatorname{var}(\bar Y)=\Sigma/n$，只是 Bootstrap 世界把 $\mu,\Sigma$ 换成 $\bar Y,\widehat\Sigma$。中心化必须用 $\bar Y^*-\bar Y$；用 $\bar Y^*-\mu$ 会把未知现实参数带进条件实验。
+
+原书还精确列出 $Z_n^*=\sqrt n(\bar Y^*-\bar Y)$ 的三至六阶矩。例如
+
+::: {#hansen-eq-10-14}
+$$
+E^*(Z_n^{*3})=\frac{\widehat\kappa_3}{\sqrt n},
+\qquad
+E^*(Z_n^{*4})=\frac{\widehat\kappa_4}{n}+3\widehat\kappa_2^2.
+\tag{10.14}
+$$
+:::
+
+样本累积量直接替代总体累积量，是后面 Edgeworth 高阶改进的来源。
+
+## Bootstrap 渐近理论（Bootstrap Asymptotics）
+
+Bootstrap 概率收敛 $Z_n^*\to_{p^*}Z$ 的含义是：对任意 $\epsilon>0$，条件概率 $P^*(\|Z_n^*-Z\|>\epsilon)$ 本身是原样本的随机变量，并在现实概率下收敛到 0。它是“两层概率”，不能只把星号看成装饰。
+
+原书定理 10.2–10.6依次给出 Bootstrap WLLN、连续映射、CLT 和 Delta 法。在 $Y_i$ i.i.d.、$E\|Y\|^2<\infty$、$\Sigma>0$ 下，
+
+$$
+\sqrt n(\bar Y^*-\bar Y)\to_{d^*}N(0,\Sigma).
+$$
+
+对光滑函数模型 $\theta=g(E[h(Y)])$，若 $G=\partial g(\mu)'/\partial\mu$ 连续，则
+
+$$
+\sqrt n(\hat\theta^*-\hat\theta)
+\to_{d^*}N(0,G'VG),
+$$
+
+与现实世界 $\sqrt n(\hat\theta-\theta)$ 的极限相同。这才是 Bootstrap 推断首阶有效的理论理由；“重复抽很多次”本身不是证明。
+
+## Bootstrap 方差估计的一致性（Consistency of the Bootstrap Estimate of Variance）
+
+设某个归一化序列满足
+
+::: {#hansen-eq-10-15}
+$$
+Z_n=a_n(\hat\theta-\theta)\to_d\xi,
+\tag{10.15}
+$$
+:::
+
+并且
+
+::: {#hansen-eq-10-16}
+$$
+Z_n^*=a_n(\hat\theta^*-\hat\theta)\to_{d^*}\xi.
+\tag{10.16}
+$$
+:::
+
+分布收敛仍不足以推出方差收敛：极少量越来越极端的值可以几乎不改变 CDF，却主宰二阶矩。因此定理 10.9另要求 $\|Z_n^*\|^2$ 一致可积。对样本均值，有限二阶矩配合精确四阶矩计算可得
+
+::: {#hansen-eq-10-17}
+$$
+E^*(Z_n^{*4})
+=n^2E^*\{(\bar Y^*-\bar Y)^4\}
+=O_p(1).
+\tag{10.17}
+$$
+:::
+
+这足以控制尾部并得到二阶矩一致性。对一般光滑函数，若某一有限阶导数全局有界，原书定理 10.10给出相同结论；“光滑”若只在真值邻域成立，尚不能自动排除伪样本跑到奇异点。
+
+## 修剪的 Bootstrap 方差估计（Trimmed Estimator of Bootstrap Variance）
+
+比率 $\theta=\mu_1/\mu_2$ 的导数在 $\mu_2=0$ 附近爆炸；即使 $\mu_2\ne0$，某些伪样本的分母仍可能极接近零，使未修剪方差由极少量异常复制决定。定义 $Z_n^{**}=Z_n^*\mathbf1\{\|Z_n^*\|\le\tau_n\}$，再对 $Z_n^{**}$ 求样本方差。阈值 $\tau_n\to\infty$ 使修剪在极限中消失，同时有限样本中阻断爆炸尾部。
+
+原书定理 10.11先令 $B\to\infty$，说明模拟方差趋于给定样本的修剪方差；定理 10.12再令 $n\to\infty$，说明后者趋于目标渐近方差。这两个极限回答不同问题。实务可查看复制分布并修剪极小比例，例如 1%，但必须同时报告规则，并用未修剪结果、Jackknife 与解析标准误作敏感性比较。
+
+## 未修剪 Bootstrap 标准误为何不可靠（Unreliability of Untrimmed Bootstrap Standard Errors）
+
+原书工资回归的经验峰值为 $\hat\theta=-50\hat\beta_2/\hat\beta_3$。解析与 Jackknife 标准误约为 7，两次各 $10{,}000$ 次的未修剪 Bootstrap 标准误却分别为 825 和 544，修剪后约 10.1。原因不是软件随机数“坏了”，而是分母在少数伪样本接近零，比率产生极端值，二阶矩不稳定。
+
+诊断顺序应是：检查估计量是否含倒数、对数边界或矩阵逆；查看复制直方图与最大值；用不同种子重跑；比较修剪与未修剪；最后判断“标准误”是否本来就不是稳健摘要。不要仅因 Bootstrap 看起来更计算密集就无条件信任它。
+
+## Percentile 区间的一致性（Consistency of the Percentile Interval）
+
+定理 10.13假设
+
+::: {#hansen-eq-10-18}
+$$
+a_n(\hat\theta-\theta)\to_d\xi,
+\tag{10.18}
+$$
+:::
+
+且
+
+::: {#hansen-eq-10-19}
+$$
+a_n(\hat\theta^*-\hat\theta)\to_{d^*}\xi,
+\tag{10.19}
+$$
+:::
+
+其中 $\xi$ 连续且关于 0 对称。由分位数连续性，
+
+::: {#hansen-eq-10-20}
+$$
+a_n(q_\alpha^*-\hat\theta)\to_pq_\alpha,
+\tag{10.20}
+$$
+:::
+
+于是 $P(q^*_{\alpha/2}\le\theta\le q^*_{1-\alpha/2})$ 转化为 $P(-q_{\alpha/2}\ge\xi\ge-q_{1-\alpha/2})$；利用对称性 $-q_{\alpha/2}=q_{1-\alpha/2}$，覆盖率趋于 $1-\alpha$。
+
+关键不是记住结论，而是看见对称性在哪一步用到。若有限样本分布有明显偏差或偏斜，Percentile 区间即使首阶有效也可能覆盖较差；这推动后面的 BC 与 BCa 修正。
+
+## 偏差修正的 Percentile 区间（Bias-Corrected Percentile Interval）
+
+BC 方法假设存在严格递增变换 $\psi$ 和常数 $z_0$，使
+
+::: {#hansen-eq-10-21}
+$$
+Z=\psi(\hat\theta)-\psi(\theta)+z_0\sim N(0,1).
+\tag{10.21}
+$$
+:::
+
+先计算复制估计落在原估计左侧的比例
+
+::: {#hansen-eq-10-22}
+$$
+p^*=\frac1B\sum_{b=1}^B\mathbf1\{\hat\theta_b^*\le\hat\theta\},
+\tag{10.22}
+$$
+:::
+
+再转为正态尺度
+
+::: {#hansen-eq-10-23}
+$$
+z_0^*=\Phi^{-1}(p^*).
+\tag{10.23}
+$$
+:::
+
+若无中位数偏差，$p^*\approx0.5,z_0^*\approx0$。若估计向上偏，复制分布多在 $\hat\theta$ 下方，故 $p^*<0.5,z_0^*<0$。调整分位概率为
+
+::: {#hansen-eq-10-24}
+$$
+x(\alpha)=\Phi(z_\alpha+2z_0),
+\tag{10.24}
+$$
+:::
+
+BC 区间是
+
+::: {#hansen-eq-10-25}
+$$
+C^{\mathrm{bc}}
+=\left[q^*_{x(\alpha/2)},q^*_{x(1-\alpha/2)}\right].
+\tag{10.25}
+$$
+:::
+
+它仍尊重单调变换。理解时可把 $z_0$ 看成“Bootstrap 分布中心相对 $\hat\theta$ 偏了多少个正态标准差”，[式 (10.24)](#hansen-eq-10-24) 用两倍位移修正上下端点。
+
+## BCa Percentile 区间（BCa Percentile Interval）
+
+BCa 再允许估计量尺度随参数改变，用 acceleration 常数 $a$ 描述偏斜：
+
+::: {#hansen-eq-10-28}
+$$
+Z=\frac{\psi(\hat\theta)-\psi(\theta)}{1+a\psi(\theta)}+z_0
+\sim N(0,1).
+\tag{10.28}
+$$
+:::
+
+$z_0$ 仍由 [式 (10.23)](#hansen-eq-10-23) 估计，$a$ 用删除一个观测的 Jackknife 三阶矩估计：
+
+$$
+\hat a=
+\frac{\sum_i(\bar\theta_{(-\cdot)}-\hat\theta_{(-i)})^3}
+{6\{\sum_i(\bar\theta_{(-\cdot)}-\hat\theta_{(-i)})^2\}^{3/2}}.
+$$
+
+调整概率变为 $x(\alpha)=\Phi[z_0+(z_\alpha+z_0)/\{1-a(z_\alpha+z_0)\}]$，再取相应 Bootstrap 分位数。$a=0$ 时退化为 BC。BCa 同时修正中位数偏差与偏斜，具有变换不变性和高阶精度，但需额外 $n$ 次 Jackknife，且分母 $1-a(z_\alpha+z_0)$ 接近零时区间会不稳定。
+
+## Percentile-$t$ 区间（Percentile-t Interval）
+
+样本 $t$ 统计量为 $T=(\hat\theta-\theta)/s(\hat\theta)$；每个伪样本必须重新计算标准误，形成 $T_b^*=(\hat\theta_b^*-\hat\theta)/s(\hat\theta_b^*)$。若 $q_\alpha^*$ 是 $T_b^*$ 的经验分位数，则
+
+$$
+C^{\mathrm{pt}}
+=\left[\hat\theta-s(\hat\theta)q^*_{1-\alpha/2},
+\hat\theta-s(\hat\theta)q^*_{\alpha/2}\right].
+$$
+
+左端使用上分位数是由不等式反演得到：$q^*_{\alpha/2}\le(\hat\theta-\theta)/s(\hat\theta)\le q^*_{1-\alpha/2}$，解出 $\theta$ 后方向反转。若复制分布对称，端点近似熟悉的 $\hat\theta\pm1.96s$；偏斜时两侧自动不同。
+
+Studentization 利用每个伪样本自己的尺度，常提高准确度，但标准误公式必须可靠。若每次内部再 Bootstrap 估计 $s(\hat\theta_b^*)$，会产生约 $B^2$ 次估计的 nested Bootstrap。该区间不像 Percentile/BC/BCa 那样尊重一般单调变换。
+
+## Percentile-$t$ 的渐近改进（Percentile-t Asymptotic Refinement）
+
+首阶有效只说覆盖误差趋零。原书用 Edgeworth 与 Cornish–Fisher 展开说明：光滑函数模型中，Bootstrap $t$ 分位数与真实 $t$ 分位数之差为 $O_p(n^{-1})$，故 Percentile-$t$ 覆盖率为 $1-\alpha+O(n^{-1})$；普通单侧渐近区间通常只有 $O(n^{-1/2})$ 误差。
+
+若覆盖率写成 $1-\alpha+O(n^{-k/2})$，原书称其为 $k$ 阶准确。Bootstrap 比对应渐近法高一阶时称 asymptotic refinement。这个优势不是“Bootstrap 永远更准”：它依赖 Edgeworth 展开的高阶矩、光滑性以及有效 studentization。BCa 也能达到相同高阶，普通 Percentile 与 BC 通常只是一阶准确。
+
+## Bootstrap 假设检验（Bootstrap Hypothesis Tests）
+
+检验 $H_0:\theta=\theta_0$ 时，观测统计量是 $T=(\hat\theta-\theta_0)/s(\hat\theta)$，但非参数 Bootstrap 统计量必须是
+
+$$
+T_b^*=\frac{\hat\theta_b^*-\hat\theta}{s(\hat\theta_b^*)},
+$$
+
+因为 $\hat\theta$ 才是经验分布世界的“真值”。误用 $(\hat\theta_b^*-\theta_0)/s(\hat\theta_b^*)$ 会让 Bootstrap 分布带着原样本估计与原假设的偏离，临界值随观测 $T$ 一起移动，检验可能异常保守。
+
+双侧 Bootstrap $p$ 值为 $B^{-1}\sum_b\mathbf1\{|T_b^*|>|T|\}$，它估计 Bootstrap 零分布中比观测统计量更极端的比例。有限 $B$ 时可使用 $(1+\#\{\cdot\})/(B+1)$ 避免报告机械的零 $p$ 值。Percentile-$t$ 区间正是两个单侧 Bootstrap $t$ 检验未拒绝值的反演集合。
+
+## Wald 型 Bootstrap 检验（Wald-Type Bootstrap Tests）
+
+向量限制使用 $W=(\hat\theta-\theta_0)'\widehat V_{\hat\theta}^{-1}(\hat\theta-\theta_0)$，其 Bootstrap 对应物为
+
+$$
+W_b^*=(\hat\theta_b^*-\hat\theta)'
+(\widehat V_{\hat\theta,b}^*)^{-1}
+(\hat\theta_b^*-\hat\theta).
+$$
+
+以 $W_b^*$ 的 $1-\alpha$ 分位数作临界值，或以超过观测 $W$ 的比例作 $p$ 值。若可靠协方差不可得，可用任意正定权重矩阵构造距离统计量，再让 Bootstrap 估计其分布；通常仍可首阶有效，但失去有效 studentization 带来的高阶改进。
+
+## 基于准则的 Bootstrap 检验（Criterion-Based Bootstrap Tests）
+
+若 $\hat\beta=\arg\min_\beta J(\beta)$，观测统计量是受限与无约束准则差 $J(\tilde\beta)-J(\hat\beta)$。非参数 Bootstrap 中，受限问题必须施加 $r(\beta)=r(\hat\beta)=\hat\theta$，而非机械施加现实原假设 $\theta_0$：
+
+$$
+J_b^*=J_b^*(\tilde\beta_b^*)-J_b^*(\hat\beta_b^*),
+\quad
+\tilde\beta_b^*=\arg\min_{r(\beta)=\hat\theta}J_b^*(\beta).
+$$
+
+这与 $t$/Wald 统计量中心化在 $\hat\theta$ 是同一原则。F、最小距离和 LR 都是特例。每个伪样本都需同时完成受限和无约束优化；若只重算无约束估计，所得不是准则差的 Bootstrap 分布。
+
+## 参数 Bootstrap（Parametric Bootstrap）
+
+若完整分布 $Y\sim F(y\mid\beta)$ 已指定，就可从 $F(y\mid\hat\beta)$ 生成伪样本；条件模型中固定 $X_i$，从 $F(y\mid X_i,\hat\beta)$ 生成 $Y_i^*$。正态回归就是抽 $e_i^*\sim N(0,\hat\sigma^2)$ 并令 $Y_i^*=X_i'\hat\beta+e_i^*$。
+
+检验时还可从受限估计 $\tilde\beta$ 生成，使原假设在 Bootstrap 世界精确成立；此时统计量可直接围绕 $\theta_0$。参数 Bootstrap 在模型完全正确时利用更多结构，常更精确；分布、同方差或尾部设定错误时，这些额外结构也会成为额外偏误来源。非参数 Bootstrap 更灵活，但也不自动实施模型蕴含的条件限制。
+
+## Bootstrap 重复次数（How Many Bootstrap Replications?）
+
+计算成本近似与 $B$ 成正比，Monte Carlo 标准误按 $B^{-1/2}$ 下降。Bootstrap $p$ 值是 Bernoulli 平均，其条件标准误约为 $\sqrt{p^*(1-p^*)/B}$，最坏不超过 $1/(2\sqrt B)$。若希望最坏标准误不超过 0.005，需要 $B\ge10{,}000$。
+
+原书建议探索阶段可用 $B\approx100$ 快速排错，正式结果最低约 1000，理想为 10,000。尾部检验还应确保 $B$ 足够分辨目标水平：例如 $B=100$ 时 $p$ 值网格非常粗，无法可信地区分 1% 与 2%。报告中应写明 $B$，必要时同时给 Monte Carlo 标准误。
+
+## 设置 Bootstrap 随机种子（Setting the Bootstrap Seed）
+
+固定 seed 使同一程序复现完全相同的伪随机序列。探索阶段若 $B$ 小而始终固定 seed，结果看起来“稳定”可能只是反复使用同一批复制；不固定或更换 seed 能暴露 Monte Carlo 噪声。最终表格应固定并记录 seed，使用足够大的 $B$，使合理改变 seed 不影响实质结论。
+
+可复现不只是 `set.seed()`：还要记录随机数生成器、软件版本、抽样单位、缺失复制处理、并行流和每次重新估计的完整程序。并行执行时应使用可复现的独立随机流，不能让不同 worker 复制同一 seed 序列。
+
+## Bootstrap 回归（Bootstrap Regression）
+
+Pairs Bootstrap 整体抽取 $(Y_i,X_i)$，OLS 复制估计为
+
+::: {#hansen-eq-10-32}
+$$
+\hat\beta^*=(X^{*'}X^*)^{-1}X^{*'}Y^*.
+\tag{10.32}
+$$
+:::
+
+经验分布下的投影系数恰为 $\hat\beta$，故伪观测满足
+
+::: {#hansen-eq-10-33}
+$$
+Y_i^*=X_i^{*'}\hat\beta+e_i^*,
+\qquad E^*(X_i^*e_i^*)=0.
+\tag{10.33}
+$$
+:::
+
+Pairs Bootstrap 自然保留 $X$ 的随机性与一般异方差。不过某个伪样本可能使 $X^{*'}X^*$ 奇异，稀疏 dummy 尤其危险。原书建议以最小特征值比 $\lambda^*=\lambda_{\min}(X^{*'}X^*)/\lambda_{\min}(X'X)$ 检查设计，并修剪：
+
+::: {#hansen-eq-10-34}
+$$
+\hat\beta^*=\begin{cases}
+(X^{*'}X^*)^{-1}X^{*'}Y^*,&\lambda^*\ge\tau,\\
+\hat\beta,&\lambda^*<\tau.
+\end{cases}
+\tag{10.34}
+$$
+:::
+
+不能静默丢弃失败复制而不报告比例，因为失败率本身揭示设计支持不足。
+
+## Bootstrap 回归的渐近理论（Bootstrap Regression Asymptotic Theory）
+
+由 [式 (10.33)](#hansen-eq-10-33)，
+
+$$
+\sqrt n(\hat\beta^*-\hat\beta)
+=\left(\frac1n\sum_iX_i^*X_i^{*'}\right)^{-1}
+\left(\frac1{\sqrt n}\sum_iX_i^*e_i^*\right).
+$$
+
+Bootstrap WLLN 令第一项趋于 $Q^{-1}$，Bootstrap CLT 令第二项趋于 $N(0,\Omega)$，故极限协方差为 $Q^{-1}\Omega Q^{-1}$，与异方差稳健 OLS 极限一致。对 $\theta=r(\beta)$ 再用 Bootstrap Delta 法；用一致稳健标准误 studentize 后，$T^*\to_{d^*}N(0,1)$。
+
+矩阵求逆不是全局连续函数，所以标准误的矩一致性还需 [式 (10.34)](#hansen-eq-10-34) 一类设计修剪；非线性 $r$ 还可能需要统计量尾部修剪。这里应区分“分布近似一致”与“复制样本方差一致”，后者条件更强。
+
+## Wild Bootstrap
+
+在线性条件均值模型 $Y=X'\beta+e,E(e\mid X)=0$ 中，Pairs Bootstrap 没有主动施加条件均值限制；Residual Bootstrap 独立重抽残差又会额外施加 $e\perp X$，从而抹掉异方差。Wild Bootstrap 固定 $X_i$，生成
+
+$$
+e_i^*=\hat e_i\xi_i^*,
+\qquad
+Y_i^*=X_i'\hat\beta+e_i^*,
+$$
+
+其中 $E^*(\xi_i^*)=0,E^*(\xi_i^{*2})=1$。于是 $E^*(e_i^*\mid X_i)=0$ 且 $E^*(e_i^{*2}\mid X_i)=\hat e_i^2$，复制了异方差的一、二阶结构。
+
+Rademacher 权重以各 $1/2$ 概率取 $\pm1$；Mammen 两点权重额外匹配三阶矩。检验 $r(\beta)=0$ 时宜用受限 Wild Bootstrap：先求满足原假设的 $\tilde\beta$ 与受限残差 $\tilde e_i$，再令 $Y_i^*=X_i'\tilde\beta+\tilde e_i\xi_i^*$。这使原假设在伪世界成立，而不只是在统计量上事后中心化。
+
+## 聚类观测的 Bootstrap（Bootstrap for Clustered Observations）
+
+组内任意相关时，应以整组 $(Y_g,X_g)$ 为抽样单位，抽取 $G$ 个 cluster pairs；不能组内逐行抽样。每个伪样本应计算 cluster-robust 标准误，BCa 的 acceleration 也应来自 delete-cluster Jackknife。
+
+Wild cluster Bootstrap 固定组和回归量，对整组残差乘同一个权重：$e_g^*=\hat e_g\xi_g^*$。同一个 $\xi_g^*$ 保留组内误差共同移动。检验时使用受限 $\tilde\beta,\tilde e_g$。有效样本量是 $G$；若 $G$ 少、组规模差异大或处理组很少，渐近法和 Bootstrap 都可能不准，重抽样并不能制造新的独立组。
+
+原书表 10.4 的 tracking 例子中，渐近 cluster、cluster Jackknife 和 cluster Bootstrap 标准误均为 0.078，说明该平衡设计下方法相近；它不是“聚类 Bootstrap 总会等于 cluster-robust”的一般结论。
+
+## 技术证明（Technical Proofs）
+
+原书定理 10.20 的 Marcinkiewicz WLLN 说明：独立且一致可积的 $u_i$，对任意 $r>1$，有 $n^{-r}\sum_i|u_i|^r\to_p0$。它用于控制经验分布的高阶尾部，而无需假设对应 $r$ 阶总体矩有限。
+
+Bootstrap WLLN 的证明路线是：先用 Markov 不等式把 $P^*(\|\bar Y^*-\bar Y\|>\epsilon)$ 控制在 $n^{-1}\operatorname{tr}(\widehat\Sigma)$ 上，再用 Marcinkiewicz WLLN 令此上界趋零。Bootstrap CLT 不能直接套固定分布的 Lindeberg–Lévy CLT，因为条件分布 $F_n$ 随 $n$ 变化；原书改用三角阵 Lindeberg 条件。修剪方差的一致性证明则把事件分为均值留在真值邻域与离开邻域两部分：前者用均值定理，后者用 Bernstein 不等式压低概率。
+
+## 习题阅读指南（Exercises）
+
+10.1–10.6训练 Jackknife/Bootstrap 在线性变换下的协变性和 Percentile 等价；10.7–10.9补完 Bootstrap Delta 法与方差一致性；10.10–10.15集中于偏差、变换与错误中心化；10.16–10.25要求把参数、非参数、Percentile 与 Percentile-$t$ 写成具体算法；10.26–10.27辨析 RESET 和内生性中 Bootstrap 不能修复的错误；10.28–10.31是成本函数、增长、工资比率与 cluster 实证。
+
+写算法题时逐项交代：抽样单位；有放回还是权重生成；Bootstrap 世界的真参数；每次重估哪些第一步/标准误；保存哪个统计量；如何用经验分位数或超过比例推断；$B$、seed 与失败复制。尤其要检查是否误把 $\theta_0$ 当作非参数 Bootstrap 世界的中心。
+
+::: {.book-map}
+**章末自检**
+
+1. [式 (10.1)](#hansen-eq-10-1) 的缩放为何使样本均值情形精确等于通常方差估计？
+2. 为什么典型 Bootstrap 样本只有约 63.2% 的不同原观测？
+3. $F$ 与 $F_n$、$G_n$ 与 $G_n^*$、$P$ 与 $P^*$ 各属于哪个概率世界？
+4. 为什么分布收敛不足以保证 Bootstrap 方差一致？
+5. Percentile、BC、BCa 与 Percentile-$t$ 分别修正或利用了什么？
+6. 非参数 Bootstrap 检验为什么中心化在 $\hat\theta$，受限参数 Bootstrap 又为何可中心化在 $\theta_0$？
+7. Pairs、Residual、Wild 与 Wild cluster Bootstrap 各保留或施加什么结构？
+8. 增加 $B$ 能减少哪种误差，不能减少哪种误差？
+:::

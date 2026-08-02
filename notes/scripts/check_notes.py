@@ -20,6 +20,8 @@ EXPECTED = {
     "ch06.qmd": (10, "6", 2200),
     "ch07.qmd": (22, "7", 3800),
     "ch08.qmd": (17, "8", 3300),
+    "ch09.qmd": (24, "9", 4000),
+    "ch10.qmd": (32, "10", 4500),
     "appendix-a.qmd": (23, "A", 3500),
     "appendix-b.qmd": (5, "B", 2200),
 }
@@ -29,6 +31,7 @@ SCOPES = {
     "chapters-3-4": {"ch03.qmd", "ch04.qmd"},
     "chapters-5-6": {"ch05.qmd", "ch06.qmd"},
     "chapters-7-8": {"ch07.qmd", "ch08.qmd"},
+    "chapters-9-10": {"ch09.qmd", "ch10.qmd"},
     "chapters": {name for name in EXPECTED if name.startswith("ch")},
     "foundation": {
         "appendix-a.qmd",
