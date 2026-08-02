@@ -13,6 +13,8 @@ book:
       chapters:
         - ch01.qmd
         - ch02.qmd
+        - ch03.qmd
+        - ch04.qmd
   appendices:
     - appendix-a.qmd
     - appendix-b.qmd

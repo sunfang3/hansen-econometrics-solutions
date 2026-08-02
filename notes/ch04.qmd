@@ -1,0 +1,592 @@
+---
+title: "最小二乘回归的有限样本性质"
+subtitle: "从条件无偏、Gauss–Markov 到稳健与聚类标准误"
+hansen-chapter: "Chapter 4"
+book-pages: "97–136"
+pdf-pages: "117–156"
+status: "完整初稿"
+---
+
+::: {.book-map}
+**原书位置与本章路线**　对应 Hansen Chapter 4（书内 pp. 97–136；PDF pp. 117–156）。本章把第 3 章的样本代数放入概率模型：先在随机抽样和线性条件均值下求 OLS 的条件均值、条件方差；再解释 Gauss–Markov 与 GLS 的效率边界；随后从残差的杠杆偏差推出同方差、HC0–HC3 与聚类协方差估计；最后讨论稀疏虚拟变量、拟合度、聚类层级和技术证明。
+:::
+
+::: {.bridge}
+**本科桥接**　本科教材常把“OLS 无偏”和“OLS 是 BLUE”连成一句。本章必须拆开：无偏需要零条件均值，经典 BLUE 还需要同方差且只在特定估计量类中比较；异方差不会使满足零条件均值的 OLS 自动有偏，却会改变其方差和标准误。所谓“稳健标准误”只改变推断，不改变已经得到的 OLS 点估计。
+:::
+
+## 导言（Introduction）
+
+第 3 章中的 $\hat\beta$ 是给定数据后的确定函数。本章转向重复抽样问题：若从同一数据生成机制反复取得样本，$\hat\beta$ 的分布中心在哪里、散布多大、用什么量估计这种散布？“有限样本”表示结论在给定 $n$ 下成立，而不是等 $n\to\infty$ 后才近似成立。
+
+阅读时要保持三个层次分离：$\beta$ 是固定而未知的总体参数；$e_i$ 是不可观测的总体误差；$\hat\beta$、$\hat e_i$ 和标准误都是随机样本的函数。一个估计量无偏，并不意味着某一次估计恰等于真值；标准误小，也不保证识别假设正确。
+
+## 随机抽样（Random Sampling）
+
+假设 4.1 要求 $\{(Y_i,X_i):i=1,\ldots,n\}$ 独立同分布，即 i.i.d.。同分布保证每个观测面向同一总体参数；相互独立使跨观测协方差为零。若学生来自同一学校、居民来自同一村庄或企业处于同一产业冲击之下，后一要求可能失败，本章 4.23 节会以聚类依赖放宽它。
+
+i.i.d. 与同方差不是一回事。前者比较不同观测之间的联合抽样关系；后者比较同一个条件分布在不同 $X$ 处的误差方差。即使各 $(Y_i,X_i)$ 同分布，$\operatorname{var}(e_i\mid X_i=x)$ 仍完全可以随 $x$ 变化。
+
+## 样本均值（Sample Mean）
+
+先看只有截距的模型 $Y_i=\mu+e_i$，其中 $\mathbb E(e_i)=0$。OLS 是 $\hat\mu=\bar Y$。线性期望给出
+
+$$
+\mathbb E(\bar Y)=\frac1n\sum_{i=1}^n\mathbb E(Y_i)=\mu,
+$$
+
+所以样本均值对总体均值无偏。再写 $\bar Y-\mu=n^{-1}\sum_i e_i$，则
+
+$$
+\operatorname{var}(\bar Y)
+=\frac1{n^2}\sum_i\sum_j\mathbb E(e_ie_j)
+=\frac{\sigma^2}{n}.
+$$
+
+最后一步把对角项 $i=j$ 的 $\sigma^2$ 保留，并用独立性和零均值把 $i\ne j$ 的交叉项消掉。这是后面回归方差推导的缩影：估计误差是各观测误差的线性组合，方差由其权重与协方差结构共同决定。
+
+## 线性回归模型（Linear Regression Model）
+
+假设 4.2 的核心是
+
+::: {#hansen-eq-4-1}
+$$
+Y=X'\beta+e,
+\tag{4.1}
+$$
+:::
+
+::: {#hansen-eq-4-2}
+$$
+\mathbb E(e\mid X)=0.
+\tag{4.2}
+$$
+:::
+
+同时要求 $Y,X$ 有有限二阶矩，且 $Q_{XX}=\mathbb E(XX')>0$。这里 $X$ 为 $k\times1$，故 $Q_{XX}$ 为 $k\times k$；正定性排除总体精确共线。零条件均值比 $\mathbb E(Xe)=0$ 更强：它说明在每个 $X$ 条件下误差都居中于零，因此条件均值函数本身线性，即 $\mathbb E(Y\mid X)=X'\beta$。
+
+假设 4.3 进一步加入同方差：
+
+::: {#hansen-eq-4-3}
+$$
+\mathbb E(e^2\mid X)=\sigma^2(X)=\sigma^2.
+\tag{4.3}
+$$
+:::
+
+[式 (4.3)](#hansen-eq-4-3) 不属于 OLS 无偏所必需的条件，而是简化方差和效率比较的额外限制。也未假定正态；本章多数有限样本均值、方差结论不靠正态分布。
+
+## 最小二乘估计量的期望（Expectation of Least Squares Estimator）
+
+在 i.i.d. 下，给定整个设计矩阵 $X=(X_1,\ldots,X_n)'$，第 $i$ 个结果的条件均值只依赖自己的 $X_i$：
+
+::: {#hansen-eq-4-4}
+$$
+\mathbb E(Y_i\mid X_1,\ldots,X_n)
+=\mathbb E(Y_i\mid X_i)=X_i'\beta.
+\tag{4.4}
+$$
+:::
+
+堆叠后为
+
+::: {#hansen-eq-4-5}
+$$
+\mathbb E(Y\mid X)=X\beta.
+\tag{4.5}
+$$
+:::
+
+把 $Y=X\beta+e$ 代入 OLS 公式并逐步展开：
+
+::: {#hansen-eq-4-6}
+$$
+\hat\beta
+=(X'X)^{-1}X'(X\beta+e)
+=\beta+(X'X)^{-1}X'e.
+\tag{4.6}
+$$
+:::
+
+给定 $X$ 后，$(X'X)^{-1}X'$ 是常数矩阵；由 $\mathbb E(e\mid X)=0$，随机项的条件期望为零。因此
+
+::: {#hansen-eq-4-7}
+$$
+\mathbb E(\hat\beta\mid X)=\beta.
+\tag{4.7}
+$$
+:::
+
+这叫条件无偏：对任一满列秩的设计实现，$\hat\beta$ 的条件分布以 $\beta$ 为中心。推导隐含 $X'X$ 以概率 1 可逆。残差正规方程 $X'\hat e=0$ 不能替代 [式 (4.2)](#hansen-eq-4-2)：前者是拟合后机械成立的样本关系，后者是关于不可观测总体误差的数据生成假设。
+
+## 最小二乘估计量的方差（Variance of Least Squares Estimator）
+
+在随机抽样下，给定 $X$ 的误差协方差矩阵为对角阵
+
+::: {#hansen-eq-4-8}
+$$
+D=\operatorname{diag}(\sigma_1^2,\ldots,\sigma_n^2),
+\qquad \sigma_i^2=\mathbb E(e_i^2\mid X_i).
+\tag{4.8}
+$$
+:::
+
+对任意依赖于 $X$ 的 $n\times r$ 矩阵 $A$，线性变换的条件方差为
+
+::: {#hansen-eq-4-9}
+$$
+\operatorname{var}(A'Y\mid X)=A'DA.
+\tag{4.9}
+$$
+:::
+
+OLS 可写为 $A'Y$，其中 $A=X(X'X)^{-1}$。代入而不跳步：$A'=(X'X)^{-1}X'$，所以
+
+::: {#hansen-eq-4-10}
+$$
+V_{\hat\beta}
+=\operatorname{var}(\hat\beta\mid X)
+=(X'X)^{-1}(X'DX)(X'X)^{-1}.
+\tag{4.10}
+$$
+:::
+
+这是常说的“面包—夹心—面包”结构。若同方差，$D=I_n\sigma^2$，中间一层化为 $X'X\sigma^2$，于是 $V_{\hat\beta}=\sigma^2(X'X)^{-1}$。异方差不破坏前节无偏推导，但若仍使用这个简式，就会错估不确定性。
+
+## 无条件矩（Unconditional Moments）
+
+从条件无偏到无条件无偏通常写成 $\mathbb E\{\mathbb E(\hat\beta\mid X)\}=\beta$，但这一步需先确保 $\hat\beta$ 的期望存在。若无截距回归量是取 1 概率为 $p<1$ 的虚拟变量，则样本中它全为 0 的概率是 $(1-p)^n>0$；此时 $X'X$ 奇异，OLS 甚至没有处处定义。
+
+Hansen 引用 Kinal 的正态连续设计结果：$\mathbb E\|\hat\beta\|^r<\infty$ 当且仅当 $r<n-k+1$。它提醒我们，“条件于已实现的满秩 $X$”与“在所有可能 $X$ 上积分”不是同一问题。若二阶矩存在，全方差公式给出
+
+$$
+\operatorname{var}(\hat\beta)
+=\mathbb E\{\operatorname{var}(\hat\beta\mid X)\}
++\operatorname{var}\{\mathbb E(\hat\beta\mid X)\}
+=\mathbb E(V_{\hat\beta}).
+$$
+
+不能把期望穿过矩阵逆，故一般不能把它简化成把 $X'X$ 换为其期望的公式。
+
+## Gauss–Markov 定理（Gauss–Markov Theorem）
+
+考虑线性估计量 $\tilde\beta=A'Y$。由 $\mathbb E(Y\mid X)=X\beta$，它对所有 $\beta$ 条件无偏当且仅当 $A'X=I_k$。在同方差下，其方差为 $A'A\sigma^2$。经典 Gauss–Markov 定理说明，所有此类线性无偏估计量中 OLS 的条件方差最小。
+
+令 $A_0=X(X'X)^{-1}$ 为 OLS 权重，并令 $C=A-A_0$。无偏约束给 $C'X=0$。于是
+
+::: {#hansen-eq-4-11}
+$$
+A'A-(X'X)^{-1}=C'C\succeq0.
+\tag{4.11}
+$$
+:::
+
+乘以 $\sigma^2$ 就得到任意线性无偏估计量与 OLS 方差之差半正定。这里“最小”是 Loewner 偏序：任意方向 $a$ 上，$a'\tilde\beta$ 的方差都不小于 $a'\hat\beta$；它不是逐元素都更小。BLUE 的 B、L、U、E 分别是 best、linear、unbiased、estimator，这一定理不证明 OLS 在异方差下有效，也不证明其具有因果含义。
+
+## 现代 Gauss–Markov 定理（Modern Gauss–Markov Theorem）
+
+Hansen 的现代版本移除了“估计量必须是 $Y$ 的线性函数”这一限制：在 i.i.d.、线性条件均值和同方差下，任何满足 $\mathbb E(\tilde\beta\mid X)=\beta$ 的估计量，其条件方差都不小于 $\sigma^2(X'X)^{-1}$。因此效率边界针对所有条件无偏估计量，而非人为限定的线性类。
+
+这仍然是“给定模型类且坚持无偏”下的结论。岭回归等有偏估计量可能用少量偏差换取较低均方误差；模型错设时，围绕错误参数的高效率也没有实质价值。技术证明延至 4.26 节，首次阅读先把定理的比较集合和结论读准。
+
+## 广义最小二乘（Generalized Least Squares）
+
+现在允许跨观测相关或异方差：
+
+::: {#hansen-eq-4-12}
+$$
+Y=X\beta+e,
+\tag{4.12}
+$$
+:::
+
+::: {#hansen-eq-4-13}
+$$
+\mathbb E(e\mid X)=0,
+\tag{4.13}
+$$
+:::
+
+::: {#hansen-eq-4-14}
+$$
+\operatorname{var}(e\mid X)=\Omega.
+\tag{4.14}
+$$
+:::
+
+$\Omega$ 是 $n\times n$ 对称正定矩阵。OLS 仍条件无偏，但方差为 $(X'X)^{-1}X'\Omega X(X'X)^{-1}$。若 $\Omega=c^2\Sigma$ 且 $\Sigma$ 已知，用 $\Sigma^{-1/2}$ 左乘模型，相当于把误差“白化”；对白化模型做 OLS 得
+
+::: {#hansen-eq-4-17}
+$$
+\tilde\beta_{\mathrm{gls}}
+=(X'\Sigma^{-1}X)^{-1}X'\Sigma^{-1}Y.
+\tag{4.17}
+$$
+:::
+
+其条件均值和方差分别为
+
+::: {#hansen-eq-4-18}
+$$
+\mathbb E(\tilde\beta_{\mathrm{gls}}\mid X)=\beta,
+\tag{4.18}
+$$
+:::
+
+::: {#hansen-eq-4-19}
+$$
+\operatorname{var}(\tilde\beta_{\mathrm{gls}}\mid X)
+=(X'\Omega^{-1}X)^{-1}.
+\tag{4.19}
+$$
+:::
+
+本科的加权最小二乘是 $\Omega$ 对角时的 GLS：方差越大的观测权重越小。知道“异方差存在”不等于知道每个 $\sigma_i^2$；若权重模型未知或错设，GLS 的效率承诺不能直接兑现，这也是 OLS 配稳健协方差常被采用的原因。
+
+## 现代广义 Gauss–Markov 定理（Modern Generalized Gauss–Markov Theorem）
+
+当 i.i.d. 下 $\Omega=D$ 时，GLS 边界变为 $(X'D^{-1}X)^{-1}$。Hansen 的现代广义定理进一步说，在有限条件方差模型中，所有条件无偏估计量的方差都不小于这个边界；GLS 在 $D$ 已知时达到它。
+
+要分清两个问题：其一，哪种点估计在假定的方差结构下最有效；其二，怎样为某个点估计构造可靠的方差估计。HC 标准误处理第二个问题，并不把 OLS 变成 GLS。实证中若不愿为条件方差建立强参数模型，保留 OLS 点估计并稳健推断是一种稳健性取舍。
+
+## 残差（Residuals）
+
+第 3 章有 $\hat e=Me$，其中 $M=I-X(X'X)^{-1}X'$。给定 $X$，
+
+::: {#hansen-eq-4-20}
+$$
+\operatorname{var}(\hat e\mid X)=MDM.
+\tag{4.20}
+$$
+:::
+
+同方差时利用 $M^2=M$ 化为 $M\sigma^2$，其第 $i$ 个对角元给出
+
+::: {#hansen-eq-4-22}
+$$
+\mathbb E(\hat e_i^2\mid X)=(1-h_{ii})\sigma^2.
+\tag{4.22}
+$$
+:::
+
+这揭示两个易错点。第一，即使真实误差同方差，OLS 残差也因杠杆 $h_{ii}$ 不同而具有不同条件方差。第二，$\hat e_i^2$ 对 $\sigma^2$ 向下偏，且高杠杆处偏得更多。用 $(1-h_{ii})^{-1/2}\hat e_i$ 标准化可使每个分量在同方差下具有方差 $\sigma^2$；留一误差 $(1-h_{ii})^{-1}\hat e_i$ 则还会补入估计系数带来的预测不确定性。
+
+## 误差方差的估计（Estimation of Error Variance）
+
+以 $n$ 为分母的残差平方均值记为 $\hat\sigma^2=n^{-1}\hat e'\hat e$。由 $\hat e=Me$、迹的循环性质及 $\mathbb E(ee'\mid X)=D$，
+
+::: {#hansen-eq-4-25}
+$$
+\mathbb E(\hat\sigma^2\mid X)
+=\frac1n\operatorname{tr}(MD)
+=\frac1n\sum_{i=1}^n(1-h_{ii})\sigma_i^2.
+\tag{4.25}
+$$
+:::
+
+同方差时 $\sum_i h_{ii}=k$，所以期望是 $(n-k)\sigma^2/n$。自由度修正据此定义
+
+::: {#hansen-eq-4-26}
+$$
+s^2=\frac1{n-k}\sum_{i=1}^n\hat e_i^2,
+\tag{4.26}
+$$
+:::
+
+并在同方差模型下满足 $\mathbb E(s^2\mid X)=\sigma^2$。另一条逐观测修正路线是
+
+::: {#hansen-eq-4-27}
+$$
+\bar\sigma^2
+=\frac1n\sum_{i=1}^n(1-h_{ii})^{-1}\hat e_i^2,
+\qquad
+\mathbb E(\bar\sigma^2\mid X)=\sigma^2.
+\tag{4.27}
+$$
+:::
+
+$n-k$ 不是口诀，而是残差空间维数 $\operatorname{tr}(M)$。若异方差存在，单一 $\sigma^2$ 只是平均未解释变异，以上“无偏”结论不再逐字适用。
+
+## 均方预测误差（Mean-Square Forecast Error）
+
+对独立的新观测，预测误差为 $\tilde e_{n+1}=e_{n+1}-X_{n+1}'(\hat\beta-\beta)$。平方并取期望得到原书分解：
+
+::: {#hansen-eq-4-28}
+$$
+\operatorname{MSFE}_n
+=\mathbb E(e_{n+1}^2)
+-2\mathbb E\!\left[e_{n+1}X_{n+1}'(\hat\beta-\beta)\right]
++\mathbb E\!\left[X_{n+1}'(\hat\beta-\beta)(\hat\beta-\beta)'X_{n+1}\right].
+\tag{4.28}
+$$
+:::
+
+新观测与估计样本独立且两端居中，使交叉项为零；第三项可写为
+
+::: {#hansen-eq-4-29}
+$$
+\mathbb E\!\left[X_{n+1}'V_{\hat\beta}X_{n+1}\right].
+\tag{4.29}
+$$
+:::
+
+因此 MSFE = 不可约误差方差 + 参数估计误差。训练样本 RSS 只看被同一数据拟合后的残差，系统性过于乐观；留一平方预测误差的平均值无偏估计样本量 $n-1$ 时的 MSFE，故更接近真正样本外风险。
+
+## 同方差下的协方差矩阵估计（Covariance Matrix Estimation Under Homoskedasticity）
+
+若 [式 (4.3)](#hansen-eq-4-3) 成立，经典估计量为
+
+::: {#hansen-eq-4-30}
+$$
+\widehat V_{\hat\beta}^{,0}=(X'X)^{-1}s^2.
+\tag{4.30}
+$$
+:::
+
+因为 $s^2$ 条件无偏，[式 (4.30)](#hansen-eq-4-30) 对 $\sigma^2(X'X)^{-1}$ 条件无偏。但若误差异方差，真方差的中间层是 $X'DX$，用标量 $s^2X'X$ 替代可能差得很远；误差方差与回归量大小相关时尤其如此。
+
+软件“默认标准误”只是默认采用了某组假设，不代表那组假设已由数据证明。报告结果时必须写明 covariance estimator，而不能只写“括号中为标准误”。
+
+## 异方差下的协方差矩阵估计（Covariance Matrix Estimation Under Heteroskedasticity）
+
+若真实 $e_i^2$ 可见，把它代入 [式 (4.10)](#hansen-eq-4-10) 即可；实际只能用残差。最基本的 HC0 为
+
+::: {#hansen-eq-4-31}
+$$
+\widehat V_{\hat\beta}^{\mathrm{HC0}}
+=(X'X)^{-1}
+\left(\sum_{i=1}^nX_iX_i'\hat e_i^2\right)
+(X'X)^{-1}.
+\tag{4.31}
+$$
+:::
+
+HC1 给整体自由度修正，HC2 与 HC3 分别对每个残差按杠杆修正：
+
+::: {#hansen-eq-4-32}
+$$
+\widehat V_{\hat\beta}^{\mathrm{HC1}}
+=\frac{n}{n-k}\widehat V_{\hat\beta}^{\mathrm{HC0}},
+\tag{4.32}
+$$
+:::
+
+::: {#hansen-eq-4-33}
+$$
+\widehat V_{\hat\beta}^{\mathrm{HC2}}
+=(X'X)^{-1}
+\left\{\sum_i(1-h_{ii})^{-1}X_iX_i'\hat e_i^2\right\}
+(X'X)^{-1},
+\tag{4.33}
+$$
+:::
+
+::: {#hansen-eq-4-34}
+$$
+\widehat V_{\hat\beta}^{\mathrm{HC3}}
+=(X'X)^{-1}
+\left\{\sum_i(1-h_{ii})^{-2}X_iX_i'\hat e_i^2\right\}
+(X'X)^{-1}.
+\tag{4.34}
+$$
+:::
+
+由于权重逐步增大，原书给出半正定排序
+
+::: {#hansen-eq-4-35}
+$$
+\widehat V^{\mathrm{HC0}}_{\hat\beta}
+\preceq\widehat V^{\mathrm{HC2}}_{\hat\beta}
+\preceq\widehat V^{\mathrm{HC3}}_{\hat\beta}.
+\tag{4.35}
+$$
+:::
+
+同方差基准下 HC2 条件无偏：
+
+::: {#hansen-eq-4-36}
+$$
+\mathbb E(\widehat V^{\mathrm{HC2}}_{\hat\beta}\mid X)
+=(X'X)^{-1}\sigma^2.
+\tag{4.36}
+$$
+:::
+
+HC3 使用留一残差，有限样本往往更保守。四种 HC 在低杠杆大样本中通常接近；有 $h_{ii}$ 接近 1 时差异可能巨大。Hansen 原稿建议一般避免只依赖同方差公式，并偏好 HC2 或 HC3。这里的“稳健”只针对未知异方差，并不自动处理聚类、时间相关、内生性或模型错设。
+
+## 标准误（Standard Errors）
+
+向量估计量的第 $j$ 个标准误是协方差估计矩阵第 $j$ 个对角元的平方根。同方差公式为
+
+::: {#hansen-eq-4-37}
+$$
+s(\hat\beta_j)
+=s\sqrt{[(X'X)^{-1}]_{jj}}.
+\tag{4.37}
+$$
+:::
+
+标准误不是误差项的标准差，也不是 $|\hat\beta_j-\beta_j|$ 的观测值；它估计的是重复抽样中 $\hat\beta_j$ 的标准差。同一组点估计可配经典、HC2、HC3 或聚类标准误，因为每个公式面向不同的允许依赖结构。
+
+原书 20 个 CPS 观测的教育系数同为 0.155，但同方差、HC0、HC1、HC2、HC3 标准误依次约为 0.045、0.029、0.030、0.031、0.033。这个例子也说明“稳健标准误必然更大”是错误说法；调整方向取决于异方差与设计权重如何共同出现。
+
+## 稀疏虚拟变量的估计（Estimation with Sparse Dummy Variables）
+
+考虑
+
+::: {#hansen-eq-4-40}
+$$
+Y=\beta_1D+\beta_2+e,
+\tag{4.40}
+$$
+:::
+
+若只有一个观测满足 $D_i=1$，该组均值完全由一个结果决定，对应 $h_{ii}=1$、残差为零。真方差并不会因总样本 $n$ 很大而消失，因为 $\beta_1$ 的有效信息仍只有一个处理观测；HC1 却会把关键观测的零残差当作“没有噪声”，从而严重向下偏。
+
+此时 HC2、HC3 因包含 $(1-h_{ii})^{-1}$ 而无法计算。问题不是换一个软件选项就能解决，而是设计缺乏重复信息。读者应检查各虚拟变量和交互单元的频数、最大杠杆以及处理簇数量；若一个处理类别极少，诚实报告识别支持与敏感性比机械相信大总样本更重要。
+
+## 计算（Computation）
+
+复现 HC 公式时可把“肉”写为校正后得分向量的外积和。设第 $i$ 行得分为 $u_i=X_i\hat e_i$，HC0 肉是 $\sum_i u_iu_i'$；HC2 将 $u_i$ 除以 $\sqrt{1-h_{ii}}$，HC3 除以 $1-h_{ii}$。左右再乘 $(X'X)^{-1}$。
+
+程序应输出并核对 $n,k$、残差、杠杆、协方差类型和标准误，且用软件内置实现交叉验证手工矩阵结果。不同程序的 “robust” 默认可能是 HC0 或 HC1；不能只比较命令名。对接近奇异的 $X$，继续优先用 QR/线性求解器，显式求逆只用于展示公式结构。
+
+## 拟合度量（Measures of Fit）
+
+普通 $R^2$ 随加入回归量机械不降，因而不能衡量识别可信度，也不适合直接选模型。调整 $R^2$ 用自由度修正残差方差，缓解但没有彻底解决样本内过拟合。
+
+Hansen 更推荐留一拟合度
+
+$$
+\widetilde R^2
+=1-\frac{\sum_i\tilde e_i^2}{\sum_i(Y_i-\bar Y)^2},
+$$
+
+其中 $\tilde e_i$ 是未用第 $i$ 个结果拟合的预测误差。它可以为负：这表示模型样本外式预测比只报样本均值还差，而不是计算错误。比较模型时，最大化 $\widetilde R^2$ 等价于最小化留一均方预测误差；但预测较好仍不等于系数具有因果解释。
+
+## 经验例（Empirical Example）
+
+原书以 46,943 个 CPS 观测估计对数工资方程，并采用 HC2 标准误。阅读表格应按四步：先核对样本筛选与变量单位；再读系数方向和量级；随后读括号中的协方差方法；最后才结合模型条件讨论含义。
+
+教育、经验、性别、婚姻与地区等系数控制的是所列回归量的线性部分。它们是条件相关，而非自动的结构或因果效应。大样本可令抽样标准误很小，却不能修补遗漏能力、选择就业样本或测量误差等识别问题。
+
+## 多重共线性（Multicollinearity）
+
+精确共线使 $X'X$ 奇异，系数不唯一；近似共线使最小特征值很小，某些系数组合的标准误变大、数值结果对微扰敏感。后者不是假设违反，也不存在由某个 VIF 阈值自动触发的统一“修复”。
+
+删变量可能降低方差，却若删去影响 $Y$ 且与保留变量相关的控制量，会改变目标参数或引入遗漏变量问题。增加真正提供独立变化的数据、重新设计实验、聚焦可精确估计的线性组合，才是信息层面的解决方式。变量换单位可改善数值尺度，但不会创造辨识信息。
+
+## 聚类抽样（Clustered Sampling）
+
+设样本分为 $G$ 个簇，簇内观测可任意相关，簇间独立。原书学校追踪分班例先写简单回归
+
+::: {#hansen-eq-4-41}
+$$
+\text{TestScore}_{ig}
+=-0.071+0.138\,\text{Tracking}_g+e_{ig}.
+\tag{4.41}
+$$
+:::
+
+把簇 $g$ 内的 $N_g$ 个观测堆叠为 $Y_g=X_g\beta+e_g$；$X_g$ 为 $N_g\times k$，$e_g$ 为 $N_g\times1$。OLS 可按簇求和：
+
+::: {#hansen-eq-4-44}
+$$
+\hat\beta
+=\left(\sum_{g=1}^G X_g'X_g\right)^{-1}
+\left(\sum_{g=1}^G X_g'Y_g\right).
+\tag{4.44}
+$$
+:::
+
+假设是簇间独立，并有 $\mathbb E(e_g\mid X_g)=0$；簇内协方差 $\Sigma_g=\mathbb E(e_ge_g'\mid X_g)$ 不受限制。于是中间层为
+
+::: {#hansen-eq-4-46}
+$$
+\Omega_n=\sum_{g=1}^G X_g'\Sigma_gX_g,
+\tag{4.46}
+$$
+:::
+
+总体方差仍是夹心：
+
+::: {#hansen-eq-4-47}
+$$
+V_{\hat\beta}
+=(X'X)^{-1}\Omega_n(X'X)^{-1}.
+\tag{4.47}
+$$
+:::
+
+可行的聚类肉用每簇得分和 $X_g'\hat e_g$ 的外积：
+
+::: {#hansen-eq-4-49}
+$$
+\widehat\Omega_n
+=\sum_{g=1}^G X_g'\hat e_g\hat e_g'X_g
+=\sum_{g=1}^G
+\left(\sum_iX_{ig}\hat e_{ig}\right)
+\left(\sum_iX_{ig}\hat e_{ig}\right)'.
+\tag{4.49}
+$$
+:::
+
+::: {#hansen-eq-4-50}
+$$
+\widehat V_{\hat\beta}^{\mathrm{cluster}}
+=a_n(X'X)^{-1}\widehat\Omega_n(X'X)^{-1}.
+\tag{4.50}
+$$
+:::
+
+关键变化是先在簇内求和，再在簇间计算变异。把每个学生当独立观测会漏掉同校误差的交叉乘积。点估计未变，改变的是允许的抽样依赖与方差估计。
+
+## 聚类样本的推断（Inference with Clustered Samples）
+
+聚类稳健推断的有效样本量更接近簇数 $G$，不是个人数 $n=\sum_gN_g$。若有 10 万人但只来自 20 个州，协方差的独立重复单位仍约为 20。回归量很多、$G$ 小、簇大小高度不均时，有限样本推断尤其脆弱。
+
+异质簇大小意味着簇得分方差差异很大，类似只有 $G$ 个且高度异方差的观测。若处理在簇层赋值，还要看处理簇数量；只有一个或几个处理簇，就是上一节稀疏虚拟变量问题的簇版本。常规聚类标准误可能给出虚假的精确感，不能因总个体数巨大而放心。
+
+Hansen 给出的 CR3 思路使用整簇留一估计来校正杠杆，概念上对应单观测 HC3。复现时至少报告 $G$、各簇规模分布、处理/对照簇数及采用的有限样本修正，而不是只写“clustered SE”。
+
+## 应在哪一层聚类？（At What Level to Cluster?）
+
+聚类过细会把真实相关的单位拆开，遗漏正的协方差项，标准误通常向下偏。聚类过粗不会在所假定的更强独立结构下遗漏项，却加入许多噪声协方差并显著减少有效簇数，使协方差估计更不精确。这是偏差与方差的权衡，没有只看“哪组标准误更大”就能选择层级的规则。
+
+合理层级应由冲击、抽样和处理赋值机制决定：同一学校共享教师与管理冲击，就至少考虑学校；政策在州层实施，就不能仅按县聚类。可以报告理论首选层级及有实质依据的敏感性结果，但不应遍历层级后挑选最有显著性的一个。原书 Duflo–Dupas–Kremer 例有 111 所学校而只有 9 个区域，学校层在其赋值与有效样本量之间较为自然。
+
+## 技术证明（Technical Proofs）*
+
+现代 Gauss–Markov 证明的策略不是直接比较所有非线性估计量，而是在满足线性条件均值的宽泛分布类中构造一个局部参数子模型，再调用 Cramér–Rao 下界。为控制尾部，先定义截尾且重新居中的函数
+
+::: {#hansen-eq-4-56}
+$$
+\psi_c(e)
+=e\mathbf 1\{|e|\le c\}
+-\mathbb E[e\mathbf 1\{|e|\le c\}\mid X].
+\tag{4.56}
+$$
+:::
+
+它满足有界、条件均值为零，并保留所需的误差—得分协方差。用它扰动真实条件密度，可验证新密度非负、积分为 1、条件均值仍是 $x'\beta$，且二阶矩有限。该子模型的信息矩阵不超过 $X'D_c^{-1}X$；Cramér–Rao 给任何无偏估计量方差不低于其逆。最后让截尾阈值 $c\to\infty$，$D_c\to D$，便得到 $(X'D^{-1}X)^{-1}$ 的广义效率下界。
+
+首次阅读应掌握证明骨架及每一条件的作用：截尾保证合法扰动，重新居中保证密度积分为 1，条件均值计算保证子模型仍属于研究的模型类，信息不等式给下界，极限撤销截尾。完整代数可在第二遍配合附录 A 的半正定矩阵次序重做。
+
+## 习题阅读指南（Exercises）
+
+4.1–4.4 从样本矩、无偏性与正规方程起步；4.5–4.11要求重做 OLS/GLS 方差、误差方差和 HC 排序；4.12–4.17提醒非线性变换会产生偏差、因变量测量误差会改变条件方差、平方变换会改变 CEF；4.18–4.23覆盖遗漏变量、再参数化、GLS、i.i.d. 与同方差的区别及岭回归偏差；4.24–4.26是跨软件与聚类复现。
+
+证明题建议固定使用“已知—目标—条件化—展开—消交叉项—维数核对”的顺序。实证题须固定样本后再比较标准误，报告协方差类型、最大杠杆和簇数；若不同软件结果不同，先检查 HC 版本、自由度修正、缺失样本与分类变量编码。
+
+::: {.book-map}
+**章末自检**
+
+1. 能否从 [式 (4.6)](#hansen-eq-4-6) 逐步推出条件无偏，并指出每一步用了什么假设？
+2. 为什么 i.i.d. 不蕴含同方差？异方差为何不必使 OLS 有偏？
+3. 能否从 $D$ 的维数推出 [式 (4.10)](#hansen-eq-4-10) 的夹心结构，并说明同方差时如何约去中间层？
+4. 经典与现代 Gauss–Markov 的比较对象有何不同？BLUE 没有声称什么？
+5. 为什么 $\hat e_i^2$ 在高杠杆处向下偏？HC2 与 HC3 分别如何修正？
+6. 为什么稀疏处理单元不能由很大的总样本量补救？
+7. 聚类协方差为什么先汇总簇内得分？有效样本量为何更接近 $G$？
+8. 选择聚类层级时，数据生成和处理赋值机制分别提供什么依据？
+:::

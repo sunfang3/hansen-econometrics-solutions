@@ -24,6 +24,7 @@ EXPECTED = {
 SCOPES = {
     "appendices": {"appendix-a.qmd", "appendix-b.qmd"},
     "chapters-1-2": {"ch01.qmd", "ch02.qmd"},
+    "chapters-3-4": {"ch03.qmd", "ch04.qmd"},
     "chapters": {f"ch{i:02d}.qmd" for i in range(1, 7)},
     "foundation": set(EXPECTED),
 }
