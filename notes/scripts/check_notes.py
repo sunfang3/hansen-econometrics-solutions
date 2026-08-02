@@ -18,6 +18,8 @@ EXPECTED = {
     "ch04.qmd": (27, "4", 4500),
     "ch05.qmd": (15, "5", 2800),
     "ch06.qmd": (10, "6", 2200),
+    "ch07.qmd": (22, "7", 3800),
+    "ch08.qmd": (17, "8", 3300),
     "appendix-a.qmd": (23, "A", 3500),
     "appendix-b.qmd": (5, "B", 2200),
 }
@@ -26,8 +28,14 @@ SCOPES = {
     "chapters-1-2": {"ch01.qmd", "ch02.qmd"},
     "chapters-3-4": {"ch03.qmd", "ch04.qmd"},
     "chapters-5-6": {"ch05.qmd", "ch06.qmd"},
-    "chapters": {f"ch{i:02d}.qmd" for i in range(1, 7)},
-    "foundation": set(EXPECTED),
+    "chapters-7-8": {"ch07.qmd", "ch08.qmd"},
+    "chapters": {name for name in EXPECTED if name.startswith("ch")},
+    "foundation": {
+        "appendix-a.qmd",
+        "appendix-b.qmd",
+        *(f"ch{i:02d}.qmd" for i in range(1, 7)),
+    },
+    "all-current": set(EXPECTED),
 }
 PLACEHOLDER = re.compile(r"\b(?:TODO|TBD)\b|待补|占位|Lorem", re.I)
 CHINESE = re.compile(r"[\u3400-\u9fff]")
@@ -106,8 +114,8 @@ def main() -> int:
     parser.add_argument(
         "--scope",
         choices=SCOPES,
-        default="foundation",
-        help="检查附录、Ch.1–6，或整个基础阶段（默认）。",
+        default="all-current",
+        help="选择章节批次、基础阶段、当前全部章节或附录（默认：当前全部）。",
     )
     parser.add_argument(
         "--rendered",

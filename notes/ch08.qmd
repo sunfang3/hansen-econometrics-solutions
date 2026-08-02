@@ -1,0 +1,479 @@
+---
+title: "约束估计"
+subtitle: "CLS、最小距离、效率、错设与边界"
+hansen-chapter: "Chapter 8"
+book-pages: "196–220"
+pdf-pages: "216–240"
+status: "完整初稿"
+---
+
+::: {.book-map}
+**原书位置与本章路线**　对应 Hansen Chapter 8（书内 pp. 196–220；PDF pp. 216–240）。本章研究已知或被假定为真的参数限制：先由 Lagrange 乘子推导约束最小二乘（CLS），再把它放入最小距离（MD）框架；随后选择有效权重、比较 OLS/CLS/EMD，讨论 Hausman 等式、限制错设、非线性与不等式限制。
+:::
+
+::: {.bridge}
+**本科桥接**　本科的“删掉不显著变量”“检验后再回归”与本章的“已知限制”不是一回事。只有限制确实成立，约束估计才对原参数一致；限制错误时，方差可能变小，却围绕伪真值。异方差下，直接删变量的 CLS 甚至可能比保留无关变量的 OLS 方差更大，真正有效的是按 OLS 渐近协方差度量距离的 EMD。
+:::
+
+## 导言（Introduction）
+
+在线性投影 $Y=X'\beta+e$、$\mathbb E(Xe)=0$ 中，$q$ 个线性限制写为
+
+::: {#hansen-eq-8-1}
+$$
+R'\beta=c,
+\qquad R\in\mathbb R^{k\times q},quad
+\operatorname{rank}(R)=q<k,quad c\in\mathbb R^q.
+\tag{8.1}
+$$
+:::
+
+满列秩说明限制彼此独立。排除限制 $\beta_2=0$ 对应选择矩阵
+
+::: {#hansen-eq-8-2}
+$$
+R=\begin{pmatrix}0\\I_{k_2}\end{pmatrix},
+\qquad c=0.
+\tag{8.2}
+$$
+:::
+
+其他例子包括 $\beta_1+\beta_2=1$、$\beta_1=\beta_2$ 和 $\beta_1=-\beta_2$。限制减少可自由变化的参数方向，若正确，可借此降低方差；若错误，则把估计量强行推离真值。本章始终区分“限制来自理论/设计”与“数据看起来支持限制”两种证据来源。
+
+## 约束最小二乘（Constrained Least Squares）
+
+CLS 在可行集合上最小化 SSE：
+
+::: {#hansen-eq-8-3}
+$$
+\tilde\beta_{\mathrm{cls}}
+=\arg\min_{R'\beta=c}\operatorname{SSE}(\beta).
+\tag{8.3}
+$$
+:::
+
+以 $\lambda\in\mathbb R^q$ 为乘子，Lagrangian 是
+
+::: {#hansen-eq-8-5}
+$$
+\mathcal L(\beta,\lambda)
+=\frac12\operatorname{SSE}(\beta)+\lambda'(R'\beta-c).
+\tag{8.5}
+$$
+:::
+
+两组一阶条件为
+
+::: {#hansen-eq-8-6}
+$$
+-X'Y+X'X\tilde\beta_{\mathrm{cls}}+R\tilde\lambda=0,
+\tag{8.6}
+$$
+:::
+
+::: {#hansen-eq-8-7}
+$$
+R'\tilde\beta_{\mathrm{cls}}-c=0.
+\tag{8.7}
+$$
+:::
+
+由第一式得 $\tilde\beta=\hat\beta-(X'X)^{-1}R\tilde\lambda$；代入第二式解出乘子，再回代：
+
+::: {#hansen-eq-8-8}
+$$
+\tilde\beta_{\mathrm{cls}}
+=\hat\beta_{\mathrm{ols}}
+-(X'X)^{-1}R
+\{R'(X'X)^{-1}R\}^{-1}
+(R'\hat\beta_{\mathrm{ols}}-c).
+\tag{8.8}
+$$
+:::
+
+修正量等于“限制违反程度”乘以由设计矩阵决定的回推方向。$R'(X'X)^{-1}R>0$，故可逆。几何上，CLS 是 SSE 椭球与仿射限制平面首次相切的点；它不是普通欧氏距离下离 OLS 最近的点，而是按 $X'X$ 度量。
+
+维数逐项核对：$(X'X)^{-1}R$ 为 $k\times q$，中间逆为 $q\times q$，$R'\hat\beta-c$ 为 $q\times1$，所以修正项为 $k\times1$。左乘 $R'$ 后，中间结构化为单位阵，立刻验证 $R'\tilde\beta=c$。若数值结果不满足此恒等式，首先检查 $R$ 的转置方向和系数顺序。
+
+Lagrange 乘子 $\tilde\lambda$ 衡量放松各限制对最优 SSE 的边际影响。乘子大说明该限制与无约束拟合冲突强，但它本身不是显著性检验；检验还需按抽样方差标准化。
+
+## 排除限制（Exclusion Restriction）
+
+把模型分为
+
+::: {#hansen-eq-8-10}
+$$
+Y=X_1'\beta_1+X_2'\beta_2+e,
+\tag{8.10}
+$$
+:::
+
+并施加 $\beta_2=0$，约束方程为 $Y=X_1'\beta_1+e$。CLS 等于短回归 OLS：
+
+::: {#hansen-eq-8-12}
+$$
+\tilde\beta_1
+=\left(\sum_iX_{1i}X_{1i}'\right)^{-1}
+\sum_iX_{1i}Y_i.
+\tag{8.12}
+$$
+:::
+
+整个受限向量为
+
+::: {#hansen-eq-8-13}
+$$
+\tilde\beta=\begin{pmatrix}\tilde\beta_1\\0\end{pmatrix}.
+\tag{8.13}
+$$
+:::
+
+关键不只是“删掉 $X_2$”：原投影模型仍有 $\mathbb E(X_2e)=0$，只是 CLS 的短回归没有利用这些额外矩条件。在线性同方差模型中这不损失效率；在一般异方差投影模型中，丢弃的正交条件可能有信息，后面的 EMD 会重新利用它。
+
+## 有限样本性质（Finite Sample Properties）
+
+现在加入线性 CEF $Y=X'\beta+e$、$\mathbb E(e\mid X)=0$，并假定限制真。将 [式 (8.8)](#hansen-eq-8-8) 中 $\hat\beta-\beta=(X'X)^{-1}X'e$ 代入，可把 CLS 误差写成 $e$ 的线性函数，因此条件均值为零。
+
+同方差下，其条件协方差等于 OLS 方差减去限制方向上的部分：
+
+$$
+V_{\tilde\beta}^0
+=\left[(X'X)^{-1}
+-(X'X)^{-1}R\{R'(X'X)^{-1}R\}^{-1}R'(X'X)^{-1}
+\right]\sigma^2.
+$$
+
+受限残差空间维数变为 $n-k+q$，故
+
+::: {#hansen-eq-8-16}
+$$
+s_{\mathrm{cls}}^2
+=\frac1{n-k+q}\sum_{i=1}^n\tilde e_i^2.
+\tag{8.16}
+$$
+:::
+
+每个独立限制归还一个自由度，因为自由参数由 $k$ 降到 $k-q$。在正态回归中，$\tilde\beta$ 与 $s_{\mathrm{cls}}^2$ 独立，$(n-k+q)s_{\mathrm{cls}}^2/\sigma^2\sim\chi^2_{n-k+q}$，经典 $t$ 比精确服从 $t_{n-k+q}$。
+
+更具体地，受限残差可写为 $\tilde e=M_Re$，其中 $M_R=I-P+XAX'$ 对称幂等，迹为 $n-k+q$。幂等性让 $e'M_Re$ 在正态同方差下成为秩数个独立正态平方；$\tilde\beta$ 所用的线性变换与 $M_R$ 的乘积为零，联合正态再把零协方差提升为独立。这与第 5 章 OLS 证明是同一模板，只是残差子空间因限制扩大了 $q$ 维。
+
+若只满足零条件均值而异方差，CLS 仍条件无偏，但上述简单协方差、无偏 $s^2$ 与精确 $t$ 分布不再成立。不要把本节不同层次的定理打包成一个“受限回归性质”。
+
+OLS 与 CLS 的差异还满足
+
+::: {#hansen-eq-8-18}
+$$
+\operatorname{var}(\hat\beta_{\mathrm{ols}}-\tilde\beta_{\mathrm{cls}}\mid X)
+=\operatorname{var}(\hat\beta_{\mathrm{ols}}\mid X)
+-\operatorname{var}(\tilde\beta_{\mathrm{cls}}\mid X).
+\tag{8.18}
+$$
+:::
+
+右侧半正定，所以正确限制在同方差有限样本模型下提升效率。这一“差的方差等于方差之差”是 Hausman 等式的原型。
+
+## 最小距离（Minimum Distance）
+
+一般投影模型中，以正定权重 $\widehat W$ 定义 OLS 与候选 $\beta$ 的加权距离：
+
+::: {#hansen-eq-8-19}
+$$
+J(\beta)
+=n(\hat\beta-\beta)'\widehat W(\hat\beta-\beta).
+\tag{8.19}
+$$
+:::
+
+MD 在 $R'\beta=c$ 下最小化 $J$。若 $\widehat W=\hat Q_{XX}$，则由残差正交可分解
+
+::: {#hansen-eq-8-21}
+$$
+\operatorname{SSE}(\beta)
+=n\hat\sigma^2
++n(\hat\beta-\beta)'\hat Q_{XX}(\hat\beta-\beta),
+\tag{8.21}
+$$
+:::
+
+第一项与 $\beta$ 无关，所以 MD 恰等于 CLS。一般权重下，Lagrange 解为
+
+::: {#hansen-eq-8-23}
+$$
+\tilde\beta_{\mathrm{md}}
+=\hat\beta
+-\widehat W^{-1}R
+(R'\widehat W^{-1}R)^{-1}
+(R'\hat\beta-c).
+\tag{8.23}
+$$
+:::
+
+不同 $W$ 决定把 OLS 投到限制平面时使用何种距离。变量单位变化会改变普通欧氏距离，故合理权重应同时反映估计误差尺度与相关方向。
+
+将变量可逆重参数化后，若权重随协方差相应变换，MD 估计代表同一个经济限制；若武断固定 $W=I$，结果会依赖把工资写成元还是千元。最优权重的一个好处正是这种尺度调整由抽样协方差自动完成。
+
+因目标函数只关心 $\hat\beta-\beta$，MD 是“先无约束估计、再投影”的两步思路。它不同于直接在原始观测残差上重新加权；权重空间是参数空间 $\mathbb R^k$，不是观测空间 $\mathbb R^n$。
+
+## 渐近分布（Asymptotic Distribution）
+
+若限制正确且 $\widehat W\to_pW>0$，[式 (8.23)](#hansen-eq-8-23) 的连续映射给一致性。将其减去真值并乘 $\sqrt n$，可写为线性变换
+
+$$
+\sqrt n(\tilde\beta_{\mathrm{md}}-\beta)
+=A_W\sqrt n(\hat\beta-\beta)+o_p(1),
+$$
+
+其中 $A_W=I-W^{-1}R(R'W^{-1}R)^{-1}R'$。因此极限正态，协方差为 $A_WV_\beta A_W'$；原书展开为
+
+::: {#hansen-eq-8-24}
+$$
+\begin{aligned}
+V_\beta(W)={}&V_\beta
+-W^{-1}R(R'W^{-1}R)^{-1}R'V_\beta\\
+&-V_\beta R(R'W^{-1}R)^{-1}R'W^{-1}\\
+&+W^{-1}R(R'W^{-1}R)^{-1}R'V_\beta R
+(R'W^{-1}R)^{-1}R'W^{-1}.
+\end{aligned}
+\tag{8.24}
+$$
+:::
+
+CLS 是 $W=Q_{XX}$ 的特例。注意限制成立使估计误差只能沿 $R'$ 的零空间变化，所以渐近协方差在被完全固定的限制方向上退化。
+
+从紧凑式看，$R'A_W=0$，所以 $R'\sqrt n(\tilde\beta-\beta)=0$。这正是受限估计误差满足线性限制的随机版本。将 $A_WV_\beta A_W'$ 展开即得到 [式 (8.24)](#hansen-eq-8-24) 四项，左右两个负交叉项都不能遗漏。
+
+## 方差估计与标准误（Variance Estimation and Standard Errors）
+
+CLS 的稳健协方差用受限残差 $\tilde e_i$ 构造
+
+$$
+\tilde\Omega
+=\frac1{n-k+q}\sum_iX_iX_i'\tilde e_i^2,
+\qquad
+\tilde V_\beta=\hat Q_{XX}^{-1}\tilde\Omega\hat Q_{XX}^{-1},
+$$
+
+再把 $Q_{XX}$ 与 $V_\beta$ 的 plug-in 值代入 [式 (8.24)](#hansen-eq-8-24)。自由度修正是有限样本调整，不改变固定 $k$ 的概率极限。
+
+若线性组合 $h'\beta$ 本身由限制完全固定，$h$ 落在 $R$ 的列空间，估计方差应为零，普通标准误没有新的抽样含义。对未固定方向，$s(h'\tilde\beta)=\{n^{-1}h'\tilde Vh\}^{1/2}$。
+
+## 有效最小距离估计量（Efficient Minimum Distance Estimator）
+
+最优权重是 $W=V_\beta^{-1}$，即用 OLS 估计误差的 Mahalanobis 距离。以一致的 $\widehat V_\beta$ 可行化：
+
+::: {#hansen-eq-8-25}
+$$
+\tilde\beta_{\mathrm{emd}}
+=\hat\beta
+-\widehat V_\beta R
+(R'\widehat V_\beta R)^{-1}
+(R'\hat\beta-c).
+\tag{8.25}
+$$
+:::
+
+其渐近协方差为
+
+::: {#hansen-eq-8-26}
+$$
+V_{\beta,\mathrm{emd}}
+=V_\beta
+-V_\beta R(R'V_\beta R)^{-1}R'V_\beta.
+\tag{8.26}
+$$
+:::
+
+它不大于无约束 $V_\beta$，也不大于任何其他 MD 权重下的方差（半正定次序）。同方差时 $V_\beta^{-1}$ 与 $Q_{XX}$ 只差标量，故 CLS 已有效；异方差时 $Q_{XX}$ 不是最优距离，EMD 可进一步降方差。
+
+“使用估计权重不损失首阶效率”依赖 $\widehat V_\beta\to_pV_\beta$ 且相关逆存在。第一步 HC 估计若不稳定，有限样本 EMD 可能比简单 CLS 波动更大；渐近最优不是每个样本中的方差保证。应用时应保留 OLS/CLS 对照并检查 $R'\widehat V_\beta R$ 的条件数。
+
+直觉上，EMD 不平均对待限制偏离的各方向：OLS 本来估得精确的方向被强力校正，不精确方向较少校正，并利用所有回归量携带的 $\mathbb E(Xe)=0$ 信息。
+
+## 再论排除限制（Exclusion Restriction Revisited）
+
+当 $\beta_2=0$，三种 $\beta_1$ 估计量是：长回归 OLS、删掉 $X_2$ 的短回归 CLS，以及 EMD。短回归的渐近方差为
+
+::: {#hansen-eq-8-29}
+$$
+\operatorname{avar}(\tilde\beta_1)
+=Q_{11}^{-1}\Omega_{11}Q_{11}^{-1}.
+\tag{8.29}
+$$
+:::
+
+EMD 可写成
+
+::: {#hansen-eq-8-30}
+$$
+\bar\beta_1
+=\hat\beta_1-\widehat V_{12}\widehat V_{22}^{-1}\hat\beta_2,
+\tag{8.30}
+$$
+:::
+
+其方差是 Schur complement $V_{11}-V_{12}V_{22}^{-1}V_{21}$。同方差下 CLS 不劣于长回归；异方差下排序可反转。原书构造例中长回归、CLS、EMD 方差分别为 $2/3$、$1$、$5/8$：正确删掉无关变量反而使 LS 方差增加，而 EMD 仍最小。
+
+原因不是无关变量“产生了信息关于均值系数”，而是它与异方差误差结构共同提供额外矩条件。结论也不支持随意加入海量变量：这里限制正确、维数固定且比较的是特定估计方法。
+
+从短回归角度，$X_1e$ 是使用中的矩；长回归还观察 $X_2e$。当两类矩具有非球形协方差时，最优线性组合能用后一矩降低前者的噪声。CLS 相当于完全丢掉后一矩，OLS 使用一种非最优组合，EMD 才按协方差作最优净化。这是第 13 章有效 GMM 的预演。
+
+## 方差与标准误估计（Variance and Standard Error Estimation）
+
+EMD 的最终残差重新估计 $\Omega$ 与 $V_\beta$，再按
+
+::: {#hansen-eq-8-35}
+$$
+\widetilde V_{\beta,\mathrm{emd}}
+=\widetilde V_\beta
+-\widetilde V_\beta R
+(R'\widetilde V_\beta R)^{-1}
+R'\widetilde V_\beta
+\tag{8.35}
+$$
+:::
+
+得到受限协方差。线性组合标准误为
+
+::: {#hansen-eq-8-36}
+$$
+s(h'\tilde\beta)
+=\{n^{-1}h'\widetilde V_{\beta,\mathrm{emd}}h\}^{1/2}.
+\tag{8.36}
+$$
+:::
+
+实现时要分清软件返回的是 $V_{\hat\beta}$ 还是根号 $n$ 尺度的 $V_\beta$；[式 (8.25)](#hansen-eq-8-25) 中共同缩放会抵消，但标准误必须恢复 $n^{-1}$。
+
+## Hausman 等式（Hausman Equality）
+
+有效受限估计与无约束估计满足渐近版本：
+
+::: {#hansen-eq-8-37}
+$$
+\operatorname{avar}(\hat\beta-\tilde\beta_{\mathrm{emd}})
+=\operatorname{avar}(\hat\beta)
+-\operatorname{avar}(\tilde\beta_{\mathrm{emd}}).
+\tag{8.37}
+$$
+:::
+
+一般两个估计量差的方差还含两个协方差项，不能写成方差之差。Hausman 等式成立是因为有效估计量与“损失掉的部分”渐近正交。第 9 章据此用两估计量差异检验附加限制或模型假设。
+
+## 例：Mankiw、Romer 与 Weil（1992）（Example）
+
+原书复现 98 个非石油国家的 Solow 增长回归，限制投资、人口增长和教育三个系数之和为 0。报告 OLS、CLS、EMD 及异方差稳健标准误。多数系数变化不大，人口增长系数绝对值增加且标准误明显下降，CLS 与 EMD 差异较小。
+
+复现时先按原文构造 1960–1985 人均 GDP 对数变化、初始收入、投资率、$n+g+\delta$ 与在校率，并固定 $g+\delta=0.05$；再统一 98 国样本。限制矩阵若按系数顺序写错，数值仍可能运行却约束了错误参数，所以应打印系数名—矩阵行映射并检查 $R'\tilde\beta-c$ 接近零。
+
+表中“标准误变小”不能单独证明 Solow 限制正确；它只是施加限制后的条件精度。合理报告还应给无约束限制估计 $R'\hat\beta$、其标准误及正式检验，让读者区分理论约束带来的效率与数据对约束的相容程度。
+
+## 错设（Misspecification）
+
+若真实 $R'\beta=c^*\ne c$，MD 概率极限为
+
+::: {#hansen-eq-8-38}
+$$
+\beta_{\mathrm{md}}^*
+=\beta-W^{-1}R(R'W^{-1}R)^{-1}(c^*-c).
+\tag{8.38}
+$$
+:::
+
+它是限制平面上按 $W$ 距离最接近真值的伪真参数；CLS 对应受限最佳线性预测。常规标准误仍可描述估计量围绕伪真值的抽样散布，却不包含伪真值与真实 $\beta$ 的系统距离。标准误很小不意味着错设偏差小。
+
+固定错设下，$\tilde\beta-\beta$ 不趋零，因此以真实参数为中心乘 $\sqrt n$ 会发散；要得到非退化极限，只能改以伪真值或随样本权重变化的 $\beta_n^*$ 为中心。这就是“估计量仍渐近正态”与“估计量对原参数一致”可以同时一假一真的原因。
+
+局部错设令
+
+::: {#hansen-eq-8-41}
+$$
+R'\beta_n=c+\delta n^{-1/2}.
+\tag{8.41}
+$$
+:::
+
+限制偏离与估计误差同为根号 $n$ 量级，故缩放后留下有限均值偏移：
+
+::: {#hansen-eq-8-43}
+$$
+\sqrt n(\tilde\beta_{\mathrm{md}}-\beta_n)
+\to_dN(\delta^*,V_\beta(W)),
+\qquad
+\delta^*=W^{-1}R(R'W^{-1}R)^{-1}\delta.
+\tag{8.43}
+$$
+:::
+
+若偏离固定不缩小，根号 $n$ 偏差会发散并主导随机波动；若比 $n^{-1/2}$ 更小，极限中看不见。局部序列恰是研究检验功效和偏差—方差权衡的中间尺度。
+
+局部错设不是说现实真参数随研究者样本量改变，而是构造一列越来越难区分的统计实验。它回答“限制与标准误同一量级地偏离时，现有推断会怎样”，因此在比较检验和估计风险时有用。
+
+## 非线性限制（Nonlinear Constraints）
+
+一般等式限制写为
+
+::: {#hansen-eq-8-44}
+$$
+r(\beta)=0,
+\qquad r:\mathbb R^k\to\mathbb R^q.
+\tag{8.44}
+$$
+:::
+
+如 $\beta_1\beta_2=1$。CLS/MD 分别在该曲面上最小化 SSE/$J$，通常没有闭式解，需要约束优化。正则条件要求真值处 Jacobian $R=\partial r(\beta)'/\partial\beta$ 满列秩；局部一阶展开把曲面近似为切平面，所以渐近方差仍用 [式 (8.24)](#hansen-eq-8-24)，只需把固定 $R$ 换成真值处导数。
+
+可行方差使用 $\hat R=\partial r(\tilde\beta)'/\partial\beta$。数值优化应检查约束残差、梯度/KKT 条件、初值敏感性和是否找到全局而非局部最优；闭式线性限制可作为代码验证基准。
+
+满秩 Jacobian 是局部识别条件。若 $r(\beta)=\beta_1^2$ 且真值 $\beta_1=0$，导数为零，切平面不提供有效的一阶限制，普通根号 $n$ 展开失效。限制表面光滑并不自动保证真值处正则。
+
+## 不等式限制（Inequality Restrictions）
+
+不等式写为
+
+::: {#hansen-eq-8-49}
+$$
+r(\beta)\ge0.
+\tag{8.49}
+$$
+:::
+
+若单一限制 $\beta_1\ge0$，无约束估计非负时保持原值；若为负，就把解投到边界 $\beta_1=0$ 并重新估计。多个或非线性不等式需二次/非线性规划及 KKT 条件。
+
+推断的难点来自边界。若真值严格在内部，约束渐近上不生效，分布同无约束估计；若真值恰在边界，$\tilde\beta_1=\max(\hat\beta_1,0)$ 的极限是 $\max(Z,0)$，在 0 处有点质量而非普通正态。常规对称标准误区间和 $\chi^2$ 临界值不能机械使用。
+
+## 技术证明（Technical Proofs）*
+
+EMD 效率证明构造 $R_\perp$，使 $R_\perp'V_\beta R=0$，再用可逆基变换 $C=[R,R_\perp]$ 把候选方差与最优方差之差化为只有右下块非零的半正定矩阵。因为 congruence transformation 保持半正定次序，得到 $V_{\beta,\mathrm{emd}}\preceq V_\beta(W)$。
+
+非线性限制证明对每个 $r_j$ 用均值定理：
+
+::: {#hansen-eq-8-52}
+$$
+r_j(\tilde\beta)
+=r_j(\beta)
++\frac{\partial r_j(\beta_j^*)'}{\partial\beta}
+(\tilde\beta-\beta).
+\tag{8.52}
+$$
+:::
+
+一致性使中间点 $\beta_j^*\to_p\beta$，Jacobians 因连续性趋于 $R$；结合最优化一阶条件，将 $\sqrt n(\tilde\beta-\beta)$ 写成对 $\sqrt n(\hat\beta-\beta)$ 的渐近线性投影，便复原 [式 (8.24)](#hansen-eq-8-24)。
+
+## 习题阅读指南（Exercises）
+
+8.1–8.10训练线性限制重参数化、CLS 公式和有限样本性质；8.11–8.17推导 MD/EMD 渐近分布及反直觉异方差例；8.18合并两独立样本；8.19复现 CPS 等式与不等式约束；8.20把多项式单调/凹性转为系数限制；8.21–8.22研究限制检验与比率限制。
+
+解题时先写 $R,c$ 的维数并验证 rank，再决定是重参数化、CLS 闭式解还是 EMD。所有受限结果都应数值检查 $R'\tilde\beta=c$；若限制可能错设，要同时报告无约束估计与限制违反量，不能只展示更小的受限标准误。
+
+::: {.book-map}
+**章末自检**
+
+1. 能否从两组 Lagrange 一阶条件逐步推出 [式 (8.8)](#hansen-eq-8-8)？
+2. 为什么排除 $X_2$ 后，$\mathbb E(X_2e)=0$ 仍是可利用的信息？
+3. 自由度为何从 $n-k$ 变为 $n-k+q$？
+4. CLS 是哪一个权重下的 MD？EMD 为何使用 $V_\beta^{-1}$？
+5. 异方差下，正确排除变量为何仍可能增加 CLS 方差？
+6. Hausman 等式为何不是任意两个估计量都满足的恒等式？
+7. 限制错设时，标准误能描述什么，不能描述什么？
+8. 真值在不等式边界上时，为什么极限分布不再普通正态？
+:::

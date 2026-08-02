@@ -1,0 +1,462 @@
+---
+title: "最小二乘的渐近理论"
+subtitle: "一致性、渐近正态、稳健协方差与 Wald 推断"
+hansen-chapter: "Chapter 7"
+book-pages: "162–195"
+pdf-pages: "182–215"
+status: "完整初稿"
+---
+
+::: {.book-map}
+**原书位置与本章路线**　对应 Hansen Chapter 7（书内 pp. 162–195；PDF pp. 182–215）。7.1–7.7 从 OLS 的样本矩表达出发，用 WLLN、CLT 与 CMT 建立一致性、渐近正态和协方差估计；7.8–7.13统一有限样本/渐近方差记号并处理参数函数；7.14–7.18构造回归区间、预测区间、Wald 统计量和置信域；7.19–7.21解释高阶近似、残差一致性与渐近杠杆。
+:::
+
+::: {.bridge}
+**本科桥接**　本科“OLS 大样本正态”常只给结论。本章逐层搭建：投影条件 $\mathbb E(Xe)=0$ 足以使 OLS 收敛到最佳线性投影系数，不必要求 CEF 线性；异方差允许存在，但渐近方差必须用 $Q_{XX}^{-1}\Omega Q_{XX}^{-1}$。经典与稳健标准误的点估计相同，差别在对 $\Omega$ 的估计。
+:::
+
+## 导言（Introduction）
+
+本章采用比线性 CEF 更宽的投影模型 $Y=X'\beta+e$，其中 $\mathbb E(Xe)=0$。若真实 CEF 非线性，$\beta$ 仍是最佳线性近似系数；因此一致性所指目标必须先说清楚，不能见到 OLS 收敛就自动称为“结构参数”。
+
+假设 7.1 要求 i.i.d.、$Y$ 与 $X$ 有有限二阶矩、$Q_{XX}=\mathbb E(XX')>0$。一致性使用这些条件；渐近正态和稳健协方差一致性进一步要求有限四阶矩，以保证 $Xe$ 及 $XX'e^2$ 的所需矩存在。
+
+这里的假设层级值得反复核对。$\mathbb E(Y^2)<\infty$ 与 $\mathbb E\|X\|^2<\infty$ 通过 Cauchy–Schwarz 保证 $\mathbb E\|XY\|<\infty$，足够让 $\hat Q_{XY}$ 使用 WLLN；但 $\Omega$ 是 $XX'e^2$ 的期望，涉及四个随机因子的乘积，二阶矩不再自动够用。每次从一致性升级到分布推断，都应重新检查矩阶，而不是把假设 7.1 沿用到底。
+
+## 最小二乘估计量的一致性（Consistency of Least Squares Estimator）
+
+把 OLS 写成样本矩函数：$\hat\beta=\hat Q_{XX}^{-1}\hat Q_{XY}$。第一步对矩阵每个元素用 WLLN：
+
+::: {#hansen-eq-7-1}
+$$
+\hat Q_{XX}=\frac1n\sum_{i=1}^nX_iX_i'
+\to_p\mathbb E(XX')=Q_{XX}.
+\tag{7.1}
+$$
+:::
+
+同理 $\hat Q_{XY}\to_pQ_{XY}$。第二步核对 $Q_{XX}>0$，因此 $g(A,b)=A^{-1}b$ 在极限点连续；CMT 给
+
+::: {#hansen-eq-7-2}
+$$
+\hat\beta=\hat Q_{XX}^{-1}\hat Q_{XY}
+\to_pQ_{XX}^{-1}Q_{XY}=\beta.
+\tag{7.2}
+$$
+:::
+
+另一条更直接的路线从
+
+::: {#hansen-eq-7-3}
+$$
+\hat\beta-\beta
+=\hat Q_{XX}^{-1}\hat Q_{Xe},
+\qquad
+\hat Q_{Xe}=\frac1n\sum_iX_ie_i
+\tag{7.3}
+$$
+:::
+
+出发。WLLN 给 $\hat Q_{Xe}\to_p\mathbb E(Xe)=0$，而逆矩阵趋于有限的 $Q_{XX}^{-1}$，乘积趋零。随机阶写法是
+
+::: {#hansen-eq-7-4}
+$$
+\hat\beta=\beta+o_p(1).
+\tag{7.4}
+$$
+:::
+
+这条证明没有使用 $\mathbb E(e\mid X)=0$ 或同方差，只使用投影正交矩。若回归中遗漏变量，使针对所声称参数的 $\mathbb E(Xe)\ne0$，OLS 仍可能收敛，但收敛到另一个伪真投影参数。
+
+样本 $X'X$ 在某些有限样本实现中可能奇异，而总体 $Q_{XX}>0$。一致性论证的含义是：$\hat Q_{XX}$ 越来越靠近正定极限，其最小特征值以概率趋近正数，因此可逆的概率趋于 1。它不是声称每个有限样本必可逆。若总体本身奇异，逆映射在极限点不连续，参数坐标也不唯一，CMT 路线从根本上断裂。
+
+还要看到 $\hat Q_{XY}$ 与 $\hat Q_{XX}$ 来自同一观测，二者不独立；CMT 并不要求它们独立，只需联合依概率收敛。有限维下逐元素 WLLN 后把所有元素合并，即得到联合收敛。
+
+## 渐近正态性（Asymptotic Normality）
+
+一致性不描述误差的形状。把 [式 (7.3)](#hansen-eq-7-3) 乘 $\sqrt n$：
+
+::: {#hansen-eq-7-5}
+$$
+\sqrt n(\hat\beta-\beta)
+=\left(\frac1n\sum_iX_iX_i'\right)^{-1}
+\left(\frac1{\sqrt n}\sum_iX_ie_i\right).
+\tag{7.5}
+$$
+:::
+
+右侧第一项由 WLLN/CMT 趋于 $Q_{XX}^{-1}$。第二项是 i.i.d. 零均值向量和；定义
+
+$$
+\Omega=\mathbb E[(Xe)(Xe)']
+=\mathbb E(XX'e^2).
+$$
+
+有限四阶矩通过两次 Cauchy–Schwarz 保证 $\Omega$ 各元素有限，于是多元 CLT 给
+
+::: {#hansen-eq-7-7}
+$$
+\frac1{\sqrt n}\sum_{i=1}^nX_ie_i
+\to_dN(0,\Omega).
+\tag{7.7}
+$$
+:::
+
+Slutsky 合并两部分：
+
+::: {#hansen-eq-7-8}
+$$
+\sqrt n(\hat\beta-\beta)
+\to_dN(0,V_\beta),
+\qquad
+V_\beta=Q_{XX}^{-1}\Omega Q_{XX}^{-1}.
+\tag{7.8}
+$$
+:::
+
+所以 $\hat\beta-\beta=O_p(n^{-1/2})$。这是逐点渐近结论：对每个满足条件的固定分布，近似误差随 $n$ 消失；它不保证存在一个对所有重尾分布都有效的“小样本量阈值”。原书双 Pareto 和高次正态变换模拟显示，即使 $n=100$，偏态或厚尾也可使有限样本分布远离正态。
+
+逐元素证明 $\Omega<\infty$ 时，对 $\mathbb E|X_jX_\ell e^2|$ 先把 $X_jX_\ell$ 与 $e^2$ 分开，再把 $X_j^2$ 与 $X_\ell^2$ 分开，最终由 $\{\mathbb E(X_j^4)\mathbb E(X_\ell^4)\}^{1/4}\{\mathbb E(e^4)\}^{1/2}$ 控制。误差 $e=Y-X'\beta$ 的四阶矩又由 $Y,X$ 四阶矩推出。写清这条链，才能知道厚尾会在哪一步阻断 CLT。
+
+Slutsky 所做的是把随机的 $\hat Q_{XX}^{-1}$ 替换为概率极限 $Q_{XX}^{-1}$，不是假定它与得分和独立。极限协方差左右各乘一次 $Q_{XX}^{-1}$，分别来自线性变换及其转置；因 $Q_{XX}$ 对称，两个逆写法相同。
+
+若 $XX'$ 与 $e^2$ 不相关，即
+
+::: {#hansen-eq-7-10}
+$$
+\operatorname{cov}(XX',e^2)=0,
+\tag{7.10}
+$$
+:::
+
+则 $\Omega=Q_{XX}\sigma^2$，夹心简化为
+
+::: {#hansen-eq-7-11}
+$$
+V_\beta=V_\beta^0=Q_{XX}^{-1}\sigma^2.
+\tag{7.11}
+$$
+:::
+
+条件同方差蕴含 [式 (7.10)](#hansen-eq-7-10)，但后者稍弱；因此“同方差公式恰好正确”不逻辑等价于整个条件方差恒定。
+
+## 联合分布（Joint Distribution）
+
+$V_\beta$ 的非对角元决定系数估计之间的渐近协方差。两回归量、均值 0、方差 1、相关系数 $\rho$ 且同方差时，
+
+$$
+V_\beta^0
+=\frac{\sigma^2}{1-\rho^2}
+\begin{pmatrix}1&-\rho\\-\rho&1\end{pmatrix}.
+$$
+
+所以正相关回归量对应负相关系数估计：固定拟合结果时，一个系数偏高可由另一个偏低补偿。但这不是普遍规律；异方差时中间层 $\Omega$ 会重新加权不同 $X$ 区域，符号甚至可以反转。
+
+分块系数的联合分布必须保留 $V_{12}$。若研究 $\beta_1-\beta_2$，方差是 $V_{11}+V_{22}-2V_{12}$，仅报告两个边际标准误不足以判断差异是否精确。原书给出 [式 (7.13)–(7.16)] 的完整分块夹心表达，实务中通常由矩阵运算直接取得，而不逐项手算。
+
+相关回归量导致的是条件信息方向重叠，不是系数估计必然同号或反号。即使两个系数各自不显著，它们的和也可能很精确；反之两个系数各自显著，差可能不精确。联合协方差矩阵而非单列标准误决定这些线性组合。
+
+## 误差方差估计量的一致性（Consistency of Error Variance Estimators）
+
+残差与误差的关系是 $\hat e_i=e_i-X_i'(\hat\beta-\beta)$。平方展开：
+
+::: {#hansen-eq-7-17}
+$$
+\hat e_i^2
+=e_i^2-2e_iX_i'(\hat\beta-\beta)
++(\hat\beta-\beta)'X_iX_i'(\hat\beta-\beta).
+\tag{7.17}
+$$
+:::
+
+取样本平均得到
+
+::: {#hansen-eq-7-18}
+$$
+\hat\sigma^2
+=\frac1n\sum_ie_i^2
+-2\left(\frac1n\sum_ie_iX_i'\right)(\hat\beta-\beta)
++(\hat\beta-\beta)'\hat Q_{XX}(\hat\beta-\beta).
+\tag{7.18}
+$$
+:::
+
+第一项由 WLLN 趋于 $\sigma^2=\mathbb E(e^2)$；第二项中样本交叉矩趋零且系数误差趋零；第三项是“趋零向量—有界矩阵—趋零向量”，也趋零。因此 $\hat\sigma^2\to_p\sigma^2$。又因固定 $k$ 下 $n/(n-k)\to1$，$s^2$ 同样一致。有限样本无偏与渐近一致是不同性质：$\hat\sigma^2$ 在同方差模型中向下偏，却仍一致。
+
+在一般投影模型中，$\sigma^2=\mathbb E(e^2)$ 是线性预测误差的无条件二阶矩，不必等于某个恒定的条件方差。该一致性证明也没有使用同方差。若 $k$ 随 $n$ 增长到 $k/n\not\to0$，自由度比例不再趋 1，$\hat\sigma^2$ 与 $s^2$ 的渐近等价需要重新分析。
+
+## 同方差协方差矩阵估计（Homoskedastic Covariance Matrix Estimation）
+
+定义 $V_\beta^0=Q_{XX}^{-1}\sigma^2$，自然 plug-in 为 $\widehat V_\beta^0=\hat Q_{XX}^{-1}s^2$。由 $\hat Q_{XX}^{-1}\to_pQ_{XX}^{-1}$ 与 $s^2\to_p\sigma^2$，CMT 给 $\widehat V_\beta^0\to_pV_\beta^0$。
+
+这里有一个细微但重要的逻辑：即使真实误差异方差，该估计量仍一致估计数学对象 $V_\beta^0$；问题是此时 $V_\beta^0\ne V_\beta$，它不是 OLS 的正确渐近方差。一致估计了错误目标对推断没有帮助。只有条件同方差，或更弱的 [式 (7.10)](#hansen-eq-7-10)，才有 $V_\beta^0=V_\beta$。
+
+## 异方差协方差矩阵估计（Heteroskedastic Covariance Matrix Estimation）
+
+以残差构造 $\hat\Omega=n^{-1}\sum_iX_iX_i'\hat e_i^2$，HC0 的渐近尺度估计量为
+
+::: {#hansen-eq-7-19}
+$$
+\widehat V_\beta^{\mathrm{HC0}}
+=\hat Q_{XX}^{-1}\hat\Omega\hat Q_{XX}^{-1}.
+\tag{7.19}
+$$
+:::
+
+关键不是简单说“残差接近误差”，而要证明加权平方差整体可忽略：
+
+::: {#hansen-eq-7-20}
+$$
+\frac1n\sum_iX_iX_i'(\hat e_i^2-e_i^2)\to_p0.
+\tag{7.20}
+$$
+:::
+
+将 [式 (7.17)](#hansen-eq-7-17) 代入，用矩阵范数与 Cauchy–Schwarz，上界可写为
+
+$$
+2\left(\frac1n\sum_i\|X_i\|^3|e_i|\right)\|\hat\beta-\beta\|
++\left(\frac1n\sum_i\|X_i\|^4\right)\|\hat\beta-\beta\|^2.
+$$
+
+四阶矩确保括号内两项 $O_p(1)$，一致性确保其余因子 $o_p(1)$，故上界为 $o_p(1)$。于是 $\hat\Omega\to_p\Omega$，夹心估计一致。这个证明清楚说明为什么协方差估计比系数一致性需要更强矩条件。
+
+## 协方差矩阵记号汇总（Summary of Covariance Matrix Notation）
+
+本章同时使用“估计量本身的方差”和“根号 $n$ 极限的方差”，二者相差约 $n$：
+
+| 对象 | 正确尺度 | 稳健表达 | 用途 |
+|---|---:|---|---|
+| $V_{\hat\beta}$ | $O(n^{-1})$ | $(X'X)^{-1}X'DX(X'X)^{-1}$ | 标准误、统计量 |
+| $V_\beta$ | $O(1)$ | $Q_{XX}^{-1}\Omega Q_{XX}^{-1}$ | 渐近极限 |
+| $\widehat V_{\hat\beta}$ | $O(n^{-1})$ | 第 4 章 HC 公式 | 实际报告 |
+| $\widehat V_\beta$ | $O(1)$ | $\hat Q_{XX}^{-1}\hat\Omega\hat Q_{XX}^{-1}$ | 一致性证明 |
+
+精确关系是 $\widehat V_\beta^{\mathrm{HC0}}=n\widehat V_{\hat\beta}^{\mathrm{HC0}}$，同方差估计量也相同。把 $V_\beta$ 直接开根号当标准误会漏掉 $n^{-1/2}$。
+
+“精确条件方差”只在线性 CEF 及相应条件协方差设定下定义为 $\operatorname{var}(\hat\beta\mid X)$；投影模型下 [式 (7.8)](#hansen-eq-7-8) 仍有效，却不要求 $\mathbb E(e\mid X)=0$。这也是同一个夹心外观背后所陈述概率对象不同的原因。书写时用下标帽子和是否乘 $n$ 固定口径，可避免后续 Wald 统计量多乘或少乘一个 $n$。
+
+## 其他协方差矩阵估计量（Alternative Covariance Matrix Estimators）*
+
+固定 $k$ 下，HC1 的因子 $n/(n-k)\to1$。HC2、HC3 与 HC0 的差别来自 $(1-h_{ii})^{-1}$ 或 $(1-h_{ii})^{-2}$；若最大杠杆
+
+::: {#hansen-eq-7-24}
+$$
+h_n^*=\max_{1\le i\le n}h_{ii}=o_p(1),
+\tag{7.24}
+$$
+:::
+
+则这些权重一致趋于 1，三者差为 $o_p(1)$。因此 HC0–HC3 在经典固定维渐近框架下都一致估计同一个 $V_\beta$，差别主要是有限样本偏差和高杠杆敏感性。
+
+这一等价不适用于 $k/n$ 不可忽略的高维渐近，因为自由度因子和杠杆可能不趋于 0。不能把固定 $k$ 定理无条件搬到机器学习或大量固定效应设计。
+
+## 参数函数（Functions of Parameters）
+
+设研究参数为 $\theta=r(\beta)\in\mathbb R^q$，plug-in 估计为 $\hat\theta=r(\hat\beta)$。连续性给一致性；若 $r$ 在真值附近连续可微，定义 $R=\partial r(\beta)'/\partial\beta$（$k\times q$），Delta 法给
+
+::: {#hansen-eq-7-25}
+$$
+\sqrt n(\hat\theta-\theta)
+\to_dN(0,V_\theta),
+\qquad V_\theta=R'V_\beta R.
+\tag{7.25}
+$$
+:::
+
+对比率 $r(\beta)=\beta_j/\beta_\ell$，梯度在第 $j$ 位为 $1/\beta_\ell$，第 $\ell$ 位为 $-\beta_j/\beta_\ell^2$。当分母接近 0，梯度与近似方差爆大，普通 Delta 区间可能很差。
+
+线性选择是最简单特例：若 $R$ 只挑出 $\beta$ 的若干分量，$R'V_\beta R$ 就是相应协方差子矩阵。对边际效应，$R$ 通常同时依赖系数和评价点；若评价点本身由同一数据估计，也有抽样误差，不能只对 $\beta$ 求导而忽略生成量的不确定性。
+
+以 $\hat R=\partial r(\hat\beta)'/\partial\beta$ 和稳健 $\widehat V_\beta$ plug in：
+
+::: {#hansen-eq-7-28}
+$$
+\widehat V_\theta=\hat R'\widehat V_\beta\hat R.
+\tag{7.28}
+$$
+:::
+
+解析导数优先；函数复杂时可数值差分，但步长过大会有截断误差，过小会有舍入误差。自动微分若可用，通常兼具可复现与精度。
+
+## 渐近标准误（Asymptotic Standard Errors）
+
+估计量本身的协方差是 $\widehat V_{\hat\theta}=n^{-1}\widehat V_\theta$，标量标准误为 $s(\hat\theta)=\sqrt{\widehat V_{\hat\theta}}$。每个报告的变换参数也应报告自己的标准误，而不是复用某个原始系数标准误。
+
+原书工资例计算教育百分比回报、经验 10 年时的边际回报和使二次工资曲线最大化的经验年数。第三个参数是系数比率，标准误必须含 $\hat\beta_2$、$\hat\beta_3$ 的方差及协方差；忽略非对角元会得到错误精度。软件 `nlcom` 一类命令本质上执行同一 Delta 法。
+
+## t 统计量（t-statistic）
+
+对标量 $\theta$，定义
+
+::: {#hansen-eq-7-33}
+$$
+T(\theta)=\frac{\hat\theta-\theta}{s(\hat\theta)}.
+\tag{7.33}
+$$
+:::
+
+由分子渐近正态、方差估计一致及 Slutsky，若 $V_\theta>0$，则 $T(\theta)\to_dN(0,1)$。这叫渐近枢轴：有限样本分布仍依赖未知分布特征，但这种依赖在极限中消失。
+
+与第 5 章不同，这里不需要正态误差，标准误可以异方差稳健，临界值的理论来源是标准正态而非精确 $t_{n-k}$。软件使用 $t$ 临界值是有限样本习惯性修正，不应误述成一般异方差下的精确定理。
+
+## 置信区间（Confidence Intervals）
+
+渐近 $1-\alpha$ 区间为
+
+::: {#hansen-eq-7-35}
+$$
+\widehat C
+=\left[\hat\theta-cs(\hat\theta),
+\hat\theta+cs(\hat\theta)\right],
+\qquad c=\Phi^{-1}(1-\alpha/2).
+\tag{7.35}
+$$
+:::
+
+其覆盖率满足 $P(\theta\in\widehat C)\to1-\alpha$，不是每个有限 $n$ 精确等于目标。95% 时 $c=1.96$，口算可用 2。区间由 $|T(\theta)|\le c$ 反演而来，因此与同口径双侧检验一致。
+
+“渐近覆盖”仍是逐点陈述。若参数靠近边界、比率分母接近零、尾部极厚或识别变弱，近似可很差；此时应寻找问题特定的稳健推断，而非只依赖更大字体报告 1.96。
+
+## 回归区间（Regression Intervals）
+
+在线性 CEF 中 $m(x)=x'\beta$，估计为 $x'\hat\beta$，梯度是 $x$。因此给固定 $x$ 的均值回归区间为
+
+$$
+x'\hat\beta\pm1.96\sqrt{x'\widehat V_{\hat\beta}x}.
+$$
+
+宽度随 $x$ 变化：离样本设计中心远或沿弱信息方向的点，$x'\widehat Vx$ 更大。含多项式时令 $x$ 包含原变量及各幂，必须连同协方差交叉项一起计算，不能把各项标准误简单相加。
+
+该区间估计的是条件均值 $m(x)$，不是某个新个体的 $Y$。图上逐点 95% 带也不是整条曲线同时覆盖 95% 的 simultaneous band；后者需要多重比较修正。
+
+外推还涉及支持集：公式对任意数值 $x$ 都能计算，但若 $x$ 远离样本中 $X$ 的取值区域，线性 CEF 形式本身缺乏数据检验，标准误只量化给定模型内的参数不确定性，不能量化函数形式错设风险。
+
+## 预测区间（Forecast Intervals）
+
+新个体预测误差是 $e_{n+1}-x'(\hat\beta-\beta)$。独立样本下交叉项为零，故
+
+::: {#hansen-eq-7-36}
+$$
+\mathbb E(\hat e_{n+1}^2\mid X_{n+1}=x)
+=\sigma^2(x)+x'V_{\hat\beta}x.
+\tag{7.36}
+$$
+:::
+
+第一项是个体不可约噪声，第二项是回归均值估计误差，所以预测区间总比均值回归区间宽。常见 $x'\hat\beta\pm2\sqrt{\hat\sigma^2+x'\widehat Vx}$ 在同方差正态模型下有依据；一般误差下，单个新误差不会因训练样本增大而自动正态，渐近理论不能为它创造正态分布。可靠预测区间需要估计 $e\mid X=x$ 的条件分位数。
+
+## Wald 统计量（Wald Statistic）
+
+对 $q$ 维 $\theta$，定义
+
+::: {#hansen-eq-7-37}
+$$
+W(\theta)
+=(\hat\theta-\theta)'
+\widehat V_{\hat\theta}^{-1}
+(\hat\theta-\theta)
+=n(\hat\theta-\theta)'
+\widehat V_\theta^{-1}
+(\hat\theta-\theta).
+\tag{7.37}
+$$
+:::
+
+标准化后的渐近正态二次型服从 $\chi_q^2$。当 $q=1$，$W=T^2$。矩阵逆要求 $V_\theta>0$；若限制冗余或参数组合没有随机变异，需先降到有效秩。
+
+Wald 度量估计值到候选参数的 Mahalanobis 距离，而非普通欧氏距离：不确定性大的方向惩罚小，精确方向惩罚大。它是第 9 章联合假设检验与第 8 章约束估计的核心。
+
+## 同方差 Wald 统计量（Homoskedastic Wald Statistic）
+
+用 $\widehat V_{\hat\theta}^0$ 替代稳健协方差得到
+
+::: {#hansen-eq-7-38}
+$$
+W^0(\theta)
+=(\hat\theta-\theta)'
+(\widehat V_{\hat\theta}^0)^{-1}
+(\hat\theta-\theta).
+\tag{7.38}
+$$
+:::
+
+只有同方差成立时它才渐近 $\chi_q^2$。点估计未变不代表检验稳健；错误的中间层会把距离尺度量错。应用中若没有可信同方差理由，应使用异方差稳健 Wald。
+
+## 置信域（Confidence Regions）
+
+多维置信域由检验反演得到：
+
+$$
+\widehat C=\{\theta:W(\theta)\le\chi^2_{q,1-\alpha}\}.
+$$
+
+在线性参数与固定协方差下，它是以 $\hat\theta$ 为中心的椭球；轴方向由协方差特征向量决定，轴长由特征值决定。两个各自 95% 的边际区间笛卡尔积不等同于 95% 联合置信域，因为同时覆盖概率和相关性均不同。
+
+绘制二维椭圆能显示系数相关方向。若只看边际标准误，会漏掉“某个线性组合很精确、另一个很不精确”的几何信息。
+
+## Edgeworth 展开（Edgeworth Expansion）*
+
+正态近似只保留首阶。Edgeworth 展开再加入 $n^{-1/2}p_1(x)\phi(x)$ 与 $n^{-1}p_2(x)\phi(x)$ 修正，系数由偏度、峰度等高阶矩决定。原书定理要求高达 16 阶矩和多阶光滑性，说明高阶精度并非免费。
+
+一侧区间的覆盖误差通常为 $O(n^{-1/2})$；对称双侧区间中首个偶多项式修正在两尾抵消，覆盖误差可降至 $O(n^{-1})$。这解释双侧 studentized 区间有时比单侧近似更准，但不是重尾或弱识别下的万能保证。
+
+## 一致收敛的残差（Uniformly Consistent Residuals）*
+
+由
+
+::: {#hansen-eq-7-39}
+$$
+\hat e_i-e_i=-X_i'(\hat\beta-\beta)
+\tag{7.39}
+$$
+:::
+
+及 Cauchy–Schwarz，$|\hat e_i-e_i|\le\|X_i\|\|\hat\beta-\beta\|$。对固定 $i$ 容易趋零；要同时控制所有观测，需控制 $\max_i\|X_i\|$。若 $\mathbb E\|X\|^r<\infty$，第 6 章一致随机界与根号 $n$ 系数率给
+
+::: {#hansen-eq-7-41}
+$$
+\max_{1\le i\le n}|\hat e_i-e_i|
+=o_p(n^{-1/2+1/r}).
+\tag{7.41}
+$$
+:::
+
+四阶矩时至少为 $o_p(n^{-1/4})$。这一统一界可更简洁地证明 $\hat\Omega$ 中用残差替代误差不会改变概率极限。
+
+## 渐近杠杆（Asymptotic Leverage）*
+
+$h_{ii}=X_i'(X'X)^{-1}X_i$。用二次型特征值界：
+
+::: {#hansen-eq-7-42}
+$$
+h_{ii}
+\le
+\left\{\lambda_{\min}\!\left(\frac1nX'X\right)\right\}^{-1}
+\frac1n\|X_i\|^2.
+\tag{7.42}
+$$
+:::
+
+最小特征值趋于 $\lambda_{\min}(Q_{XX})>0$；若 $r$ 阶矩存在，最大 $\|X_i\|^2=o_p(n^{2/r})$，故 $\max_i h_{ii}=o_p(n^{2/r-1})$。$r=4$ 时为 $o_p(n^{-1/2})$。
+
+结论依赖 i.i.d.、固定 $k$、有限矩与总体设计正定。实际大样本仍出现高杠杆，可能提示厚尾、稀疏单元、近共线或维数随样本增长；这不是“样本够大所以可忽略”的理由，而是检查渐近条件是否适合当前设计的信号。
+
+## 习题阅读指南（Exercises）
+
+7.1–7.7训练遗漏变量概率极限、ridge 和测量误差；7.8–7.11推导方差矩与残差 plug-in 的渐近分布；7.12–7.18集中于非线性参数、标准误、置信区间及回归函数；7.19–7.27处理分样本、加权估计、生成回归量和截尾样本；7.28要求完整 CPS 实证与预测区间。
+
+每道渐近题建议写成五行骨架：精确代数分解；样本矩概率极限；中心化和 $\sqrt n$ 缩放；CLT 的得分向量及其方差；Slutsky/Delta 合并。实证题必须说明 HC 版本，非线性函数要报告梯度和协方差交叉项。
+
+::: {.book-map}
+**章末自检**
+
+1. 为什么投影条件 $\mathbb E(Xe)=0$ 足以证明 OLS 一致，却未必赋予因果解释？
+2. 能否从 [式 (7.5)](#hansen-eq-7-5) 分别指出 WLLN、CLT 与 Slutsky 作用在哪一项？
+3. $V_{\hat\beta}$ 与 $V_\beta$ 相差什么尺度？哪个用于实际标准误？
+4. 证明 $\hat\Omega\to_p\Omega$ 时，四阶矩具体控制了哪些样本平均？
+5. 为什么 HC0–HC3 在固定维渐近下等价，却在高杠杆有限样本中不同？
+6. 非线性参数标准误为何必须含协方差项？
+7. 回归均值区间与个体预测区间分别包含哪类不确定性？
+8. 高杠杆未随大样本消失时，可能是哪条渐近条件失效？
+:::

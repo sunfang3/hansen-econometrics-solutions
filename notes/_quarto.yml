@@ -19,6 +19,8 @@ book:
     - part: "第二部分　大样本方法"
       chapters:
         - ch06.qmd
+        - ch07.qmd
+        - ch08.qmd
   appendices:
     - appendix-a.qmd
     - appendix-b.qmd
