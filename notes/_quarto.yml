@@ -15,6 +15,10 @@ book:
         - ch02.qmd
         - ch03.qmd
         - ch04.qmd
+        - ch05.qmd
+    - part: "第二部分　大样本方法"
+      chapters:
+        - ch06.qmd
   appendices:
     - appendix-a.qmd
     - appendix-b.qmd

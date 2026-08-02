@@ -1,0 +1,339 @@
+---
+title: "正态回归"
+subtitle: "精确分布、似然、t/F 推断与信息下界"
+hansen-chapter: "Chapter 5"
+book-pages: "137–153"
+pdf-pages: "157–173"
+status: "完整初稿"
+---
+
+::: {.book-map}
+**原书位置与本章路线**　对应 Hansen Chapter 5（书内 pp. 137–153；PDF pp. 157–173）。本章在第 4 章同方差线性回归上加入条件正态性：先回顾单变量与多元正态，再从条件密度推导似然和 MLE；随后利用正态线性变换、正交投影与卡方分布，得到 OLS、残差、方差估计量、$t$ 与 $F$ 的精确有限样本分布。
+:::
+
+::: {.bridge}
+**本科桥接**　本科常直接使用 $t_{n-k}$ 和 $F_{q,n-k}$ 临界值。本章说明这些分布为何出现，以及“精确”依赖哪些条件。正态性不是 OLS 无偏所必需，却让零协方差升级为独立性，并让标准化正态量除以独立卡方量成为 Student $t$。稳健标准误对应的 $t$ 比在有限样本下通常不再精确服从 $t_{n-k}$。
+:::
+
+## 导言（Introduction）
+
+正态回归是完全参数模型：它不仅指定 $\mathbb E(Y\mid X)$ 与 $\operatorname{var}(Y\mid X)$，还指定整个条件分布。因此可以写出似然，并在任意给定样本量下推导精确分布。它也是后面大样本近似与 bootstrap 的基准：若离开正态模型，许多熟悉的临界值只能由渐近理论或重抽样近似。
+
+“正态”要准确定位为给定 $X$ 后误差的分布，而不是要求回归量本身正态。模型允许工资、教育或虚拟变量具有任意边际分布，只要条件误差满足所列限制。
+
+## 正态分布（The Normal Distribution）
+
+标准正态 $Z\sim N(0,1)$ 的密度是 $\phi(z)=(2\pi)^{-1/2}\exp(-z^2/2)$，分布函数记为 $\Phi(z)$。密度关于 0 对称，所有奇数阶矩为 0，偶数阶矩满足 $\mathbb E(Z^{2m})=(2m-1)!!$。若 $X=\mu+\sigma Z$，则 $X\sim N(\mu,\sigma^2)$。
+
+密度、CDF 与分位数函数不可混淆：$\phi(x)$ 是某点附近的密度高度；$\Phi(x)=P(Z\le x)$ 是累计概率；$\Phi^{-1}(p)$ 返回使累计概率等于 $p$ 的分位点。检验与置信区间需要尾概率或分位点，现代计算应调用软件函数而非查表，并检查函数使用左尾还是右尾。
+
+正态分布由均值和方差完全刻画，但这句话只在已经假定正态的分布族内成立。一般分布即使均值、方差与正态相同，偏度、峰度和尾概率仍可完全不同。经验中看到钟形直方图也不能证明条件误差精确正态；本章是在明确模型假设下讨论推论。
+
+## 多元正态分布（Multivariate Normal Distribution）
+
+若 $Z\sim N(0,I_k)$ 且 $X=\mu+BZ$，则 $X\sim N(\mu,\Sigma)$，其中 $\Sigma=BB'$。当 $\Sigma>0$ 时，密度指数项为 Mahalanobis 距离 $(x-\mu)'\Sigma^{-1}(x-\mu)$。仿射变换仍为正态：$a+CX\sim N(a+C\mu,C\Sigma C')$。
+
+多元正态最特殊的性质是：联合正态向量的两个子向量不相关，当且仅当它们独立。一般分布下零协方差只排除线性关系，不能推出独立。另有 $Z'Z\sim\chi_k^2$；标准正态除以独立的 $\sqrt{\chi_k^2/k}$ 得 $t_k$。本章残差平方与 $t$ 比的推导正依赖这两条。
+
+## 联合正态与线性回归（Joint Normality and Linear Regression）
+
+若 $(Y,X)$ 联合正态，先作最佳线性投影 $Y=\alpha+X'\beta+e$。投影性质给 $\mathbb E(e)=0$ 与 $\mathbb E(Xe)=0$；而 $(e,X)$ 是 $(Y,X)$ 的仿射变换，仍联合正态。于是“不相关”升级为 $e$ 与 $X$ 独立，从而
+
+$$
+\mathbb E(e\mid X)=0,
+\qquad
+\mathbb E(e^2\mid X)=\sigma^2.
+$$
+
+因此联合正态蕴含线性、同方差 CEF。反向不成立：正态回归只限制 $Y\mid X$，不要求 $X$ 正态；包含离散虚拟变量的 $X$ 显然不可能联合连续正态，但条件误差仍可建模为正态。
+
+## 正态回归模型（Normal Regression Model）
+
+模型写为
+
+::: {#hansen-eq-5-1}
+$$
+Y=X'\beta+e,
+\qquad e\sim N(0,\sigma^2),quad e\perp X.
+\tag{5.1}
+$$
+:::
+
+给定独立样本，条件密度之积给对数似然
+
+::: {#hansen-eq-5-2}
+$$
+\ell_n(\beta,\sigma^2)
+=-\frac n2\log(2\pi\sigma^2)
+-\frac1{2\sigma^2}\sum_{i=1}^n(Y_i-X_i'\beta)^2.
+\tag{5.2}
+$$
+:::
+
+MLE 定义为
+
+::: {#hansen-eq-5-3}
+$$
+(\hat\beta_{\mathrm{mle}},\hat\sigma^2_{\mathrm{mle}})
+=\arg\max_{\beta\in\mathbb R^k,\,\sigma^2>0}
+\ell_n(\beta,\sigma^2).
+\tag{5.3}
+$$
+:::
+
+对 $\beta$ 的一阶条件与 OLS 正规方程成比例；对 $\sigma^2$ 的一阶条件分别为
+
+::: {#hansen-eq-5-4}
+$$
+0=\frac1{\hat\sigma^2_{\mathrm{mle}}}
+\sum_iX_i(Y_i-X_i'\hat\beta_{\mathrm{mle}}),
+\tag{5.4}
+$$
+:::
+
+::: {#hansen-eq-5-5}
+$$
+0=-\frac n{2\hat\sigma^2_{\mathrm{mle}}}
++\frac1{2\hat\sigma^4_{\mathrm{mle}}}
+\sum_i(Y_i-X_i'\hat\beta_{\mathrm{mle}})^2.
+\tag{5.5}
+$$
+:::
+
+所以 $\hat\beta_{\mathrm{mle}}=\hat\beta_{\mathrm{ols}}$，而 $\hat\sigma^2_{\mathrm{mle}}=n^{-1}\sum_i\hat e_i^2$。注意 MLE 方差分母是 $n$，不是无偏估计的 $n-k$；最大似然追求最大化样本似然，不以有限样本无偏为定义。OLS 系数仅在所指定正态条件密度下同时是 MLE，不能因数值相同就把正态性“反推”为事实。
+
+为何可由一阶条件认定最大值？固定 $\sigma^2$ 时，[式 (5.2)](#hansen-eq-5-2) 是 SSE 的负数乘正常数，满列秩下由第 3 章严格凸性知 OLS 唯一最小化 SSE，故唯一最大化似然。固定 $\beta=\hat\beta$ 后，以 $v=\sigma^2>0$ 写 profile log-likelihood，其导数在 $v=\mathrm{SSE}/n$ 前为正、后为负，因而该驻点为全局最大值。取对数不改变 argmax，因为 $\log$ 严格递增，却把密度乘积变为求和，计算更稳定。
+
+把估计量代回还得到最大化对数似然 $-\tfrac n2\log(2\pi\hat\sigma^2)-\tfrac n2$。它可用于同一数据、同一条件密度口径下比较拟合；不同样本或不同因变量尺度下的数值不能直接横比。
+
+## OLS 系数向量的分布（Distribution of OLS Coefficient Vector）
+
+给定 $X$，误差向量 $e\sim N(0,I_n\sigma^2)$。由
+$\hat\beta-\beta=(X'X)^{-1}X'e$ 是正态向量的线性变换，得到
+
+$$
+\hat\beta\mid X
+\sim N\!\left(\beta,\sigma^2(X'X)^{-1}\right).
+$$
+
+第 $j$ 个分量因此满足
+
+::: {#hansen-eq-5-7}
+$$
+\hat\beta_j\mid X
+\sim N\!\left(\beta_j,
+\sigma^2[(X'X)^{-1}]_{jj}\right).
+\tag{5.7}
+$$
+:::
+
+这是给定设计的精确有限样本结论，不需要 $n$ 很大。无条件分布则把不同随机设计下的条件正态混合起来，一般不再是简单正态；不要把 [式 (5.7)](#hansen-eq-5-7) 的条件分布误说成联合正态设计下无条件分布必有同一形式。
+
+逐步核对协方差：令 $A=(X'X)^{-1}X'$，则 $A(I_n\sigma^2)A'=\sigma^2(X'X)^{-1}X'X(X'X)^{-1}$，中间 $X'X$ 与一侧逆相消。均值为 $A\mathbb E(e\mid X)=0$。正态性只用于确定整个分布形状；第 4 章在不正态时已经得到相同的条件均值与协方差。
+
+## OLS 残差向量的分布（Distribution of OLS Residual Vector）
+
+$\hat e=Me$，所以 $\hat e\mid X\sim N(0,\sigma^2M)$。把系数误差与残差堆叠，其交叉协方差为
+
+$$
+\sigma^2(X'X)^{-1}X'M=0.
+$$
+
+二者联合正态且不相关，故 $\hat\beta$ 与 $\hat e$ 条件独立。这一步比第 4 章的残差正交更强：$X'\hat e=0$ 是样本代数；这里的独立性是正态概率模型的分布结论。它还推出 $\hat\beta$ 与任何残差函数，包括 $s^2$ 和各 HC 协方差估计量，条件独立。
+
+虽然 $\hat e$ 是 $n$ 维向量，其协方差 $\sigma^2M$ 只有秩 $n-k$，因此是奇异正态：残差被 $k$ 条正规方程限制在 $X$ 列空间的正交补中。每个残差可随机变化，但整组残差不可能在 $\mathbb R^n$ 中任意移动。
+
+## 方差估计量的分布（Distribution of Variance Estimator）
+
+由 $(n-k)s^2=e'Me$。$M$ 对称幂等、秩为 $n-k$，可正交对角化为 $H\operatorname{diag}(I_{n-k},0_k)H'$。令 $u=H'e/\sigma\sim N(0,I_n)$，则二次型只留下前 $n-k$ 个独立标准正态平方：
+
+$$
+\frac{(n-k)s^2}{\sigma^2}
+=\sum_{j=1}^{n-k}u_j^2
+\sim\chi^2_{n-k}.
+$$
+
+该量与 $\hat\beta$ 独立。自由度 $n-k$ 在此有几何和分布双重含义：残差空间维数为 $n-k$，卡方正好累加该空间中 $n-k$ 个正态坐标的平方。
+
+证明中的正交矩阵 $H$ 只是旋转坐标，不改变球形正态 $N(0,I_n\sigma^2)$ 的分布。幂等矩阵特征值只能为 0 或 1；其迹与秩均为 $n-k$，所以恰有 $n-k$ 个坐标被保留。若误差不是球形正态，旋转后的坐标未必独立同方差，精确卡方结论即会失效。
+
+## t 统计量（t-statistic）
+
+若 $\sigma^2$ 已知，[式 (5.7)](#hansen-eq-5-7) 标准化后为 $N(0,1)$。实际用独立的 $s^2$ 替换 $\sigma^2$，得到
+
+$$
+T(\beta_j)
+=\frac{\hat\beta_j-\beta_j}
+{s\sqrt{[(X'X)^{-1}]_{jj}}}
+=\frac{\hat\beta_j-\beta_j}{s(\hat\beta_j)}
+\sim t_{n-k}.
+$$
+
+分子标准正态、分母为独立的 $\sqrt{\chi^2_{n-k}/(n-k)}$，这就是 studentization。其分布不含未知 $\beta_j$ 或 $\sigma^2$，因而是枢轴量。该精确 $t$ 结论只适用于正态、同方差模型下的经典标准误；HC2/HC3 $t$ 比即使误差真为正态，有限样本也一般不精确服从 $t_{n-k}$。
+
+## 回归系数的置信区间（Confidence Intervals for Regression Coefficients）
+
+以 $c=t_{n-k,1-\alpha/2}$ 为临界值，区间为
+
+::: {#hansen-eq-5-8}
+$$
+\widehat C
+=\left[\hat\beta-cs(\hat\beta),
+\hat\beta+cs(\hat\beta)\right].
+\tag{5.8}
+$$
+:::
+
+覆盖事件等价于
+
+::: {#hansen-eq-5-9}
+$$
+P(\beta\in\widehat C)
+=P\{|T(\beta)|\le c\}.
+\tag{5.9}
+$$
+:::
+
+因此精确覆盖率是 $1-\alpha$。频率学派解释是：$\beta$ 固定，区间随样本变化；若无限次重复同一建区间程序，比例 $1-\alpha$ 的区间覆盖真值。对已经算出的某个区间，不能在频率学派语义下说“真值有 95% 概率在里面”。
+
+区间也可理解为所有未被相应双侧 $t$ 检验拒绝的参数值集合。这个“检验反演”视角说明置信区间与显著性判断必须一致：若 95% 区间不含 0，则同一标准误与假设下的双侧 5% 检验拒绝 $\beta=0$；若两者不一致，通常是临界值、单双侧或协方差口径混用了。
+
+当 $n-k\ge61$ 时，95% 临界值不超过 2，原书给常用近似
+
+::: {#hansen-eq-5-10}
+$$
+\widehat C
+=\left[\hat\beta-2s(\hat\beta),
+\hat\beta+2s(\hat\beta)\right].
+\tag{5.10}
+$$
+:::
+
+区间宽度直接表达估计精度；若它覆盖从经济上很负到很正的一整段值，不能只凭点估计符号下结论。
+
+## 误差方差的置信区间（Confidence Intervals for Error Variance）
+
+枢轴量为
+
+::: {#hansen-eq-5-11}
+$$
+\frac{(n-k)s^2}{\sigma^2}\sim\chi^2_{n-k}.
+\tag{5.11}
+$$
+:::
+
+令 $c_1$、$c_2$ 分别是卡方分布的 $\alpha/2$ 与 $1-\alpha/2$ 分位点。对不等式求 $\sigma^2$ 时要注意倒数会反转端点，得到
+
+::: {#hansen-eq-5-12}
+$$
+\widehat C_{\sigma^2}
+=\left[
+\frac{(n-k)s^2}{c_2},
+\frac{(n-k)s^2}{c_1}
+\right].
+\tag{5.12}
+$$
+:::
+
+卡方分布右偏，所以区间不以 $s^2$ 对称。若目标是 $\sigma$，可对两个正端点取平方根；单调变换保持覆盖事件等价。
+
+## t 检验（t Test）
+
+双侧原假设为
+
+::: {#hansen-eq-5-13}
+$$
+H_0:\beta=\beta_0,
+\qquad H_1:\beta\ne\beta_0.
+\tag{5.13}
+$$
+:::
+
+统计量为
+
+::: {#hansen-eq-5-14}
+$$
+|T|=\left|\frac{\hat\beta-\beta_0}{s(\hat\beta)}\right|.
+\tag{5.14}
+$$
+:::
+
+在 $H_0$ 与正态回归条件下，$T\sim t_{n-k}$；若 $|T|$ 超过 $1-\alpha/2$ 分位点就拒绝。双侧 $p$ 值是 $2\{1-F_{n-k}(|T|)\}$，表示在原假设下观察到至少如此极端统计量的概率，不是“$H_0$ 为真的概率”。不拒绝只说明证据不足，不等于证明系数恰为零；显著也不等于经济量级重要或因果识别成立。
+
+## 似然比检验（Likelihood Ratio Test）
+
+把 $X=(X_1',X_2')'$、$\beta=(\beta_1',\beta_2')'$，检验 $q$ 个限制 $H_0:\beta_2=0$。非约束模型是
+
+::: {#hansen-eq-5-15}
+$$
+Y=X_1'\beta_1+X_2'\beta_2+e,
+\tag{5.15}
+$$
+:::
+
+原假设下仅回归 $Y$ 对 $X_1$。令非约束与约束 MLE 残差方差分别为 $\hat\sigma^2$、$\tilde\sigma^2$，似然比统计量为
+
+::: {#hansen-eq-5-18}
+$$
+LR
+=2(\ell_{\mathrm{unrestricted}}-\ell_{\mathrm{restricted}})
+=n\log\left(\frac{\tilde\sigma^2}{\hat\sigma^2}\right).
+\tag{5.18}
+$$
+:::
+
+因约束模型残差平方不小于非约束模型，$LR\ge0$；限制与数据冲突越强，两者差越大。单调等价的有限样本 $F$ 统计量是
+
+::: {#hansen-eq-5-19}
+$$
+F
+=\frac{(\tilde\sigma^2-\hat\sigma^2)/q}
+{\hat\sigma^2/(n-k)}
+\sim F_{q,n-k}quad(H_0).
+\tag{5.19}
+$$
+:::
+
+分子度量施加 $q$ 个限制后增加的拟合损失，分母用非约束模型估计噪声尺度。在正态模型下，相应两个正交二次型独立且分别为卡方，从而得到精确 $F$ 分布。这里的经典 $F$ 仍依赖同方差正态性；稳健联合检验要用后续 Wald 理论。
+
+嵌套关系至关重要：约束模型必须能由非约束模型施加 $q$ 个独立限制得到，且两者使用相同观测与同一因变量。若缺失值使样本不同，残差平方差不再只反映限制；若限制线性相关，分子自由度也不是表面写出的限制条数。$q=1$ 时，使用同一经典标准误可验证 $F=T^2$。
+
+## 正态回归的信息下界（Information Bound for Normal Regression）
+
+对 $(\beta',\sigma^2)'$ 的条件 Fisher 信息矩阵为
+
+::: {#hansen-eq-5-20}
+$$
+\mathcal I
+=\begin{pmatrix}
+\sigma^{-2}X'X & 0\\
+0 & n/(2\sigma^4)
+\end{pmatrix}.
+\tag{5.20}
+$$
+:::
+
+非对角块为零说明两个得分正交。其逆给 Cramér–Rao 下界：$\beta$ 部分是 $\sigma^2(X'X)^{-1}$，OLS 恰达到，因此在正态模型的无偏估计量中有效。$s^2$ 的方差为 $2\sigma^4/(n-k)$，大于 $2\sigma^4/n$，未达到方差参数的下界。
+
+信息矩阵可从得分方差计算：$\beta$ 得分为 $\sigma^{-2}X'e$，方差给 $\sigma^{-2}X'X$；方差参数得分由 $e_i^2-\sigma^2$ 的和组成，正态四阶矩给 $\operatorname{var}(e_i^2)=2\sigma^4$。交叉块涉及三阶矩 $\mathbb E(e_i^3)=0$，所以为零。
+
+比较定理范围：经典 Gauss–Markov 允许非正态但只比较线性无偏估计量；Cramér–Rao 比较更广估计量却要求完整正态参数模型；现代 Gauss–Markov 又在更宽模型类中给出无偏下界。效率结论必须连同模型类与比较类一起陈述。
+
+## 习题阅读指南（Exercises）
+
+5.1–5.3练习卡方矩、正交变换和白化；5.4检验似然与对数似然 argmax 等价；5.5–5.7从投影矩阵推导拟合值、留一残差与 HC 矩阵的独立性；5.8–5.10训练对称分布、单调变换区间以及 LR 与 $F$ 的单调关系；5.11–5.12重做信息矩阵与方差下界。
+
+做分布推导时应依次写：条件于 $X$、把统计量写成 $e$ 的线性或二次型、找出投影矩阵的秩、核对独立性、最后匹配正态/卡方/$t$/$F$ 定义。省掉“条件于 $X$”或“二次型正交”都会掩盖精确分布成立的关键。
+
+::: {.book-map}
+**章末自检**
+
+1. 为什么正态回归不要求 $X$ 正态？联合正态为何是更强条件？
+2. 能否从 [式 (5.2)](#hansen-eq-5-2) 的两组一阶条件推出 OLS 与 MLE 的数值关系？
+3. $\hat\beta$ 与 $\hat e$ 独立的证明在哪一步使用了正态性？
+4. 为什么 $(n-k)s^2/\sigma^2$ 的自由度是 $n-k$？
+5. 精确 $t_{n-k}$ 结论为什么不能直接套给 HC3 标准误？
+6. 如何从卡方枢轴量正确反解 [式 (5.12)](#hansen-eq-5-12) 的上下端点？
+7. $p$ 值不是哪一种概率？“不拒绝”与“接受为真”有何差别？
+8. Gauss–Markov、Cramér–Rao 与现代 Gauss–Markov 的模型类和比较类分别是什么？
+:::
