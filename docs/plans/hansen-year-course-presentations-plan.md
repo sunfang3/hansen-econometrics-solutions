@@ -4,6 +4,8 @@
 **Date:** 2026-08-02  
 **Requirements:** `docs/plans/hansen-year-course-presentations-requirements.md`
 
+**验证基线：** Quarto 1.10.18，Pandoc 3.10.0，Dart Sass 1.101.0。课程默认不执行 R 代码，因此本机缺少 `rmarkdown` 和部分扩展 R 包不阻塞 HTML 渲染；需要复现实证时按补充讲义另行安装。
+
 ## 1. 高层架构
 
 `presentation/` 是与现有习题解答平行的独立 Quarto `default` project。项目根目录只负责渲染目标、输出目录、书目信息和通用语言；`sessions/_metadata.yml` 统一提供 RevealJS 课堂演示配置，`supplements/_metadata.yml` 统一提供可滚动 HTML 文档配置。这样既能让 40 次课堂讲义具有一致的讲者视图、页码和主题，也能让矩阵、概率、渐近工具等长篇补充材料保持适合课后阅读的文档形态。
@@ -23,6 +25,16 @@ Appendix A/B + Ch.6 ──> 6 份中文补充讲义 ──> 可滚动 HTML
 ```
 
 渲染不得强制读取被 `.gitignore` 忽略的 `hansen/`。工作坊中的 R 代码默认展示但不执行；需要数据时给出相对仓库根目录的路径和明确的执行说明。共享 SCSS 只负责中文字体、字号、公式、表格、步骤框和溢出预防，不给各课次复制独立样式。
+
+每份 session 使用统一 front matter：`session-number`、`session-type`、`semester`、`duration`、`chapters`、`book-pages`、`pdf-pages`。课堂主体控制在 18–24 张内容页，另设 3–6 张“备查与延伸”页；标题页和纯分节页不计入内容页。合并多个短章的课次不追求逐节罗列，而按“共同估计目标—识别—样本准则—推断—误用”建立主线，再把次要模型和带星证明放在同一 QMD 的备查区。
+
+习题解答同时给出仓库内源文件路径和 GitHub 阅读链接。前者供 clone 后定位，后者保证渲染后的 HTML 不因输出目录改变而产生失效相对链接。外部链接不可用时，学生仍能按源文件路径访问本地材料。
+
+### 课堂内容契约
+
+主课依次使用“本次课的任务—先修检查—本科语言到 Hansen 语言—路线图—逐步推导—条件与维数核对—例子/应用—常见错误—课堂检查及解答—本课小结—阅读与练习—备查与延伸”。工作坊依次使用“研究问题—数据与样本—变量变换—模型和识别—标准误/聚类/临界值—代码—数值结果—诊断与敏感性—结果解释—练习与复现”。不要求每个名称都单独占一页，但不得省略其教学功能。
+
+所有检查题必须提供可见反馈：至少一个问题页和紧随其后的解答/诊断页。所有数据缺失或代码未执行状态必须显式显示“本页使用预计算结果/代码默认不执行”，并告诉学生如何复现；不允许空图、空表或无解释的代码报错充当教学内容。
 
 ## 2. 40 次课程文件与覆盖映射
 
@@ -97,7 +109,7 @@ Appendix A/B + Ch.6 ──> 6 份中文补充讲义 ──> 可滚动 HTML
 - `presentation/styles/course.scss` — 中文字体、公式、表格、步骤框与溢出规则。
 - `presentation/references.bib` — Hansen 书稿和课程核心文献条目。
 
-**Approach:** 使用 `default` project；显式列出 `index.qmd`、`syllabus.qmd`、`sessions/*.qmd` 和 `supplements/*.qmd`。RevealJS 全局不启用 incremental，逐步推导局部启用；MathJax 负责公式；课件输出到 `_output/`。
+**Approach:** 使用 `default` project；显式列出 `index.qmd`、`syllabus.qmd`、`sessions/*.qmd` 和 `supplements/*.qmd`。RevealJS 全局不启用 incremental，逐步推导局部启用；MathJax 负责公式；课件输出到 `_output/`。主题正文不小于 28px、标题不小于 36px，颜色不作为唯一信息通道，链接保留下划线/焦点样式，支持 `prefers-reduced-motion`，图片必须有替代文本。
 
 **Patterns:** 继承现有 QMD 的 `lang: zh-CN` 与 MathJax 选择；遵循 Quarto directory metadata，避免逐文件复制 YAML。
 
@@ -107,10 +119,11 @@ Appendix A/B + Ch.6 ──> 6 份中文补充讲义 ──> 可滚动 HTML
 - [ ] Nil/empty input: 无本地教材数据、无 R 包时仍能完成默认非执行式渲染。
 - [ ] Error path: 配置中引用不存在的主题或书目时构建明确失败。
 - [ ] Edge case: 中文、长矩阵公式、脚注与讲者备注同时出现时不丢失内容。
+- [ ] Accessibility: 键盘导航、焦点可见、非颜色编码、替代文本和减少动画偏好均有明确样式或检查。
 
 **Verification:** `quarto render presentation` 能生成预期目录，课件按 `S` 打开中文备注，补充讲义可滚动阅读。
 
-**Planning-time unknowns:** Quarto CLI 的本机版本为 **Deferred to Planning**；按当前官方语法实现，并在 Unit 10 安装便携版后确认。
+**Planning-time unknowns:** 无。用户已安装 Quarto 1.10.18，`quarto check` 的基础 Markdown 渲染通过。
 
 ### Unit 2: 课程主页、教学大纲与六份辅助讲义
 
@@ -131,7 +144,7 @@ Appendix A/B + Ch.6 ──> 6 份中文补充讲义 ──> 可滚动 HTML
 - `presentation/supplements/05-r-data-reproducibility.qmd` — R、数据路径、执行与复现规范。
 - `presentation/supplements/06-reading-exercise-guide.qmd` — 分层阅读、带星内容、现有习题解答导航。
 
-**Approach:** 六份材料均为完整中文 Quarto 文档，使用定义—直觉—公式—维数/前提—例子—自检结构；syllabus 用表格将 31 个书稿单元（29 章 + A/B）逐项映射到课次。
+**Approach:** 六份材料均为完整中文 Quarto 文档，使用定义—直觉—公式—维数/前提—例子—自检结构；syllabus 用表格将 31 个书稿单元（29 章 + A/B）逐项映射到课次，并在五个课程模块结束处列出可观察的掌握门槛，而不是只列“讲过哪些章节”。
 
 **Patterns:** 复用 AGENTS.md 的“题意翻译—已知与目标—路线图—逐步推导—结论回扣”；不复制教材长段文字。
 
@@ -163,7 +176,7 @@ Appendix A/B + Ch.6 ──> 6 份中文补充讲义 ──> 可滚动 HTML
 - `presentation/sessions/05-cef-and-projection.qmd` — Ch.2 主线。
 - `presentation/sessions/06-least-squares-algebra.qmd` — Ch.3 主线。
 
-**Approach:** 每次约 24–32 页；按 10 分钟诊断、15 分钟本科桥接、45 分钟逐步推导、15 分钟例题/检查、5 分钟总结安排。每页只推进一个非显然台阶，教师备注说明板书补充、追问与常见卡点。
+**Approach:** 每次 18–24 张课堂内容页，另有 3–6 张备查与延伸页；按 10 分钟诊断、15 分钟本科桥接、45 分钟逐步推导、15 分钟例题/检查、5 分钟总结安排。每页只推进一个非显然台阶，教师备注说明板书补充、追问与常见卡点。课堂检查采用“问题页 → 留白思考/局部揭示 → 解答页”的反馈闭环；答错时，解答页明确链接应回看的定义或推导页。
 
 **Patterns:** 与 `docs/ch02/`、`docs/ch03/` 的记号一致；所有矩阵首次出现点明维数。
 
@@ -327,7 +340,7 @@ Appendix A/B + Ch.6 ──> 6 份中文补充讲义 ──> 可滚动 HTML
 - `presentation/sessions/39-model-selection-machine-learning.qmd` — Ch.28–29。
 - `presentation/sessions/40-workshop-integration.qmd` — 工作坊 8 与全年整合。
 
-**Approach:** 对合并短章采用“统一估计目标—识别假设—样本准则—推断—常见错误”框架；Ch.28–29 强调预测风险和因果参数的区别；最终工作坊要求学生从研究问题到识别、估计、标准误和稳健性完成闭环。
+**Approach:** 对合并短章采用“统一估计目标—识别假设—样本准则—推断—常见错误”框架；课堂主线只保留能形成迁移能力的共同结构，模型变体、带星证明和第二个经验例子进入同一 QMD 的备查区。Ch.28–29 强调预测风险和因果参数的区别；最终工作坊要求学生从研究问题到识别、估计、标准误和稳健性完成闭环。
 
 **Patterns:** 使用 Hansen Ch.21–29 的原记号；对现有习题解答只做链接，不把长解答塞进课件。
 
@@ -353,10 +366,11 @@ Appendix A/B + Ch.6 ──> 6 份中文补充讲义 ──> 可滚动 HTML
 **Files:**
 
 - `presentation/scripts/check_course.py` — 检查课次数、文件名、32+8、必备章节、notes、阅读页码、链接和过长页风险。
+- `presentation/scripts/test_check_course.py` — 用临时课程树覆盖检查器的正常、缺失、错误与代码块误判路径。
 - `presentation/scripts/render.sh` — 运行静态检查和 Quarto 项目渲染，错误时非零退出。
 - `presentation/README.md` — 中文构建、预览、讲者视图、PDF 导出和数据说明。
 
-**Approach:** 检查脚本只用 Python 标准库；通过文件命名和显式 YAML `session-type` 判定主课/工作坊；对每份课件检查固定标题、`.notes`、Hansen 页码和相对链接。渲染脚本先检查再渲染。
+**Approach:** 检查脚本只用 Python 标准库；通过文件命名和显式 YAML `session-type` 判定主课/工作坊；检查统一 front matter、固定教学区块、Hansen 页码、源文件路径、外部阅读链接、`TODO/TBD` 占位符和无效本地链接。除标题/纯分节页外，至少 70% 的内容页必须有中文 `.notes`。启发式溢出检查对单页超过 900 个中文字符、10 个列表项或 3 个展示公式给出文件与页标题级警告；图片缺替代文本时报错。检查器用 `unittest` 和临时目录自测，避免检查逻辑本身静默失效。渲染脚本先运行检查器测试、再检查课程、最后渲染；支持 `QUARTO_BIN` 显式指定便携版，若找不到则输出 `QUARTO_NOT_FOUND` 并以非零状态退出，不静默跳过渲染。
 
 **Patterns:** 沿用仓库 Python 脚本的 `Path` 和明确根目录模式；shell 脚本使用 `set -eu`，不假定用户当前目录。
 
@@ -366,10 +380,12 @@ Appendix A/B + Ch.6 ──> 6 份中文补充讲义 ──> 可滚动 HTML
 - [ ] Nil/empty input: `sessions/` 为空或缺课次时列出缺失编号并返回非零。
 - [ ] Error path: 缺 notes、错误内部链接或 8 个工作坊数量不符时给出文件级错误。
 - [ ] Edge case: 代码块内出现 `##` 或链接样式文本时不误判为幻灯片或真实链接。
+- [ ] Accessibility: 图片无 alt、纯颜色说明或正文小字号的可静态识别部分会失败或警告。
+- [ ] Regression: 检查器单元测试覆盖 metadata、课次数量、教学区块、notes、链接、溢出与 alt 检查的成功和失败分支。
 
-**Verification:** 对完整项目运行静态检查为 0；人工制造三类错误分别能被捕获。
+**Verification:** `python3 -m unittest presentation/scripts/test_check_course.py` 与完整项目静态检查均为 0；自动化夹具中的各类错误分别被捕获。
 
-**Planning-time unknowns:** Quarto 不在 PATH 时 render 脚本的行为为 **Deferred to Planning**；应给出明确安装提示，静态检查仍可独立运行。
+**Planning-time unknowns:** 无。Quarto 位于 `/opt/quarto/bin`；脚本仍保留 `QUARTO_NOT_FOUND` 的可观察错误路径。
 
 ### Unit 10: 仓库集成与最终验证
 
@@ -384,7 +400,7 @@ Appendix A/B + Ch.6 ──> 6 份中文补充讲义 ──> 可滚动 HTML
 - `.gitignore` — 忽略 `presentation/_output/`、`presentation/.quarto/` 等构建产物。
 - `README.md` — 增加全年课程入口、40 次结构、渲染命令并纠正过时 Quarto 描述。
 
-**Approach:** 保留现有 README 习题解答信息，只新增课程章节并修正“仅 r-toolset 分支”的陈旧表述。若系统无 Quarto，在临时目录下载官方 CLI 进行渲染，不把二进制提交到仓库。
+**Approach:** 保留现有 README 习题解答信息，只新增课程章节并修正“仅 r-toolset 分支”的陈旧表述。`render.sh` 不负责联网安装依赖；使用已安装的 Quarto 1.10.18 完成本次验收，普通构建脚本不产生隐式网络副作用。
 
 **Patterns:** 工作树中已有内容属于用户；只做局部补丁，不重排无关 README 段落。
 
@@ -395,9 +411,9 @@ Appendix A/B + Ch.6 ──> 6 份中文补充讲义 ──> 可滚动 HTML
 - [ ] Error path: 任一 QMD 解析失败时记录准确文件，修复后重新全量验证。
 - [ ] Edge case: 渲染后 `git status --short` 不出现 `_output/` 或 `.quarto/`。
 
-**Verification:** 静态检查通过；40 次课与 6 份补充材料全部真实渲染；`git diff --check` 通过；工作树只含预期源文件变更。
+**Verification:** 静态检查通过；40 次课与 6 份补充材料全部真实渲染；抽查基础矩阵课、GMM 课、单位根工作坊、机器学习课和一份长篇补充材料的首屏/公式/表格/备注；`git diff --check` 通过；工作树只含预期源文件变更。
 
-**Planning-time unknowns:** 便携 Quarto 下载是否受网络限制为 **Deferred to Planning**；若下载失败，保留静态检查证据并明确未完成的渲染验证，不伪称成功。
+**Planning-time unknowns:** 无。HTML 全量渲染可直接执行；本机未安装 Chrome Headless，因此 PDF 打印和浏览器像素级截图属于非阻塞的环境限制，不能替代 HTML 结构与公式检查。
 
 ## 4. 质量门槛检查
 
@@ -406,5 +422,64 @@ Appendix A/B + Ch.6 ──> 6 份中文补充讲义 ──> 可滚动 HTML
 - [x] 每个单元至少有 4 个测试场景，覆盖正常、空输入、错误与边界情况。
 - [x] 每个单元触及不超过 8 个文件。
 - [x] 每个单元引入的新抽象不超过 2 个；共享元数据与共享检查器均集中定义。
-- [x] 所有规划期未知项均分类为 Deferred to Planning，无 Resolve Before Planning 阻塞项。
+- [x] 原规划期未知项均已由 Quarto 1.10.18 环境核对解决，无 Resolve Before Planning 阻塞项。
 - [x] 实施者无需发明课程行为：课次、类型、章节、文件、固定结构、语言、代码策略和验收方式均已给定。
+
+## 5. 测试覆盖图
+
+```text
+统一 metadata / SCSS
+          │
+          ├─> 40 个 session QMD ─┐
+          └─> 6 个 supplement ──┼─> check_course.py
+                                │      ├─ 数量与 32+8
+课程主页 / syllabus ────────────┘      ├─ 章节覆盖与教学区块
+                                       ├─ notes / 中文 / 页码
+test_check_course.py ─────────────────>├─ 链接 / alt / 占位符
+                                       └─ 溢出启发式
+                                                 │
+                                                 v
+                                          Quarto 全量解析/渲染
+                                                 │
+                    ┌────────────────────────────┼────────────────────┐
+                    v                            v                    v
+              RevealJS 抽查               补充 HTML 抽查       Git 工作树检查
+              公式/表格/备注               导航/长文/代码        无构建产物污染
+```
+
+不把以下项目伪装成自动覆盖：各学校投影设备的颜色差异、所有浏览器版本、以及未安装全部 R 扩展包时对 8 份工作坊逐行执行。它们分别由高对比度/非颜色编码设计、当前 Chromium/Firefox 打印抽查，以及“默认不执行 + 明确复现环境”控制风险；不阻塞 HTML 源讲义交付。
+
+## 6. Phase 5 审查记录
+
+### CEO Review — HOLD SCOPE
+
+- **结论：** 课程解决的是“从本科会做题到研究生能推导、能判断识别和推断”的真实问题；40 次、32+8 和全章分层覆盖相互一致，不需要增减范围。
+- **P1（已解决）：** 原计划 24–32 张主幻灯片会压缩思考时间，现改为 18–24 张课堂内容页 + 3–6 张备查页。
+- **P1（已解决）：** 单纯章节覆盖可能成为代理指标，现要求 syllabus 在五个模块末尾写可观察的掌握门槛。
+- **P1（已解决）：** 合并短章可能走马观花，现以共同估计框架组织主线，变体和带星证明进入同一 QMD 备查区。
+
+### Design Review
+
+| 维度 | 分数 | 依据 |
+|---|---:|---|
+| 清晰度 | 9/10 | 主课与工作坊各有固定内容契约；课程目标与课后阅读分开。 |
+| 层级 | 8/10 | 主线页和备查页分层；一页只推进一个非显然台阶。 |
+| 一致性 | 9/10 | 共享 metadata、SCSS、front matter 和教学区块。 |
+| 反馈 | 8/10 | 检查题后必须紧跟解答/诊断页，并指向应回看的定义或推导。 |
+| 错误恢复 | 8/10 | 缺数据、未执行代码、错误设定和构建失败都有具名状态与下一步。 |
+| 空状态 | 8/10 | 无本地数据仍可渲染，工作坊明确使用模拟或预计算结果。 |
+| 无障碍信号 | 8/10 | 最小字号、焦点样式、非颜色编码、alt 和减少动画均进入实现与检查。 |
+
+没有低于 7 分的维度；设计类 P1 均已在计划中解决。
+
+### Engineering Review
+
+1. **Scope challenge：** 现有 `docs/chXX` 与 R companion 已被复用为阅读和代码来源；不改写生成文件。每单元最多 8 个文件、最多两个共享抽象。Quarto directory metadata、project profile 和 MathJax 使用框架内建能力。
+2. **Architecture：** RevealJS session 与 HTML supplement 由目录级 metadata 隔离；本地数据是可选输入，静态源和渲染没有隐藏依赖；外部阅读链接失效时仍保留仓库内源路径。
+3. **Code quality：** 统一 front matter 和内容契约减少 40 份文件漂移；构建错误命名为 `QUARTO_NOT_FOUND` 等可观察状态；不在脚本中自动联网安装。
+4. **Test review：** 检查器本身增加 `unittest`；静态检查、Quarto 全量解析、代表性页面抽查和 Git 污染检查形成完整覆盖图。
+
+**P0：** 0。
+
+**P1 未解决：** 0。
+**已知非阻塞环境限制：** 当前没有 Chrome Headless，不能完成 PDF 打印与像素级截图；HTML 全量渲染、结构检查和公式解析不受影响。
