@@ -1108,6 +1108,651 @@ MAIN_SESSIONS += [
 ]
 
 
+MAIN_SESSIONS += [
+    {
+        "number": 21, "semester": 2,
+        "title": "工具变量 II",
+        "subtitle": "弱工具、多工具、LATE 与异质处理效应",
+        "chapters": "Ch.12 后半", "book_pages": "332–411", "pdf_pages": "352–431",
+        "position": "从 2SLS 计算推进到弱识别与异质效应下的估计对象",
+        "objectives": ["解释弱工具为何改变有限样本分布", "从潜在结果推导二元工具的 LATE", "区分第一阶段强度、外生性与排除限制"],
+        "prerequisites": [r"会写 $E[Ze]=0$ 与秩条件", "理解 2SLS 投影公式", r"知道潜在结果 $Y(d)$ 与处理状态 $D(z)$"],
+        "bridge": "本科 IV 常把 2SLS 系数统称为因果效应；Hansen 进一步追问工具改变了谁的处理，以及异质效应下这个比率平均了谁。",
+        "bridge_prompt": "工具相关且外生，为什么仍不能自动把 IV 系数解释为总体平均处理效应？",
+        "route": ["识别强度与弱工具", "多工具与过拟合", "潜在处理状态", "LATE 的识别与外推边界"],
+        "concepts": [
+            {"title": "弱识别不是小标准误问题", "body": r"当 $E[ZX']$ 接近降秩，2SLS 是两个接近零的随机量之比，分布可偏斜、厚尾；常规正态近似和 Wald 区间会失真。"},
+            {"title": "多工具的双刃剑", "body": "增加有效工具可提高信息，但大量工具会在第一阶段过拟合内生变量，使 2SLS 向 OLS 偏移。必须报告工具数、第一阶段和弱识别稳健结果。"},
+            {"title": "潜在处理状态", "body": r"二元工具下 $D_i(1),D_i(0)\in\{0,1\}$。单调性 $D_i(1)\ge D_i(0)$ 排除 defier；complier 满足 $D_i(1)>D_i(0)$。"},
+            {"title": "LATE 是局部对象", "body": clean(r"""
+                在独立性、排除限制、单调性和非零第一阶段下，Wald 比率识别
+                $$E[Y_i(1)-Y_i(0)\mid D_i(1)>D_i(0)].$$
+                局部总体由工具和制度共同定义。
+            """)},
+        ],
+        "derivation": {
+            "title": "二元工具的 Wald–LATE",
+            "setup": r"令 $Y_i=Y_i(0)+D_i\{Y_i(1)-Y_i(0)\}$，且 $D_i=D_i(Z_i)$。比较 $Z=1$ 与 $Z=0$ 的均值。",
+            "steps": [
+                r"由工具独立性和排除限制，约化式差为 $$E[(D_i(1)-D_i(0))\{Y_i(1)-Y_i(0)\}].$$",
+                r"第一阶段差为 $E[D_i(1)-D_i(0)]$。单调性下差值只对 complier 等于 1，对 never/always-taker 等于 0。",
+                clean(r"""两者相除得到
+                    $$\frac{E[Y\mid Z=1]-E[Y\mid Z=0]}
+                    {E[D\mid Z=1]-E[D\mid Z=0]}
+                    =E[Y(1)-Y(0)\mid\text{complier}].$$
+                """),
+            ],
+            "reasons": ["潜在结果代入与工具独立", "单调性分类", "条件均值比率"],
+            "conclusion": "IV 在异质效应下识别由工具推动的服从者平均效应，不自动识别 ATE；更换工具可能更换目标总体。",
+        },
+        "conditions": ["工具对潜在结果和潜在处理独立", r"排除限制：$Z$ 只经 $D$ 影响 $Y$", "单调性与非零第一阶段", "弱识别推断不能只依赖常规 Wald"],
+        "example": {"title": "例：资格线作为工具", "body": "奖学金资格提高入学率时，IV 回报针对因资格而改变入学决定的学生。永远入学和永不入学者不进入 LATE；外推到全体需要额外同质性。"},
+        "misconception": "“不同有效工具都估计同一个因果效应。”只有处理效应同质或权重恰好相同时才成立；一般不同工具对应不同 complier 和不同 LATE。",
+        "check": {"question": "若资格鼓励一部分人入学，却使另一部分人因污名退出，哪条 LATE 条件失败？", "answer": r"单调性失败，因为存在 $D(1)<D(0)$ 的 defier。Wald 比率不再是非负权重的 complier 平均效应。", "diagnosis": "若答排除限制，区分工具的直接结果效应与对处理方向相反"},
+        "takeaways": ["弱工具改变近似分布形状", "LATE 的目标总体由工具决定", "相关、外生、排除与单调性缺一不可"],
+        "practice": "Ch.12 弱工具、异质效应与 LATE 题",
+        "extensions": ["Anderson–Rubin/CLR 推断", "LIML 与 many-instrument 修正", "MTE 与外推"],
+        "links": [("Ch.12 习题解答", "docs/ch12/Hansen_Ch12_Exercises_Solutions.md", "https://github.com/sunfang3/hansen-econometrics-solutions/blob/master/docs/ch12/Hansen_Ch12_Exercises_Solutions.md")],
+    },
+    {
+        "number": 22, "semester": 2,
+        "title": "广义矩估计",
+        "subtitle": "矩条件、有效权重、两步 GMM 与 $J$ 检验",
+        "chapters": "Ch.13", "book_pages": "412–440", "pdf_pages": "432–460",
+        "position": "把 IV 正交条件推广成贯穿动态面板和非线性模型的统一框架",
+        "objectives": ["从总体矩构造样本 GMM 准则", "推导 GMM 夹心方差与有效权重", r"正确解释过度识别 $J$ 检验"],
+        "prerequisites": ["会对向量函数求 Jacobian", "理解 LLN、CLT 与 Slutsky", r"知道 IV 矩条件 $E[Z(Y-X'\beta)]=0$"],
+        "bridge": "2SLS 是线性矩条件配特定权重的 GMM。GMM 不要求完整似然，只要求说明哪些总体平均在真值处为零。",
+        "bridge_prompt": "矩条件多于参数时，为什么不能逐条令样本矩精确等于零？",
+        "route": ["总体矩与识别", "加权样本距离", "渐近分布与有效权重", "两步 GMM 和规范检验"],
+        "concepts": [
+            {"title": "矩条件与维数", "body": r"令 $g_i(\theta)\in\mathbb R^\ell$、$\theta\in\mathbb R^q$，真值满足 $E[g_i(\theta_0)]=0$。局部识别要求 $G=E[\partial g_i/\partial\theta']$ 为 $\ell\times q$ 且列满秩。"},
+            {"title": "GMM 准则", "body": clean(r"""
+                $$\hat\theta=\arg\min_\theta
+                \bar g_n(\theta)'W_n\bar g_n(\theta),\qquad W_n>0.$$
+                恰好识别时权重不改点估计；过度识别时权重决定折中。
+            """)},
+            {"title": "有效权重", "body": r"令 $S=\operatorname{avar}(\sqrt n\bar g_n)$。最优权重 $W=S^{-1}$，有效方差为 $(G'S^{-1}G)^{-1}$。实际先初估，再用残差估计 $S$。"},
+            {"title": "过度识别检验", "body": r"$J=n\bar g(\hat\theta)'\hat S^{-1}\bar g(\hat\theta)\to\chi^2_{\ell-q}$。拒绝说明整组矩条件与模型不相容；不指出是哪一条，也不证明工具有效。"},
+        ],
+        "derivation": {
+            "title": r"GMM 的根号 $n$ 极限",
+            "setup": r"从一阶条件 $\hat G'W_n\bar g_n(\hat\theta)=0$ 出发，在 $\theta_0$ 附近线性化。",
+            "steps": [
+                r"$\bar g_n(\hat\theta)=\bar g_n(\theta_0)+G(\hat\theta-\theta_0)+o_p(n^{-1/2})$。",
+                clean(r"""代入一阶条件并解得
+                    $$\sqrt n(\hat\theta-\theta_0)
+                    =-(G'WG)^{-1}G'W\sqrt n\bar g_n(\theta_0)+o_p(1).$$
+                """),
+                clean(r"""由 CLT，$\sqrt n\bar g_n(\theta_0)\to N(0,S)$，故方差为
+                    $$(G'WG)^{-1}G'WSWG(G'WG)^{-1}.$$
+                """),
+            ],
+            "reasons": ["均值定理与一致性", "线性方程求解", "向量 CLT 与 Slutsky"],
+            "conclusion": "GMM 的渐近结构仍是“逆曲率 × 得分”；有效权重化简方差，但错误矩条件不会被权重修复。",
+        },
+        "conditions": [r"$E[g_i(\theta_0)]=0$ 且唯一识别", r"$G$ 列满秩", r"$S$ 正定并可一致估计", "两步权重的估计误差由正交一阶条件吸收"],
+        "example": {"title": "例：异方差 IV", "body": r"在线性 IV 中 $g_i=Z_i(Y_i-X_i'\beta)$。异方差下 $S=E[Z_iZ_i'e_i^2]$；使用 $(E[ZZ'])^{-1}$ 的 2SLS 通常不再有效。"},
+        "misconception": r"“$J$ 检验不拒绝，所以所有工具都外生。”不拒绝可能源于功效低；恰好识别时根本没有 $J$ 检验。",
+        "check": {"question": r"$\ell=6$ 个矩估计 $q=3$ 个参数，$J$ 自由度是多少？若 Jacobian 近乎降秩还可放心用吗？", "answer": r"自由度为 $\ell-q=3$；近乎降秩表示弱识别，标准 $\chi^2$ 近似可能很差。", "diagnosis": r"若答 6，区分矩数和过度识别限制数；若只检查 $S$，补查 $G$ 的秩"},
+        "takeaways": ["GMM 从可辩护的总体矩出发", "有效权重只在矩正确时提高效率", r"$J$ 是联合规范诊断而非工具认证"],
+        "practice": r"Ch.13 GMM 一阶条件、方差、两步估计与 $J$ 检验题",
+        "extensions": ["连续更新 GMM", "弱识别 GMM", r"聚类与 HAC 的 $S$"],
+        "links": [("Ch.13 习题解答", "docs/ch13/Hansen_Ch13_Exercises_Solutions.md", "https://github.com/sunfang3/hansen-econometrics-solutions/blob/master/docs/ch13/Hansen_Ch13_Exercises_Solutions.md")],
+    },
+    {
+        "number": 23, "semester": 2,
+        "title": "时间序列基础",
+        "subtitle": "平稳、遍历、MDS、Wold 分解与预测",
+        "chapters": "Ch.14 前半", "book_pages": "442–474", "pdf_pages": "462–494",
+        "position": "把横截面 i.i.d. 工具改造成适用于同一序列依赖观测的概率语言",
+        "objectives": ["区分平稳、遍历与鞅差", "解释时间序列 LLN/CLT 的角色", "用线性投影构造一步和多步预测"],
+        "prerequisites": ["理解条件期望塔性", "知道协方差与自相关函数", "会解稳定 AR(1)"],
+        "bridge": "本科常说“序列有自相关”；研究生计量要说明依赖结构是否仍允许时间平均稳定，以及预测信息集是什么。",
+        "bridge_prompt": "观测不独立时，为什么样本均值仍可能一致？",
+        "route": ["随机过程与信息集", "平稳和遍历", "MDS 创新", "Wold 表示与最优线性预测"],
+        "concepts": [
+            {"title": "平稳与遍历分工", "body": "严格平稳要求有限维联合分布对时间平移不变；协方差平稳只固定均值与自协方差。遍历性使时间平均学习到总体矩。"},
+            {"title": "鞅差序列", "body": r"相对信息集 $\mathcal F_{t-1}$，若 $E[u_t\mid\mathcal F_{t-1}]=0$，则 $u_t$ 是 MDS。它可条件异方差，但与过去可测变量正交。"},
+            {"title": "自协方差不是因果", "body": r"$\gamma_j=\operatorname{cov}(Y_t,Y_{t-j})$ 描述线性依赖；它不说明哪个冲击具有结构含义。预测关系也不自动是政策因果关系。"},
+            {"title": "Wold 分解", "body": clean(r"""
+                纯非确定协方差平稳过程可写为
+                $$Y_t=\mu+\sum_{j=0}^\infty\psi_j e_{t-j},\qquad\psi_0=1,$$
+                其中 $e_t$ 是线性创新。
+            """)},
+        ],
+        "derivation": {
+            "title": "稳定 AR(1) 的预测",
+            "setup": r"$Y_t=c+\rho Y_{t-1}+u_t$，$|\rho|<1$，且 $E[u_t\mid\mathcal F_{t-1}]=0$。求 $h$ 步预测。",
+            "steps": [
+                r"长期均值 $\mu=c/(1-\rho)$，所以 $Y_t-\mu=\rho(Y_{t-1}-\mu)+u_t$。",
+                r"递推 $h$ 次：$Y_{t+h}-\mu=\rho^h(Y_t-\mu)+\sum_{j=0}^{h-1}\rho^j u_{t+h-j}$。",
+                r"对 $\mathcal F_t$ 取条件期望，未来创新均值为零：$$E_tY_{t+h}=\mu+\rho^h(Y_t-\mu).$$",
+            ],
+            "reasons": ["均值方程", "递归代入", "MDS 条件期望与塔性"],
+            "conclusion": r"稳定性使冲击影响按 $\rho^h$ 衰减，预测回到长期均值；接近单位根时衰减很慢。",
+        },
+        "conditions": [r"$|\rho|<1$ 保证稳定因果表示", "信息集必须明确", "MDS 不等于独立同分布", "LLN/CLT 需弱依赖与矩条件"],
+        "example": {"title": "例：收益率与波动", "body": "资产收益均值可能近似 MDS，但平方收益高度相关。均值不可预测不表示条件方差不变；这正是 ARCH 模型的入口。"},
+        "misconception": "“无自相关就独立。”零线性相关不排除非线性依赖或条件异方差；白噪声、MDS 和 i.i.d. 是强度不同的概念。",
+        "check": {"question": r"$u_t$ 是 MDS，能否推出 $E[u_t^2\mid\mathcal F_{t-1}]$ 为常数？", "answer": "不能。MDS 只限制条件一阶矩为零；条件二阶矩可随过去变化。", "diagnosis": "若答能，混淆条件均值与条件方差；若答独立，条件过强"},
+        "takeaways": ["遍历性连接时间平均与总体矩", "MDS 是动态外生性的核心语言", "预测创新不自动具有结构因果含义"],
+        "practice": "Ch.14 平稳、MDS、Wold 与预测题",
+        "extensions": ["mixing 条件", "ARCH/GARCH", "非线性预测"],
+        "links": [("Ch.14 习题解答", "docs/ch14/Hansen_Ch14_Exercises_Solutions.md", "https://github.com/sunfang3/hansen-econometrics-solutions/blob/master/docs/ch14/Hansen_Ch14_Exercises_Solutions.md")],
+    },
+    {
+        "number": 24, "semester": 2,
+        "title": "时间序列回归与 HAC",
+        "subtitle": "动态回归、长期方差与稳健推断",
+        "chapters": "Ch.14 后半", "book_pages": "475–508", "pdf_pages": "495–528",
+        "position": "在平稳基础上重建动态回归的识别、渐近方差与长期效应",
+        "objectives": ["区分严格外生、前定与同期外生", "推导时间序列 OLS 的长期方差", "说明 HAC 带宽与核权重为何进入推断"],
+        "prerequisites": [r"会写 OLS 根号 $T$ 分解", "理解自协方差函数", "知道 MDS 与平稳遍历"],
+        "bridge": "横截面 HC 只允许逐观测异方差；时间序列得分还跨期相关，因此肉矩阵必须累加滞后协方差。",
+        "bridge_prompt": "误差有自相关一定使 OLS 有偏吗？",
+        "route": ["动态回归的外生性", "得分序列与长期方差", "HAC 构造", "动态乘数和预测诊断"],
+        "concepts": [
+            {"title": "三种动态外生性", "body": "严格外生要求解释变量所有期都与当前误差正交；前定允许未来解释变量受当前冲击影响；同期外生只限制同一期。"},
+            {"title": "长期方差", "body": clean(r"""
+                令 $s_t=X_te_t$，则
+                $$\Omega=\sum_{j=-\infty}^{\infty}E[s_ts_{t-j}'].$$
+                横截面独立时只有 $j=0$；序列相关时滞后项都影响均值波动。
+            """)},
+            {"title": "HAC 估计", "body": r"$\hat\Omega=\hat\Gamma_0+\sum_{j=1}^{L}k(j/L)(\hat\Gamma_j+\hat\Gamma_j')$。$L$ 太小漏相关，太大引入噪声；核对滞后平滑加权。"},
+            {"title": "动态乘数", "body": r"模型 $Y_t=\rho Y_{t-1}+\beta X_t+e_t$ 的当期效应是 $\beta$，在稳定与持续改变 $X$ 的解释下，长期乘数为 $\beta/(1-\rho)$。"},
+        ],
+        "derivation": {
+            "title": "时间序列 OLS 渐近方差",
+            "setup": r"对平稳回归 $Y_t=X_t'\beta+e_t$，从精确误差分解形成 LLN 与时间序列 CLT。",
+            "steps": [
+                r"$$\sqrt T(\hat\beta-\beta)=\left(T^{-1}\sum X_tX_t'\right)^{-1}T^{-1/2}\sum X_te_t.$$",
+                r"遍历 LLN 给第一项逆收敛到 $Q^{-1}$；弱依赖 CLT 给得分和趋于 $N(0,\Omega)$。",
+                r"Slutsky 得 $$\sqrt T(\hat\beta-\beta)\to N(0,Q^{-1}\Omega Q^{-1}),$$ 用 HAC 一致估计 $\Omega$。",
+            ],
+            "reasons": ["OLS 代数重排", "遍历 LLN 与依赖 CLT", "Slutsky"],
+            "conclusion": "HAC 修正得分和的长期波动，不修正遗漏动态、反向因果或单位根导致的错误中心与非标准极限。",
+        },
+        "conditions": ["序列平稳遍历或满足相应三角阵条件", r"$E[X_te_t]=0$", "长期方差有限", r"带宽 $L\to\infty$ 且 $L/T\to0$"],
+        "example": {"title": "例：政策冲击与滞后反应", "body": "季度政策影响可能跨数季传导。应加入滞后并报告累计乘数；HAC 只能让 SE 适应残余相关，不能替代合理动态设定。"},
+        "misconception": "“发现残差自相关后改用 Newey–West，就解决了模型。”HAC 不改变系数；若相关来自遗漏滞后，估计目标和预测也可能错误。",
+        "check": {"question": r"若得分 $s_t$ 与 $s_{t-1}$ 正相关，忽略滞后协方差通常怎样影响样本均值方差？", "answer": r"通常低估，因为长期方差含 $\Gamma_1+\Gamma_1'$ 等正贡献；矩阵情形仍需看具体二次型。", "diagnosis": r"若说 OLS 必然有偏，回到正交条件；若只看 $e_t$，强调得分是 $X_te_t$"},
+        "takeaways": ["依赖数据的肉矩阵是长期方差", "HAC 带宽是实质设定", "动态系数与长期效应要分开"],
+        "practice": "Ch.14 动态回归、长期方差和 HAC 题",
+        "extensions": ["固定带宽渐近", "预白化 HAC", "局部投影"],
+        "links": [("Ch.14 习题解答", "docs/ch14/Hansen_Ch14_Exercises_Solutions.md", "https://github.com/sunfang3/hansen-econometrics-solutions/blob/master/docs/ch14/Hansen_Ch14_Exercises_Solutions.md")],
+    },
+    {
+        "number": 26, "semester": 2,
+        "title": "VAR 与结构 VAR",
+        "subtitle": "伴随矩阵、脉冲响应、Granger 预测与结构识别",
+        "chapters": "Ch.15", "book_pages": "509–546", "pdf_pages": "529–566",
+        "position": "把多元回归系统放入动态环境，明确约化式与结构冲击的边界",
+        "objectives": ["用伴随矩阵判断 VAR 稳定性", "递推计算约化式脉冲响应", "区分 Granger 预测性与结构因果识别"],
+        "prerequisites": ["理解多方程堆叠与协方差矩阵", "会解 AR(p)", "知道正交化需要额外限制"],
+        "bridge": "本科 VAR 软件会直接画 IRF；Hansen 要求先问冲击是约化残差还是有经济含义的结构冲击。从前者到后者必须增加可辩护限制。",
+        "bridge_prompt": "改变 Cholesky 排序为何会改变正交化 IRF？",
+        "route": ["VAR(p) 与伴随形式", "稳定性和 MA 表示", "预测与 IRF", "SVAR 识别限制"],
+        "concepts": [
+            {"title": "VAR 系统", "body": r"$Y_t=A_1Y_{t-1}+\cdots+A_pY_{t-p}+e_t$，$Y_t:m\times1$。每个方程可用同一滞后集合 OLS，但跨方程协方差用于联合推断。"},
+            {"title": "伴随矩阵", "body": r"将 $p$ 个滞后堆成 $mp\times1$ 状态 $S_t=FS_{t-1}+v_t$。稳定要求 $F$ 全部特征根的模小于 1。"},
+            {"title": "Granger 非因果", "body": "若控制系统历史后，X 的滞后不改善 Y 预测，则 X 不 Granger 导致 Y。这是相对给定信息集的预测陈述，不是干预效应。"},
+            {"title": "结构冲击", "body": r"约化残差协方差 $\Sigma_e$ 非对角。设 $e_t=B\varepsilon_t$、$E[\varepsilon_t\varepsilon_t']=I$，仅 $BB'=\Sigma_e$ 不足以唯一确定 $B$。"},
+        ],
+        "derivation": {
+            "title": "VAR(1) 的脉冲响应",
+            "setup": r"$Y_t=AY_{t-1}+e_t$ 且稳定。求约化冲击 $e_t$ 对未来 $Y_{t+h}$ 的响应。",
+            "steps": [
+                r"向前迭代：$Y_{t+h}=A^hY_t+\sum_{j=0}^{h-1}A^je_{t+h-j}$。",
+                r"保持其他未来创新为零，对当期冲击的导数为 $\partial Y_{t+h}/\partial e_t'=A^h$。",
+                r"若 $e_t=B\varepsilon_t$，结构 IRF 为 $A^hB$；不同可行 $B$ 给不同经济响应。",
+            ],
+            "reasons": ["递归代入", "冲击导数", "结构映射链式法则"],
+            "conclusion": r"VAR 动力学由 $A$ 决定，冲击含义由 $B$ 的识别限制决定；数据协方差不能独自提供结构标签。",
+        },
+        "conditions": ["稳定性或明确处理非平稳性", "滞后阶数足够", r"$B$ 需要足够数量的独立限制", "IRF 区间应计入参数估计不确定性"],
+        "example": {"title": "例：货币政策冲击", "body": "把利率排在 Cholesky 最前假定其当期不受其他变量冲击；排在最后则相反。排序是经济假设，不是绘图选项。"},
+        "misconception": "“某变量 Granger 导致产出，所以对它干预会改变产出。”预测先行可能来自共同信息、代理变量或政策反应函数；结构因果需要额外识别。",
+        "check": {"question": r"二维 VAR 的 $\Sigma_e$ 有 3 个不同元素，而 $B$ 有 4 个元素。仅由 $BB'=\Sigma_e$ 还差几个限制？", "answer": "至少差 1 个独立限制。Cholesky 以一个当期零限制补足，但该限制必须有经济解释。", "diagnosis": "若答 4，忽略协方差已提供 3 条；若说排序由拟合优度选，回到结构识别"},
+        "takeaways": ["伴随根控制动态稳定性", "IRF 先区分约化与结构冲击", "Granger 因果是预测概念"],
+        "practice": "Ch.15 VAR、伴随矩阵、IRF 与结构识别题",
+        "extensions": ["符号限制", "外部工具 SVAR", "局部投影与 VAR 比较"],
+        "links": [("Ch.15 习题解答", "docs/ch15/Hansen_Ch15_Exercises_Solutions.md", "https://github.com/sunfang3/hansen-econometrics-solutions/blob/master/docs/ch15/Hansen_Ch15_Exercises_Solutions.md")],
+    },
+    {
+        "number": 27, "semester": 2,
+        "title": "单位根",
+        "subtitle": "随机趋势、FCLT、伪回归与 DF/ADF 非标准极限",
+        "chapters": "Ch.16 前半", "book_pages": "547–571", "pdf_pages": "567–591",
+        "position": "说明平稳渐近理论在随机趋势下何处断裂，并建立非标准推断语言",
+        "objectives": ["区分趋势平稳与差分平稳", "用 FCLT 解释 DF 统计量的非标准极限", "正确表述 ADF 的原假设与不拒绝结论"],
+        "prerequisites": ["会解 AR(1) 并判断稳定性", "理解部分和与普通 CLT", "知道确定性项会改变检验分布"],
+        "bridge": "本科记住“单位根不能查普通 t 表”；本课把原因写完整：回归元是随机游走，样本矩收敛速度和极限对象都变成 Brownian motion 泛函。",
+        "bridge_prompt": "为什么样本很大也不能把 DF t 统计量当标准正态？",
+        "route": ["随机游走与持久冲击", "伪回归", "FCLT 与非标准比率", "DF/ADF 的设定和语言"],
+        "concepts": [
+            {"title": "单位根与随机趋势", "body": r"$Y_t=Y_{t-1}+u_t$ 给 $Y_t=Y_0+\sum_{s=1}^tu_s$，冲击永久累积，方差随 $t$ 增长；一阶差分 $\Delta Y_t=u_t$ 可平稳。"},
+            {"title": "趋势平稳不等于单位根", "body": r"$Y_t=\alpha+\delta t+v_t$、$v_t$ 平稳时，去趋势后平稳；错误差分会改变长期信息。确定性趋势和随机趋势必须区分。"},
+            {"title": "伪回归", "body": r"两个独立随机游走的水平回归可给高 $R^2$ 和显著 t，因为共同持久性破坏平稳回归近似；这不是因果或真实相关。"},
+            {"title": "ADF 回归", "body": clean(r"""
+                $$\Delta Y_t=\alpha+\delta t+\gamma Y_{t-1}
+                +\sum_{j=1}^p\phi_j\Delta Y_{t-j}+e_t.$$
+                检验 $H_0:\gamma=0$；确定性项和滞后选择都会影响参考分布或检验质量。
+            """)},
+        ],
+        "derivation": {
+            "title": "DF 极限为何不是普通 t",
+            "setup": r"在 $H_0$ 下 $Y_t=Y_{t-1}+u_t$。考察无确定性项回归 $\Delta Y_t=\gamma Y_{t-1}+e_t$。",
+            "steps": [
+                r"OLS 为 $\hat\gamma=\sum Y_{t-1}u_t/\sum Y_{t-1}^2$；因 $Y_{t-1}=O_p(\sqrt T)$，尺度不同于平稳回归。",
+                clean(r"""FCLT 给 $T^{-1/2}Y_{\lfloor Tr\rfloor}\Rightarrow\sigma W(r)$，从而
+                    $$T^{-1}\sum Y_{t-1}u_t\Rightarrow\sigma^2\int W\,dW,\quad
+                    T^{-2}\sum Y_{t-1}^2\Rightarrow\sigma^2\int W^2dr.$$
+                """),
+                r"因此 $T\hat\gamma\Rightarrow\int WdW/\int W^2dr$；相应 t 统计量也是 Brownian 泛函而非 $N(0,1)$。",
+            ],
+            "reasons": ["随机游走随机阶", "函数型 CLT 与映射", "非标准随机比率"],
+            "conclusion": "非标准临界值不是小样本修正，而是单位根原假设下真正的渐近分布；确定性项会改变 Brownian 泛函。",
+        },
+        "conditions": ["明确常数/趋势设定", "ADF 滞后使创新近似白噪声", "结构突变会扭曲单位根检验", r"不拒绝 $H_0$ 不是证明单位根"],
+        "example": {"title": "例：价格水平与通胀", "body": "价格水平常表现强持久，差分近似通胀。若关心长期购买力关系，直接差分所有变量可能丢失协整信息。"},
+        "misconception": r"“ADF $p>0.05$，所以序列就是单位根。”只能说数据不足以在该设定下拒绝；低功效、近单位根、趋势和突变都可能导致不拒绝。",
+        "check": {"question": "ADF 回归中加入不必要趋势会有什么后果？", "answer": "通常降低检验功效；若真实有趋势却省略同样会错设。应依据经济机制、图形和嵌套策略说明选择。", "diagnosis": "若说临界值不变，强调无常数、常数、趋势有不同 DF 分布"},
+        "takeaways": ["单位根改变收敛速度与极限对象", "ADF 使用 DF 临界值而非普通 t", "检验结论必须附确定性项和滞后设定"],
+        "practice": "Ch.16 单位根、FCLT、伪回归和 DF/ADF 题",
+        "extensions": ["KPSS 的平稳原假设", "结构突变单位根检验", "local-to-unity 渐近"],
+        "links": [("Ch.16 习题解答", "docs/ch16/Hansen_Ch16_Exercises_Solutions.md", "https://github.com/sunfang3/hansen-econometrics-solutions/blob/master/docs/ch16/Hansen_Ch16_Exercises_Solutions.md")],
+    },
+    {
+        "number": 28, "semester": 2,
+        "title": "协整与误差修正",
+        "subtitle": "长期均衡、ECM 与 Johansen 秩",
+        "chapters": "Ch.16 后半", "book_pages": "572–596", "pdf_pages": "592–616",
+        "position": "说明非平稳序列如何通过稳定线性组合保留长期信息",
+        "objectives": ["定义协整向量和协整秩", "从长期关系推导误差修正表示", "区分 Engle–Granger 与 Johansen 的对象"],
+        "prerequisites": [r"理解 $I(0)$ 与 $I(1)$", "会读 VAR 与矩阵秩", "知道单位根检验的不拒绝语言"],
+        "bridge": "本科常把非平稳变量全部差分；协整说明某些水平组合本身平稳，差分模型需加入偏离长期均衡的修正项。",
+        "bridge_prompt": r"两个变量各自 $I(1)$，为什么其线性组合可能 $I(0)$？",
+        "route": ["协整定义与秩", "两步残差法", "ECM 短期—长期分解", "Johansen 系统秩与谨慎解释"],
+        "concepts": [
+            {"title": "协整向量", "body": r"$Y_t\in I(1)^m$，若存在非零 $\beta$ 使 $\beta'Y_t\in I(0)$，则协整。$\beta$ 的尺度需规范化；它不自动是一条结构需求关系。"},
+            {"title": "协整秩", "body": r"秩 $r$ 是独立平稳组合数：$r=0$ 无协整；$0<r<m$ 有共同随机趋势；$r=m$ 表示向量本身平稳。"},
+            {"title": "误差修正", "body": clean(r"""
+                $$\Delta Y_t=\alpha\beta'Y_{t-1}
+                +\sum_j\Gamma_j\Delta Y_{t-j}+e_t.$$
+                $\beta'Y_{t-1}$ 是长期偏离，$\alpha$ 给各变量调整速度。
+            """)},
+            {"title": "两步法与系统法", "body": "Engle–Granger 先估长期式再检验残差，适合单一关系且用生成残差临界值；Johansen 在 VECM 中联合估计秩和多个向量。"},
+        ],
+        "derivation": {
+            "title": "从 ARDL 到误差修正",
+            "setup": r"$y_t=a+\rho y_{t-1}+b_0x_t+b_1x_{t-1}+u_t$。把水平动态重参数化。",
+            "steps": [
+                r"两边减 $y_{t-1}$，并用 $x_t=x_{t-1}+\Delta x_t$：$\Delta y_t=a+(\rho-1)y_{t-1}+(b_0+b_1)x_{t-1}+b_0\Delta x_t+u_t$。",
+                r"令 $\lambda=1-\rho$、$\theta=(b_0+b_1)/(1-\rho)$、$c=a/(1-\rho)$。",
+                r"整理为 $$\Delta y_t=-\lambda(y_{t-1}-c-\theta x_{t-1})+b_0\Delta x_t+u_t.$$",
+            ],
+            "reasons": ["差分恒等式", "长期参数重参数化", "提取误差修正项"],
+            "conclusion": "ECM 同时保留短期变化与长期偏离；调整系数符号决定系统是否把偏离拉回均衡。",
+        },
+        "conditions": ["变量阶数与确定性项设定明确", "协整秩和滞后阶数需联合诊断", "残差单位根检验用专门临界值", "协整是统计长期关系，不自动是结构因果"],
+        "example": {"title": "例：消费与收入", "body": "二者水平可各自 I(1)，但消费减长期收入比例可能平稳。ECM 中收入变化给短期反应，滞后偏离给长期调整。"},
+        "misconception": "“协整证明两个变量互为因果。”协整只说明共同随机趋势受约束；因果方向和结构解释仍需外生性或制度限制。",
+        "check": {"question": r"三变量系统估计协整秩 $r=2$，有几个共同随机趋势？", "answer": r"$m-r=3-2=1$ 个。存在两条独立平稳长期组合，但向量仍有一个非平稳共同趋势。", "diagnosis": "若答 2，区分协整向量数与共同趋势数；若答平稳，注意 r<m"},
+        "takeaways": ["协整保留非平稳变量的长期组合", "ECM 分开短期变化和长期调整", "秩选择与确定性项必须透明报告"],
+        "practice": "Ch.16 协整、ECM、Engle–Granger 与 Johansen 题",
+        "extensions": ["弱外生与条件 ECM", "结构 VECM", "协整关系的结构突变"],
+        "links": [("Ch.16 习题解答", "docs/ch16/Hansen_Ch16_Exercises_Solutions.md", "https://github.com/sunfang3/hansen-econometrics-solutions/blob/master/docs/ch16/Hansen_Ch16_Exercises_Solutions.md")],
+    },
+    {
+        "number": 30, "semester": 2,
+        "title": "静态面板：FE 与 RE",
+        "subtitle": "误差成分、within 变换与聚类推断",
+        "chapters": "Ch.17 前半", "book_pages": "597–620", "pdf_pages": "617–640",
+        "position": "把本科“去均值”提升为含个体异质性、时间外生性和簇内依赖的完整模型",
+        "objectives": ["从误差成分推导 within 估计量", "区分 FE 与 RE 的识别条件", "按面板抽样结构选择聚类方差"],
+        "prerequisites": ["理解 FWL 和投影矩阵", "知道严格外生与前定变量", "会读双下标面板数据"],
+        "bridge": "本科固定效应常被当作软件选项；Hansen 把它写成消去任意相关个体异质性的线性投影，同时明确代价是不能识别时间不变变量。",
+        "bridge_prompt": "Hausman 检验不拒绝，是否就证明随机效应外生？",
+        "route": ["误差成分与严格外生", "within 变换", "FE/RE 条件比较", "序列相关和个体聚类"],
+        "concepts": [
+            {"title": "静态面板模型", "body": r"$Y_{it}=X_{it}'\beta+\alpha_i+u_{it}$，$i=1,\ldots,N$，$t=1,\ldots,T$。$\alpha_i$ 可与整条 $X_i$ 相关；关键是 $E[u_{it}\mid X_{i1},\ldots,X_{iT},\alpha_i]=0$。"},
+            {"title": "within 算子", "body": r"令 $\bar Y_i=T_i^{-1}\sum_tY_{it}$、$\dot Y_{it}=Y_{it}-\bar Y_i$，同理定义 $\dot X,\dot u$。个体常数满足 $\alpha_i-\alpha_i=0$。"},
+            {"title": "随机效应的额外条件", "body": r"RE 把 $\alpha_i+u_{it}$ 的协方差结构用于 GLS，需 $\alpha_i$ 与所有解释变量正交。若相关，效率优势换成不一致。"},
+            {"title": "面板聚类", "body": "同一个体内的冲击通常跨期相关，应把整个个体作为簇构造 sandwich。若处理在更高层分配，聚类层级还要随分配机制上移。"},
+        ],
+        "derivation": {
+            "title": "within 估计量",
+            "setup": r"从 $Y_{it}=X_{it}'\beta+\alpha_i+u_{it}$ 出发，对每个个体取时间均值并相减。",
+            "steps": [
+                r"时间均值为 $\bar Y_i=\bar X_i'\beta+\alpha_i+\bar u_i$。",
+                r"相减得 $\dot Y_{it}=\dot X_{it}'\beta+\dot u_{it}$，$\alpha_i$ 精确消失；堆叠后 $\dot Y=M_DY$，其中 $D$ 是个体虚拟变量矩阵。",
+                r"若 $\sum_{it}\dot X_{it}\dot X_{it}'$ 可逆，$$\hat\beta_{\mathrm{fe}}=(\dot X'\dot X)^{-1}\dot X'\dot Y.$$",
+            ],
+            "reasons": ["个体内平均", "线性去均值与 FWL", "OLS 一阶条件"],
+            "conclusion": "FE 只使用个体内变化；若某变量个体内不变，它与个体效应完全共线，不能由 FE 单独识别。",
+        },
+        "conditions": ["个体内严格外生用于静态 FE", r"$\dot X$ 满列秩", "横截面个体独立或采用合适更高层聚类", r"固定 $T$ 时小样本自由度修正需透明"],
+        "example": {"title": "例：最低工资与就业", "body": "州固定效应消除不随时间变化的产业结构；年份效应消除全国冲击。但州内随时间变化且同时影响政策和就业的因素仍会混杂。"},
+        "misconception": "“加入个体固定效应就消除了所有遗漏变量。”只消除个体内时间不变部分；时变混杂、反向因果和测量误差仍在。",
+        "check": {"question": r"若 $X_{it}=X_i$ 对每个个体不随时间变化，within 后是什么？能否估计其系数？", "answer": r"$\dot X_{it}=X_i-\bar X_i=0$，与个体固定效应共线，FE 不能识别该系数。需要额外结构、组间信息或相关随机效应设定。", "diagnosis": "若说系数为零，区分无法识别与真实效应为零"},
+        "takeaways": ["FE 是投影，不是因果保险箱", "FE 识别来自个体内变化", "聚类层级必须匹配依赖和处理分配"],
+        "practice": "Ch.17 静态面板、within、FE/RE 与聚类方差题",
+        "extensions": ["非平衡面板", "Mundlak correlated RE", "双向聚类"],
+        "links": [("Ch.17 习题解答", "docs/ch17/Hansen_Ch17_Exercises_Solutions.md", "https://github.com/sunfang3/hansen-econometrics-solutions/blob/master/docs/ch17/Hansen_Ch17_Exercises_Solutions.md")],
+    },
+    {
+        "number": 31, "semester": 2,
+        "title": "动态面板 GMM",
+        "subtitle": "Nickell 偏误、AB/BB 矩条件与工具膨胀",
+        "chapters": "Ch.17 后半", "book_pages": "621–649", "pdf_pages": "641–669",
+        "position": "把 GMM 应用于含滞后因变量的短面板，并把工具矩阵维数放到中心",
+        "objectives": ["解释 within 动态面板的 Nickell 偏误", "逐期写出 Arellano–Bond 工具矩条件", "诊断序列相关和工具膨胀"],
+        "prerequisites": ["会做一阶差分", "理解 GMM 的矩数与参数数", "知道前定变量和 MDS"],
+        "bridge": "本科面板加一个滞后因变量后直接做 FE；短 T 下，去均值后的滞后因变量与去均值误差机械相关，不能靠增大 N 消失。",
+        "bridge_prompt": "为什么 FE 消除了个体效应，却制造了动态回归元与误差的相关？",
+        "route": ["动态 FE 的相关性", "差分方程", "滞后水平工具", "系统 GMM 与工具控制"],
+        "concepts": [
+            {"title": "Nickell 偏误", "body": r"$Y_{it}=\rho Y_{i,t-1}+\alpha_i+u_{it}$。within 误差含 $-\bar u_i$，而 within 后的 $Y_{i,t-1}$ 含过去 $u$；固定 $T$、$N\to\infty$ 时相关不消失。"},
+            {"title": "差分 GMM", "body": r"一阶差分消去 $\alpha_i$：$\Delta Y_{it}=\rho\Delta Y_{i,t-1}+\Delta u_{it}$。若 $u$ 无序列相关，$Y_{i,t-2}$ 及更早滞后与 $\Delta u_{it}$ 正交。"},
+            {"title": "系统 GMM", "body": "差分方程的滞后水平工具在高持久性下很弱；Blundell–Bond 再加入水平方程，以滞后差分作工具，但需要额外初始条件/平稳性矩限制。"},
+            {"title": "工具膨胀", "body": r"可用滞后随 $T$ 快速增加，工具列数可达 $O(T^2)$。过多工具会过拟合内生变量、削弱 Hansen 检验并产生不可靠两步结果。"},
+        ],
+        "derivation": {
+            "title": "AB 矩条件从哪里来",
+            "setup": r"假设 $E[u_{it}\mid Y_{i0},\ldots,Y_{i,t-1},\alpha_i]=0$ 且 $u_{it}$ 无序列相关。考察差分误差 $\Delta u_{it}=u_{it}-u_{i,t-1}$。",
+            "steps": [
+                r"对 $s\le t-2$，$Y_{is}$ 只由 $u_{i1},\ldots,u_{is}$ 和初值构成，与 $u_{it}$ 正交。",
+                r"因 $s\le t-2$，同样有 $E[Y_{is}u_{i,t-1}]=0$，所以 $E[Y_{is}\Delta u_{it}]=0$。",
+                r"把每期可用的 $(Y_{i1},\ldots,Y_{i,t-2})$ 放入块状工具矩阵 $Z_i$，得到 $E[Z_i'\Delta u_i]=0$ 并用 GMM 估计。",
+            ],
+            "reasons": ["前定性与时间顺序", "线性期望", "逐期矩堆叠"],
+            "conclusion": "工具集合不是越多越好：每一列都对应一条时序正交条件，并应接受理论、强度和数量审计。",
+        },
+        "conditions": ["差分残差允许 AR(1) 但不应有 AR(2)", "工具滞后范围由变量外生性类型决定", r"报告 $N,T$、工具数与参数数", "两步 SE 使用有限样本修正"],
+        "example": {"title": "例：企业投资持续性", "body": "投资率高度持续时，滞后水平对差分的解释力弱；系统 GMM 可能改善，但额外水平方程矩条件必须由初始状态论证。"},
+        "misconception": "“Hansen J 的 p 值越大越好。”接近 1 可能是工具过多导致检验无力；应折叠工具、限制滞后并报告敏感性。",
+        "check": {"question": r"差分方程在 $t=3$ 时，为什么 $Y_{i2}$ 不能作 $\Delta Y_{i2}$ 的工具，而 $Y_{i1}$ 可以？", "answer": r"$\Delta u_{i3}=u_{i3}-u_{i2}$，$Y_{i2}$ 含 $u_{i2}$，所以相关；在无序列相关与前定性下 $Y_{i1}$ 与两项都正交。", "diagnosis": "若只说滞后越长越外生，要求写出与差分误差两项的协方差"},
+        "takeaways": ["短 T 动态 FE 有非消失偏误", "AB 工具来自明确时序矩条件", "工具数量、强度与检验功效需共同报告"],
+        "practice": "Ch.17 动态面板、AB/BB 与工具矩阵题",
+        "extensions": ["forward orthogonal deviations", "Windmeijer 修正", "偏误修正 LSDV"],
+        "links": [("Ch.17 习题解答", "docs/ch17/Hansen_Ch17_Exercises_Solutions.md", "https://github.com/sunfang3/hansen-econometrics-solutions/blob/master/docs/ch17/Hansen_Ch17_Exercises_Solutions.md")],
+    },
+    {
+        "number": 32, "semester": 2,
+        "title": "双重差分",
+        "subtitle": "潜在结果、平行趋势、TWFE 与错位处理",
+        "chapters": "Ch.18", "book_pages": "650–664", "pdf_pages": "670–684",
+        "position": "把回归中的组×后系数还原为反事实趋势假设和明确 ATT",
+        "objectives": ["从潜在结果推导 2×2 DiD", "陈述条件平行趋势与无提前反应", "解释异质错位处理下 TWFE 的权重问题"],
+        "prerequisites": ["理解潜在结果和 ATT", "会读个体与时间固定效应", "知道处理分配层级决定聚类"],
+        "bridge": "本科 DiD 常背四格相减；Hansen 语言要求指出处理组未处理结果的反事实变化由谁提供，以及估计对象是哪个时间和群组的 ATT。",
+        "bridge_prompt": "处理前趋势看起来平行，为什么仍不能证明平行趋势？",
+        "route": ["2×2 潜在结果", "平行趋势识别", "事件研究诊断", "错位处理与 TWFE 限制"],
+        "concepts": [
+            {"title": "目标与反事实", "body": r"目标为处理组后期 $ATT=E[Y_1(1)-Y_1(0)\mid G=1]$。缺失的是 $E[Y_1(0)\mid G=1]$，控制组变化用于构造它。"},
+            {"title": "平行趋势", "body": r"$E[Y_1(0)-Y_0(0)\mid G=1]=E[Y_1(0)-Y_0(0)\mid G=0]$。这是未处理潜在结果的条件，不能直接由处理后数据检验。"},
+            {"title": "事件研究", "body": "处理前 lead 可检验明显预趋势并展示动态，但不显著可能因功效低；处理前最后一期通常作基准，系数解释必须附相对时间。"},
+            {"title": "错位处理与 TWFE", "body": "不同群组不同时间处理且效应异质时，TWFE 可把已处理组当控制并形成非凸权重。应报告群组×时间 ATT 或采用异质稳健聚合。"},
+        ],
+        "derivation": {
+            "title": "2×2 DiD 识别",
+            "setup": r"组 $G\in\{0,1\}$、时期 $t\in\{0,1\}$，只有 $G=1,t=1$ 受处理。",
+            "steps": [
+                r"观察处理组变化：$E[Y_1(1)\mid G=1]-E[Y_0(0)\mid G=1]$。",
+                r"平行趋势把缺失的处理组未处理变化替换为控制组变化：$E[Y_1(0)-Y_0(0)\mid G=1]=E[Y_1(0)-Y_0(0)\mid G=0]$。",
+                r"两组变化相减后共同未处理趋势抵消，剩下 $E[Y_1(1)-Y_1(0)\mid G=1]=ATT$。",
+            ],
+            "reasons": ["潜在结果分解", "平行趋势代换", "加减消元"],
+            "conclusion": "DiD 的识别来自不可观察未处理趋势的跨组等式，而不是固定效应本身；设计论证应围绕该反事实展开。",
+        },
+        "conditions": ["平行趋势可条件在预处理协变量上", "无提前反应和处理定义稳定", "样本构成不因处理差异变化", "标准误在处理分配或序列相关层级聚类"],
+        "example": {"title": "例：分省政策分期实施", "body": "早实施省份后期已受处理，不能无条件作为晚实施省份的未处理对照。按 cohort 和相对时间估计，再以透明权重聚合。"},
+        "misconception": "“事件研究处理前系数都不显著，所以平行趋势成立。”不拒绝不等于证明；还需看区间能否排除有实质意义的预趋势和制度性同期冲击。",
+        "check": {"question": "若政策使部分低收入者迁出处理地区，标准 DiD 哪个条件受到威胁？", "answer": "样本构成/稳定总体受到威胁，观察到的组均值变化混合了处理效应与人群选择。需固定个体、研究迁移结果或重定义目标总体。", "diagnosis": "若只答平行趋势，要求说明潜在结果对象为何随样本成员改变"},
+        "takeaways": ["四格相减背后是反事实平行趋势", "预趋势图是诊断而非证明", "错位处理需异质稳健的群组—时间比较"],
+        "practice": "Ch.18 DiD 识别、事件研究和错误推理题",
+        "extensions": ["合成控制", "三重差分", "连续处理 DiD"],
+        "links": [("Ch.18 习题解答", "docs/ch18/Hansen_Ch18_Exercises_Solutions.md", "https://github.com/sunfang3/hansen-econometrics-solutions/blob/master/docs/ch18/Hansen_Ch18_Exercises_Solutions.md")],
+    },
+    {
+        "number": 34, "semester": 2,
+        "title": "非参数与级数回归",
+        "subtitle": "核、局部多项式、带宽、部分线性与 NPIV",
+        "chapters": "Ch.19–20", "book_pages": "666–738", "pdf_pages": "686–758",
+        "position": "撤去全局线性形状限制，用平滑与基函数理解偏差—方差和正则化",
+        "objectives": ["推导核/局部线性 CEF 估计", "解释带宽和级数维数的偏差—方差权衡", "识别部分线性与 NPIV 的额外困难"],
+        "prerequisites": ["理解 CEF 与局部加权 LS", "会读基函数设计矩阵", "知道维数灾难和 IV 矩条件"],
+        "bridge": "本科回归选一次项或二次项；非参数方法不预先固定有限维形状，但必须用带宽、基函数数或惩罚控制复杂度。",
+        "bridge_prompt": "模型更灵活为什么不可能同时无偏又低方差？",
+        "route": ["核权重与局部样本", "局部多项式和边界", "级数与部分线性", "NPIV 的逆问题"],
+        "concepts": [
+            {"title": "核回归", "body": r"Nadaraya–Watson 估计 $\hat m(x)=\sum_iK((X_i-x)/h)Y_i/\sum_iK((X_i-x)/h)$。$h$ 决定“邻近”的尺度。"},
+            {"title": "局部线性", "body": r"在每个 $x$ 处加权最小化 $\sum_iK_h(X_i-x)\{Y_i-a-b(X_i-x)\}^2$，取 $\hat a$。它自动做一阶偏差修正，边界表现优于局部常数。"},
+            {"title": "级数估计", "body": r"用 $p_K(X)=(p_1,\ldots,p_K)'$ 近似 $m(X)$，再 OLS。$K$ 随样本增大，但增长过快使估计方差和数值不稳定。"},
+            {"title": "部分线性与 NPIV", "body": r"$Y=D\theta+g(X)+e$ 可先残差化 $Y,D$ 再估 $\theta$。若 $D$ 内生且 $E[e\mid Z]=0$，求解条件期望算子的逆通常病态，需要正则化。"},
+        ],
+        "derivation": {
+            "title": "局部线性正规方程",
+            "setup": r"固定评价点 $x$，令 $r_i=(1,X_i-x)'$、$w_i=K((X_i-x)/h)$。估计局部截距和斜率。",
+            "steps": [
+                r"写加权准则 $Q(a,b)=\sum_iw_i(Y_i-r_i'(a,b)')^2$。",
+                r"一阶条件为 $\sum_iw_ir_i(Y_i-r_i'\hat\gamma)=0$，故 $\hat\gamma=(R'WR)^{-1}R'WY$。",
+                r"$\hat m(x)=e_1'\hat\gamma$；$\hat b$ 吸收邻域内一阶趋势，使边界处不必依赖对称样本。",
+            ],
+            "reasons": ["局部 Taylor 近似", "加权 LS 一阶条件", "选择局部截距"],
+            "conclusion": "非参数估计仍是投影，只是设计和权重随评价点及复杂度改变；推断必须把平滑偏差纳入考虑。",
+        },
+        "conditions": [r"评价点附近密度 $f_X(x)>0$", "CEF 足够光滑", r"$h\to0$ 且 $nh\to\infty$（一维典型）", "数据驱动带宽与偏差修正需配套推断"],
+        "example": {"title": "例：班级规模与成绩", "body": "局部线性曲线可显示小班区间斜率更陡。它描述 CEF；若班级规模选择内生，灵活曲线仍不是因果剂量反应。"},
+        "misconception": "“非参数等于没有假设。”它用平滑、支持、维数和复杂度增长假设替代函数形式假设；高维下这些假设更强。",
+        "check": {"question": "带宽减半通常怎样影响偏差、方差和有效局部样本？", "answer": "邻域更窄，平滑偏差通常下降；有效样本减少，方差上升。具体阶数取决于核、维数和多项式阶数。", "diagnosis": "若说样本总数不变所以方差不变，强调只有带权邻域贡献信息"},
+        "takeaways": ["带宽和级数维数就是复杂度参数", "局部线性改善边界偏差", "灵活拟合不能修复内生性"],
+        "practice": "Ch.19–20 核、局部多项式、级数、部分线性与 NPIV 题",
+        "extensions": ["交叉验证带宽", "undersmoothing/robust bias correction", "sieve NPIV"],
+        "links": [
+            ("Ch.19 习题解答", "docs/ch19/Hansen_Ch19_Exercises_Solutions.md", "https://github.com/sunfang3/hansen-econometrics-solutions/blob/master/docs/ch19/Hansen_Ch19_Exercises_Solutions.md"),
+            ("Ch.20 习题解答", "docs/ch20/Hansen_Ch20_Exercises_Solutions.md", "https://github.com/sunfang3/hansen-econometrics-solutions/blob/master/docs/ch20/Hansen_Ch20_Exercises_Solutions.md"),
+        ],
+    },
+    {
+        "number": 35, "semester": 2,
+        "title": "断点回归",
+        "subtitle": "Sharp/Fuzzy RDD、带宽、操纵与局部推断",
+        "chapters": "Ch.21", "book_pages": "739–751", "pdf_pages": "759–771",
+        "position": "把局部多项式用于阈值制度，以连续性假设识别局部因果效应",
+        "objectives": ["从潜在结果连续性推导 sharp RDD", "区分 fuzzy RDD 的分子与第一阶段", "设计带宽、操纵和协变量平滑诊断"],
+        "prerequisites": ["理解局部线性和边界估计", "知道 LATE/Wald 比率", "能区分识别窗口与估计带宽"],
+        "bridge": "RDD 不是在阈值两侧做任意回归；其识别来自若无处理，潜在结果在 running variable 阈值处连续。",
+        "bridge_prompt": "为什么阈值附近可比不等于阈值两侧完全随机分配？",
+        "route": ["制度规则与目标", "左右极限识别", "局部多项式和带宽", "fuzzy、操纵与稳健推断"],
+        "concepts": [
+            {"title": "Sharp RDD", "body": r"$D_i=1\{X_i\ge c\}$。目标 $\tau=E[Y_i(1)-Y_i(0)\mid X_i=c]$ 是阈值处局部效应，不是全样本 ATE。"},
+            {"title": "Fuzzy RDD", "body": "若阈值只改变处理概率，结果跳跃除以处理概率跳跃给阈值处 complier 的局部效应；需要排除限制、单调性和非零第一阶段。"},
+            {"title": "带宽与多项式", "body": "左右分别做低阶局部多项式。小带宽降偏但增方差；全局高阶多项式会用远端数据并产生边界振荡，不是推荐主规格。"},
+            {"title": "诊断边界", "body": "密度跳跃提示 running variable 操纵；预处理协变量跳跃提示可比性问题。诊断不显著也不能证明所有潜在结果连续。"},
+        ],
+        "derivation": {
+            "title": "Sharp RDD 的左右极限",
+            "setup": r"观察 $Y=D Y(1)+(1-D)Y(0)$，且 $D=1\{X\ge c\}$。假设 $E[Y(d)\mid X=x]$ 在 $c$ 连续。",
+            "steps": [
+                r"从右侧逼近，$D=1$，所以 $\lim_{x\downarrow c}E[Y\mid X=x]=E[Y(1)\mid X=c]$。",
+                r"从左侧逼近，$D=0$，所以 $\lim_{x\uparrow c}E[Y\mid X=x]=E[Y(0)\mid X=c]$。",
+                r"右极限减左极限得到 $\tau=E[Y(1)-Y(0)\mid X=c]$。",
+            ],
+            "reasons": ["确定处理规则", "潜在结果连续性", "左右极限相减"],
+            "conclusion": "RDD 识别是阈值处的极限比较；离阈值越远，结论越依赖函数形式外推而非设计本身。",
+        },
+        "conditions": ["阈值规则和 running variable 事前确定", "潜在结果条件均值在阈值连续", "个体不能精确操纵阈值或需解释排序机制", "带宽选择、偏差修正和聚类结构配套"],
+        "example": {"title": "例：考试分数资格线", "body": "资格在 60 分跳变。应绘制原始分箱均值和局部拟合，检查 60 分附近密度与预处理成绩；效应只适用于临界学生。"},
+        "misconception": "“加入 5 次全局多项式并控制很多协变量就更可靠。”高阶全局拟合可产生虚假跳跃；协变量用于精度和诊断，不能替代连续性设计。",
+        "check": {"question": "结果在阈值跳 4，处理概率跳 0.5。fuzzy RDD 点估计是多少，还需哪些解释条件？", "answer": "Wald 比率为 8。解释为阈值 complier LATE 还需连续性/局部独立、排除限制、单调性和有效第一阶段。", "diagnosis": "若答 4，漏除第一阶段；若答 ATE，回到局部 complier"},
+        "takeaways": ["RDD 识别阈值处局部效应", "带宽体现设计可信度与精度权衡", "图形和操纵诊断必须与正式推断并列"],
+        "practice": "Ch.21 sharp/fuzzy RDD、带宽与诊断题",
+        "extensions": ["离散 running variable", "donut RDD", "回归 kink 设计"],
+        "links": [("Ch.21 习题解答", "docs/ch21/Hansen_Ch21_Exercises_Solutions.md", "https://github.com/sunfang3/hansen-econometrics-solutions/blob/master/docs/ch21/Hansen_Ch21_Exercises_Solutions.md")],
+    },
+    {
+        "number": 36, "semester": 2,
+        "title": "M 估计与非线性最小二乘",
+        "subtitle": "极值一致性、线性化与 sandwich 推断",
+        "chapters": "Ch.22–23", "book_pages": "753–779", "pdf_pages": "773–799",
+        "position": "用统一极值框架整理 OLS、MLE、分位数和非线性模型的共同证明",
+        "objectives": ["用识别和一致收敛证明极值估计一致", "从一阶条件推导 M 估计渐近方差", "把 NLS 的函数形式、导数与识别分开核对"],
+        "prerequisites": ["会做 Taylor 展开", "理解均匀收敛与点态收敛差别", "会求梯度和 Hessian"],
+        "bridge": "本科非线性回归多从软件迭代开始；Hansen 先定义总体准则的唯一极值，再问样本准则是否整体靠近它。",
+        "bridge_prompt": "为什么对每个固定参数点收敛，仍不保证样本最优点收敛？",
+        "route": ["极值估计与识别", "一致收敛和 argmin", "一阶条件线性化", "NLS 的 Jacobian 与稳健方差"],
+        "concepts": [
+            {"title": "M 估计", "body": r"$\hat\theta=\arg\min_{\theta\in\Theta}Q_n(\theta)$，总体准则 $Q(\theta)=E[q(W_i,\theta)]$ 在 $\theta_0$ 唯一最小。识别是总体性质，不由优化器成功替代。"},
+            {"title": "均匀收敛", "body": r"$\sup_{\theta\in\Theta}|Q_n(\theta)-Q(\theta)|\to_p0$ 防止样本准则在随 $n$ 移动的参数点出现虚假深谷；配合紧致性和唯一极小给 argmin 一致性。"},
+            {"title": "sandwich 结构", "body": r"令得分 $\psi_i(\theta)=\partial q_i/\partial\theta$、$A=E[\partial\psi_i/\partial\theta']$、$B=E[\psi_i\psi_i']$，渐近方差为 $A^{-1}BA^{-1'}$。"},
+            {"title": "非线性最小二乘", "body": r"$Y_i=m(X_i,\theta_0)+e_i$，NLS 最小化残差平方。条件均值正确给识别；导数 $D_i=\partial m(X_i,\theta_0)/\partial\theta$ 决定局部信息。"},
+        ],
+        "derivation": {
+            "title": "M 估计的一阶线性化",
+            "setup": r"内点解满足 $n^{-1}\sum_i\psi_i(\hat\theta)=0$。在 $\theta_0$ 展开。",
+            "steps": [
+                r"$0=n^{-1}\sum_i\psi_i(\theta_0)+\hat A(\tilde\theta)(\hat\theta-\theta_0)$。",
+                r"乘 $\sqrt n$ 并求解：$\sqrt n(\hat\theta-\theta_0)=-\hat A^{-1}n^{-1/2}\sum_i\psi_i(\theta_0)$。",
+                r"由 LLN、CLT 与 Slutsky，$\sqrt n(\hat\theta-\theta_0)\to N(0,A^{-1}BA^{-1'})$。",
+            ],
+            "reasons": ["向量均值定理", "矩阵求解", "LLN、CLT 与 Slutsky"],
+            "conclusion": "一致性保证展开点靠近真值，Hessian 给局部曲率，得分方差给随机扰动；三者缺一不可。",
+        },
+        "conditions": ["总体准则唯一识别", "一致收敛与可测/矩包络条件", r"$A$ 非奇异", "边界、非光滑或多重极值需要不同理论"],
+        "example": {"title": "例：指数增长曲线", "body": r"$m(x,\theta)=\theta_1\exp(\theta_2x)$。起始值不同可能落到不同数值解；应画准则、检查梯度并报告参数尺度，而非只信“converged”。"},
+        "misconception": "“优化器收敛，所以估计量一致。”数值收敛只表示算法停止；统计一致还需模型识别、样本准则逼近总体准则和全局/足够好极值。",
+        "check": {"question": r"若 $A$ 近乎奇异，点估计和推断会出现什么症状？", "answer": "准则在某方向很平，参数对数据和起始值敏感，标准误很大或数值不稳定。这是弱局部识别/参数化问题，不应靠增加迭代次数掩盖。", "diagnosis": "若只答优化慢，补充统计信息不足；若说 B 决定识别，区分曲率 A 与得分波动 B"},
+        "takeaways": ["极值一致性是识别加均匀收敛", "M 估计方差仍是 sandwich", "数值成功不等于统计识别"],
+        "practice": "Ch.22–23 极值一致性、M 估计线性化和 NLS 题",
+        "extensions": ["非光滑 M 估计", "边界参数", "多起点和自动微分"],
+        "links": [
+            ("Ch.22 习题解答", "docs/ch22/Hansen_Ch22_Exercises_Solutions.md", "https://github.com/sunfang3/hansen-econometrics-solutions/blob/master/docs/ch22/Hansen_Ch22_Exercises_Solutions.md"),
+            ("Ch.23 习题解答", "docs/ch23/Hansen_Ch23_Exercises_Solutions.md", "https://github.com/sunfang3/hansen-econometrics-solutions/blob/master/docs/ch23/Hansen_Ch23_Exercises_Solutions.md"),
+        ],
+    },
+    {
+        "number": 37, "semester": 2,
+        "title": "分位数与离散选择",
+        "subtitle": "条件分位数、二元/多项选择与边际效应",
+        "chapters": "Ch.24–26", "book_pages": "780–841", "pdf_pages": "800–861",
+        "position": "从条件均值扩展到分布位置和离散结果，同时保持估计对象—函数形式—效应解释分离",
+        "objectives": ["解释分位数损失为何识别条件分位数", "区分 Logit/Probit 潜在指数系数与概率效应", "正确计算并汇总离散选择边际效应"],
+        "prerequisites": ["知道分位数定义", "理解 M 估计与似然", "会用链式法则"],
+        "bridge": "OLS 只描述条件均值；分位数回归考察条件分布不同位置，二元选择则把线性指数通过 CDF 映射到 0–1 概率。",
+        "bridge_prompt": "Probit 系数为什么不能直接读成概率增加几个百分点？",
+        "route": ["check loss 与条件分位数", "分位数回归推断", "二元响应概率", "边际效应与多项选择"],
+        "concepts": [
+            {"title": "分位数损失", "body": r"$\rho_\tau(u)=u\{\tau-1(u<0)\}$ 对正负残差不对称加权。条件于 $X=x$ 最小化 $E[\rho_\tau(Y-a)\mid X=x]$ 得条件 $\tau$ 分位数。"},
+            {"title": "分位数回归对象", "body": r"设 $Q_\tau(Y\mid X)=X'\beta(\tau)$，不同 $\tau$ 的系数描述条件分布位置随 X 的变化；它不自动是同一个体潜在结果分位数效应。"},
+            {"title": "二元响应", "body": r"$P(Y=1\mid X)=F(X'\beta)$。Logit 取 logistic CDF，Probit 取标准正态 CDF。概率被限制在 0–1，但指数尺度需规范化。"},
+            {"title": "边际效应", "body": r"连续变量的概率边际效应为 $f(X'\beta)\beta_j$，随 X 改变。可报告样本平均边际效应；虚拟变量应计算 0→1 的离散概率差。"},
+        ],
+        "derivation": {
+            "title": "check loss 识别分位数",
+            "setup": r"固定 $X=x$，令 $Q(a)=E[\rho_\tau(Y-a)\mid X=x]$，考察对 $a$ 的次梯度。",
+            "steps": [
+                r"当 $Y\ne a$，$\partial\rho_\tau(Y-a)/\partial a=1(Y<a)-\tau$。",
+                r"取条件期望得次梯度 $F_{Y\mid X}(a\mid x)-\tau$。",
+                r"令零进入次梯度集合，即 $F(a^-\mid x)\le\tau\le F(a\mid x)$，这正是条件 $\tau$ 分位数定义。",
+            ],
+            "reasons": ["分段线性求导", "条件期望", "分位数集合定义"],
+            "conclusion": "绝对值式不对称损失不是计算技巧，而是直接把目标对准条件分位数；非光滑性也决定了推断不同于 OLS。",
+        },
+        "conditions": ["条件分位数线性是函数形式假设", "分位点附近条件密度影响 QR 方差", "离散选择需避免完全预测", "边际效应必须说明评价点和变量单位"],
+        "example": {"title": "例：教育与工资分布", "body": "教育在工资第 10、50、90 分位的系数不同，说明条件分布关联异质；不能直接说同一个人教育增加后的个体分位处理效应。"},
+        "misconception": "“Probit 教育系数 0.2 表示入学概率提高 20 个百分点。”0.2 是潜在指数尺度；概率变化还乘密度并取决于其他协变量。",
+        "check": {"question": r"在 Logit 中 $\hat\beta_j>0$，边际效应会不会为负？会不会对所有人相同？", "answer": r"因 logistic 密度为正，连续变量边际效应符号与 $\beta_j$ 相同；大小为 $f(X'\beta)\beta_j$，随 X 改变，不对所有人相同。", "diagnosis": "若直接答等于 beta，回到链式法则；若虚拟变量也求导，改用离散变化"},
+        "takeaways": ["QR 改变的是条件分布目标", "离散选择系数处在指数尺度", "边际效应需报告评价方式和单位"],
+        "practice": "Ch.24–26 分位数回归、二元与多项选择题",
+        "extensions": ["分位数处理效应", "有序选择", "平均部分效应的半参数识别"],
+        "links": [
+            ("Ch.24 习题解答", "docs/ch24/Hansen_Ch24_Exercises_Solutions.md", "https://github.com/sunfang3/hansen-econometrics-solutions/blob/master/docs/ch24/Hansen_Ch24_Exercises_Solutions.md"),
+            ("Ch.25 习题解答", "docs/ch25/Hansen_Ch25_Exercises_Solutions.md", "https://github.com/sunfang3/hansen-econometrics-solutions/blob/master/docs/ch25/Hansen_Ch25_Exercises_Solutions.md"),
+            ("Ch.26 习题解答", "docs/ch26/Hansen_Ch26_Exercises_Solutions.md", "https://github.com/sunfang3/hansen-econometrics-solutions/blob/master/docs/ch26/Hansen_Ch26_Exercises_Solutions.md"),
+        ],
+    },
+    {
+        "number": 38, "semester": 2,
+        "title": "删失、截断与样本选择",
+        "subtitle": "Tobit、观测机制与排除变量",
+        "chapters": "Ch.27", "book_pages": "842–858", "pdf_pages": "862–878",
+        "position": "把“缺失或堆在边界的结果”建模为观测机制，并区分结果方程和选择方程",
+        "objectives": ["区分删失、截断和选择样本", "解释 Tobit 系数与观察结果边际效应", "推导正态选择模型中的逆 Mills 修正"],
+        "prerequisites": ["理解潜变量二元选择", "知道条件正态公式", "会区分识别与函数形式外推"],
+        "bridge": "本科常把零消费观测删掉或直接 OLS；研究生计量先问零是真实结果、左删失，还是样本从未被观察。三者的似然和目标不同。",
+        "bridge_prompt": "只在就业者中回归工资，误差条件均值为什么可能不再为零？",
+        "route": ["观测机制分类", "Tobit 潜变量", "选择方程与截断均值", "排除变量和敏感性"],
+        "concepts": [
+            {"title": "删失与截断", "body": "删失时边界观测仍在样本，如支出低于检测限记为 0；截断时这部分个体完全不进入数据。二者对总体规模和似然贡献不同。"},
+            {"title": "Tobit 潜变量", "body": r"$Y^*=X'\beta+u$、$Y=\max(0,Y^*)$。同一参数同时约束参与概率和正值结果；若两个过程不同，这个限制会错设。"},
+            {"title": "样本选择", "body": r"结果 $Y=X'\beta+u$ 仅当 $S=1\{Z'\gamma+v>0\}$ 被观察。若 $u$ 与 $v$ 相关，$E[u\mid X,Z,S=1]\ne0$。"},
+            {"title": "排除变量", "body": "依靠正态非线性也可形式识别，但往往脆弱。最好有影响观察/参与、却不直接影响结果的 Z 变量，并给制度论证。"},
+        ],
+        "derivation": {
+            "title": "选择样本中的逆 Mills 项",
+            "setup": r"设 $(u,v)$ 联合正态，$\operatorname{cov}(u,v)=\sigma_{uv}$、$\operatorname{var}(v)=1$，观察条件为 $v>-Z'\gamma$。",
+            "steps": [
+                r"联合正态条件均值给 $E[u\mid v]=\sigma_{uv}v$。",
+                r"对截断事件再取期望：$E[v\mid v>-Z'\gamma]=\phi(Z'\gamma)/\Phi(Z'\gamma)=\lambda(Z'\gamma)$。",
+                r"所以 $E[Y\mid X,Z,S=1]=X'\beta+\sigma_{uv}\lambda(Z'\gamma)$；省略该项会把选择相关混入斜率。",
+            ],
+            "reasons": ["联合正态线性条件均值", "截断正态均值", "迭代期望"],
+            "conclusion": "Heckman 两步修正高度依赖联合正态和选择方程；逆 Mills 项不是通用控制变量，排除限制决定可信度。",
+        },
+        "conditions": ["明确边界值的实际生成机制", "Tobit 的正态同方差和单指数限制需诊断", "选择模型最好有可信排除变量", "严重删失/弱排除导致外推不稳定"],
+        "example": {"title": "例：就业者工资", "body": "托儿服务距离可能影响就业但未必直接影响市场工资，可作选择排除候选；若也影响可去岗位范围，排除限制就需重新评估。"},
+        "misconception": "“样本量大后只在观察样本 OLS 就没问题。”选择偏误是错误条件均值，不随样本量消失；大样本只会更精确地估计错误目标。",
+        "check": {"question": "家庭支出数据中大量精确零值，何时不应使用 Tobit？", "answer": "若零是实际最优选择而非潜在连续支出的删失，或参与与正值强度由不同机制决定，应考虑 two-part/hurdle 等模型，而非 Tobit 单一潜变量。", "diagnosis": "若仅凭零多就用 Tobit，要求先写观测机制"},
+        "takeaways": ["先分类观测机制，再选模型", "Tobit 系数不是观察结果的统一边际效应", "选择修正的可信度依赖排除限制"],
+        "practice": "Ch.27 Tobit、截断与样本选择题",
+        "extensions": ["two-part model", "半参数选择模型", "区间删失"],
+        "links": [("Ch.27 习题解答", "docs/ch27/Hansen_Ch27_Exercises_Solutions.md", "https://github.com/sunfang3/hansen-econometrics-solutions/blob/master/docs/ch27/Hansen_Ch27_Exercises_Solutions.md")],
+    },
+    {
+        "number": 39, "semester": 2,
+        "title": "模型选择与机器学习",
+        "subtitle": "预测风险、正则化、树/森林与双重机器学习",
+        "chapters": "Ch.28–29", "book_pages": "859–944", "pdf_pages": "879–964",
+        "position": "在全年结尾区分预测优化和因果估计，并用正交化连接现代高维方法",
+        "objectives": ["用训练/验证/测试划分定义预测风险", "解释 Lasso 与树模型的复杂度控制", "推导部分线性模型的正交残差矩与 cross-fitting"],
+        "prerequisites": ["理解样本外损失", "知道偏差—方差权衡", "会用 FWL 残差化"],
+        "bridge": "传统计量从低维参数和可解释标准误出发；机器学习擅长高维预测。把 ML 用于因果时，仍必须先给识别，再用正交得分控制 nuisance 估计误差。",
+        "bridge_prompt": "交叉验证预测最好，为什么不等于因果效应最可信？",
+        "route": ["风险与数据划分", "收缩和选择", "树/森林与模型平均", "DML 的正交化和交叉拟合"],
+        "concepts": [
+            {"title": "预测风险", "body": r"目标为新样本损失 $R(f)=E[L(Y,f(X))]$。训练误差用于拟合，验证/CV 用于调参，独立测试集只作最终一次评估，避免信息泄漏。"},
+            {"title": "Lasso 与选择", "body": r"$\min_\beta n^{-1}\sum(Y_i-X_i'\beta)^2+\lambda\|\beta\|_1$。$\lambda$ 越大越收缩并产生稀疏；选择后的普通 OLS p 值一般忽略了搜索过程。"},
+            {"title": "树与森林", "body": "树递归切分并易高方差；装袋和随机森林通过重抽与随机特征平均降方差。变量重要性是预测贡献，不自动是结构效应。"},
+            {"title": "DML 思路", "body": r"部分线性模型 $Y=\theta D+g(X)+u$、$D=m(X)+v$。用 ML 估计 $g,m$，再以 cross-fitting 的残差估计 $\theta$，避免同样本过拟合偏差。"},
+        ],
+        "derivation": {
+            "title": "正交残差矩",
+            "setup": r"令 $\tilde Y=Y-E[Y\mid X]$、$\tilde D=D-E[D\mid X]$。目标是从高维 X 中分离 D 的剩余变化。",
+            "steps": [
+                r"由模型与迭代期望，$\tilde Y=\theta_0\tilde D+u$，且 $E[\tilde D\,u]=0$。",
+                r"矩条件 $E[(D-m(X))\{Y-g(X)-\theta(D-m(X))\}]=0$ 在真 nuisance 附近对一阶估计误差不敏感。",
+                r"分折估计 $g,m$ 并在未参与训练的折上构造残差；合并后 $\hat\theta=\sum\tilde D_i\tilde Y_i/\sum\tilde D_i^2$，再用正交得分方差推断。",
+            ],
+            "reasons": ["FWL 与条件期望", "Neyman 正交性", "cross-fitting 和样本矩"],
+            "conclusion": "DML 允许灵活 nuisance，但不创造因果识别；仍需部分线性结构、条件外生性、重叠和足够快的预测误差收敛。",
+        },
+        "conditions": ["训练、调参与最终评估隔离", "正则化参数选择规则预先说明", "DML 需要正交得分和 cross-fitting", "高维弱信号、重叠差和选择后推断需谨慎"],
+        "example": {"title": "例：高维工资预测与教育效应", "body": "随机森林可能很好预测工资，却把教育与家庭背景共同使用。教育因果效应仍需条件外生或 IV；DML 只帮助灵活控制高维混杂。"},
+        "misconception": "“CV 最优模型就是正确模型，因此变量重要性可作因果效应。”CV 优化指定分布下的预测损失，不验证反事实识别或干预稳定性。",
+        "check": {"question": "为何 cross-fitting 要在未训练 nuisance 的观测上计算残差得分？", "answer": "它削弱过拟合造成的自身残差相关，使 nuisance 误差更接近外部预测误差，并配合正交性得到可控余项；它不是增加样本的技巧。", "diagnosis": "若说为了更高 R²，回到推断目的；若说完全消除偏差，补充仍需率条件和识别"},
+        "takeaways": ["预测风险与因果参数是不同目标", "正则化选择会改变普通推断", "DML 是识别加正交化加交叉拟合"],
+        "practice": "Ch.28–29 风险、收缩、树/森林、正交得分与 DML 题",
+        "extensions": ["causal forests", "debiased Lasso", "分布漂移与外部有效性"],
+        "links": [
+            ("Ch.28 习题解答", "docs/ch28/Hansen_Ch28_Exercises_Solutions.md", "https://github.com/sunfang3/hansen-econometrics-solutions/blob/master/docs/ch28/Hansen_Ch28_Exercises_Solutions.md"),
+            ("Ch.29 教材配套材料", "docs/ch29", "https://github.com/sunfang3/hansen-econometrics-solutions/tree/master/docs/ch29"),
+        ],
+    },
+]
+
+
 WORKSHOP_SESSIONS = [
     {
         "number": 7,
@@ -1343,6 +1988,231 @@ WORKSHOP_SESSIONS = [
         "practice": "提交强/弱工具分布摘要、尾部图和一段识别论证",
         "extensions": ["Anderson–Rubin 区间", "多工具与 many-IV 偏误", "LIML"],
         "links": [("Ch.12 习题解答", "docs/ch12/Hansen_Ch12_Exercises_Solutions.md", "https://github.com/sunfang3/hansen-econometrics-solutions/blob/master/docs/ch12/Hansen_Ch12_Exercises_Solutions.md")],
+    },
+]
+
+
+WORKSHOP_SESSIONS += [
+    {
+        "number": 25, "semester": 2,
+        "title": "时间序列建模与 HAC",
+        "subtitle": "AR(1) 诊断、长期方差与多步预测",
+        "chapters": "Ch.14", "book_pages": "442–508", "pdf_pages": "462–528",
+        "position": "把平稳、MDS、动态回归和 HAC 落到一条可复现序列",
+        "objectives": ["估计并诊断稳定 AR(1)", "手工计算 Bartlett–HAC 方差", "报告递推预测及其设定边界"],
+        "prerequisites": ["会判断 AR 根稳定性", "知道长期方差含滞后协方差", "能解释样本内拟合与样本外预测"],
+        "research_question": "一条均值回复序列的持久性有多强？残差是否仍含线性依赖？HAC 与模型式预测分别解决什么问题？",
+        "data_status": "::: {.data-status}\n使用固定种子 20260802 自生成 AR(1)，无需外部包或教材数据；示例输出由 base R 预计算。\n:::",
+        "sample": r"先生成 340 期并丢弃前 100 期，保留 $T=240$，减轻初值影响。时间顺序绝不随机打散。",
+        "variables": r"$Y_t=2(1-0.65)+0.65Y_{t-1}+u_t$，$u_t\sim N(0,1)$。均值 2、稳定根 0.65；代码只观察 $Y_t$。",
+        "identification": r"AR 系数由 $E[Y_{t-1}u_t]=0$ 识别。模拟创新 i.i.d.；HAC 只修正回归得分方差。",
+        "estimator": "同时用 arima 的 AR(1) 似然和带截距 OLS 动态回归。比较参数化模型 SE 与 Bartlett–HAC（带宽 4）SE。",
+        "inference": "HAC 带宽固定为 4 作教学比较，并报告改为 2、8 的敏感性。多步点预测由估计 AR 递推；正式区间还应加入未来创新和参数不确定性。",
+        "workflow": "生成并去 burn-in → 时序图/ACF → AR(1) → 残差 ACF → 手工 HAC → 4 步预测 → 带宽和阶数敏感性。",
+        "code_setup": clean(r"""
+            ~~~r
+            set.seed(20260802)
+            n <- 240L
+            u <- rnorm(n + 100L)
+            y <- numeric(n + 100L)
+            for (tt in 2:length(y)) {
+              y[tt] <- 2 * (1 - 0.65) + 0.65 * y[tt - 1] + u[tt]
+            }
+            y <- tail(y, n)
+            fit_ml <- arima(y, order = c(1, 0, 0), include.mean = TRUE)
+            fit_ols <- lm(y[-1] ~ y[-n])
+            ~~~
+        """),
+        "code_estimate": clean(r"""
+            ~~~r
+            X <- model.matrix(fit_ols)
+            e <- resid(fit_ols)
+            bread <- solve(crossprod(X))
+            meat <- crossprod(X, X * e^2)
+            L <- 4L
+            for (j in seq_len(L)) {
+              w <- 1 - j / (L + 1)
+              Gj <- crossprod(X[(j + 1):nrow(X), ] * e[(j + 1):length(e)],
+                              X[1:(nrow(X) - j), ] * e[1:(length(e) - j)])
+              meat <- meat + w * (Gj + t(Gj))
+            }
+            V_hac <- nrow(X) / (nrow(X) - ncol(X)) *
+              bread %*% meat %*% bread
+            ~~~
+        """),
+        "results": "| 对象 | 预计算值 |\n|---|---:|\n| ML 的 $\\hat\\rho$ | 0.704 |\n| ML 长期均值 | 2.066 |\n| OLS 的 $\\hat\\rho$ | 0.707 |\n| OLS SE / HAC(4) SE | 0.0460 / 0.0465 |\n| ML 残差一阶 ACF | 0.019 |\n| 未来 1–4 期点预测 | 1.468, 1.645, 1.770, 1.857 |",
+        "diagnostics": r"检查伴随根 $|\hat\rho|<1$、残差 ACF 和平方残差 ACF。残差一阶 ACF 接近零只支持线性动态已大致吸收，不证明独立或正态。",
+        "sensitivity": "比较 AR(0)、AR(1)、AR(2) 的信息准则与滚动预测误差；HAC 带宽改为 2、8。预测评价必须保持时间顺序。",
+        "misconception": "把 HAC SE 和 AR 模型当成可互换修正。前者改变推断方差，后者改变条件均值与预测；若动态均值错设，仅换 HAC 不会修好预测。",
+        "check": {"question": r"若 $\hat\rho=0.98$ 且样本只有 80 期，为什么不能只因 $|\hat\rho|<1$ 就放心用平稳近似？", "answer": "近单位根时均值回复极慢，有限样本分布接近单位根非标准情形；应报告持久性区间和更谨慎预测。", "diagnosis": "若只说根小于 1，区分点估计分类与近单位根近似质量"},
+        "takeaways": ["模型动态与 HAC 推断承担不同任务", "预测验证必须尊重时间顺序", "根接近 1 时要承认近单位根不确定性"],
+        "practice": "提交带宽 2/4/8 的 SE 表、AR(1)/AR(2) 诊断与四步预测图",
+        "extensions": ["rolling-origin cross-validation", "ARCH 检验与 GARCH", "局部投影预测"],
+        "links": [("Ch.14 习题解答", "docs/ch14/Hansen_Ch14_Exercises_Solutions.md", "https://github.com/sunfang3/hansen-econometrics-solutions/blob/master/docs/ch14/Hansen_Ch14_Exercises_Solutions.md")],
+    },
+    {
+        "number": 29, "semester": 2,
+        "title": "VAR、单位根与协整",
+        "subtitle": "从设定、非标准临界值到长期秩的诊断链",
+        "chapters": "Ch.15–16", "book_pages": "509–596", "pdf_pages": "529–616",
+        "position": "把平稳系统和非平稳检验放在同一流程中，防止先回归后判断",
+        "objectives": ["估计二维 VAR 并核对稳定根", "按确定性项和滞后写 ADF 回归", "用协整残差与 Johansen 思路解释长期关系"],
+        "prerequisites": ["会读 VAR 系数矩阵", "知道 DF 统计量不用普通 t 临界值", "理解协整秩与共同趋势"],
+        "research_question": "面对多条持久序列，应如何依次判断动态阶数、单位根、长期组合和结构冲击，而不把软件默认值当结论？",
+        "data_status": "::: {.data-status}\n固定种子 20260802，生成 $T=220$ 的稳定二维 VAR、一个随机游走和一对协整序列；base R 可完整复现。Johansen 作为可选 urca 扩展。\n:::",
+        "sample": "VAR 先生成 270 期并丢弃 50 期；单位根和协整样本均为 220 期。各检验的有效样本因差分和滞后减少，输出必须报告。",
+        "variables": r"VAR 真值 $A=\begin{pmatrix}.5&.2\\-.1&.4\end{pmatrix}$；随机游走为创新累积；协整对满足 $y_t=1.5x_t+v_t$、$v_t$ 为稳定 AR(1)。",
+        "identification": "VAR 首先是约化式预测系统。ADF 的零假设是单位根；协整残差平稳识别统计长期组合。任何 SVAR 结构标签仍需独立限制。",
+        "estimator": "逐方程 OLS 估 VAR(1)；ADF(1) 含截距回归；Engle–Granger 先估长期斜率，再对生成残差做 ADF。残差检验需协整专用临界值。",
+        "inference": "不报告 lm 自动生成的普通 ADF p 值。课堂把 t 统计量与对应 DF/EG 临界值表比较；Johansen trace/max-eigen 也需匹配确定性项。",
+        "workflow": "时序图 → 水平/差分 ACF → 确定性项与滞后 → ADF/KPSS 互补 → VAR 稳定根 → 协整秩 → ECM → 最后讨论结构 IRF。",
+        "code_setup": clean(r"""
+            ~~~r
+            set.seed(20260802)
+            TT <- 220L
+            A <- matrix(c(.5, .2, -.1, .4), 2, 2, byrow = TRUE)
+            Y <- matrix(0, TT + 50L, 2)
+            for (tt in 2:nrow(Y)) {
+              e1 <- rnorm(1)
+              e2 <- .4 * e1 + sqrt(1 - .4^2) * rnorm(1)
+              Y[tt, ] <- A %*% Y[tt - 1, ] + c(e1, e2)
+            }
+            Y <- tail(Y, TT)
+            ~~~
+        """),
+        "code_estimate": clean(r"""
+            ~~~r
+            var1 <- lm(Y[-1, 1] ~ Y[-TT, 1] + Y[-TT, 2])
+            var2 <- lm(Y[-1, 2] ~ Y[-TT, 1] + Y[-TT, 2])
+            rw <- cumsum(rnorm(TT))
+            x_ci <- cumsum(rnorm(TT))
+            v_ci <- as.numeric(arima.sim(list(ar = .5), n = TT))
+            y_ci <- 1.5 * x_ci + v_ci
+            coint_fit <- lm(y_ci ~ x_ci)
+            # ADF 应显式构造 Δy、y_{t-1} 和滞后 Δy，
+            # 再使用与常数/趋势设定一致的 DF 或 EG 临界值。
+            ~~~
+        """),
+        "results": "| 结果 | 预计算值 |\n|---|---:|\n| VAR 方程 1 滞后系数 | 0.439, 0.264 |\n| VAR 方程 2 滞后系数 | -0.051, 0.382 |\n| 真伴随根模 | 0.469, 0.469 |\n| 随机游走 ADF(1) t | -2.149（不能查普通 t） |\n| 协整斜率 | 1.416 |\n| 协整残差 ADF(1) t | -7.978（用 EG 临界值） |",
+        "diagnostics": "对 ADF 残差检查剩余自相关；改变常数/趋势和滞后。对 VAR 检查所有根和残差互相关；对协整检查关系是否由结构突变驱动。",
+        "sensitivity": "ADF 滞后取 0–4；以 KPSS 平稳原假设作互补；VAR 阶数取 1–3；协整关系加入趋势并改变样本端点。",
+        "misconception": "把 ADF 不拒绝、KPSS 拒绝和 Johansen 选秩当成自动真相。它们都依赖确定性项、滞后、窗口和结构稳定性。",
+        "check": {"question": "ADF 不拒绝单位根、KPSS 也不拒绝平稳，是否矛盾？", "answer": "不矛盾。两个检验原假设相反，有限样本都可能功效不足；应报告不确定性、图形和设定敏感性。", "diagnosis": "若称序列既平稳又单位根，回到“不拒绝不是证明”"},
+        "takeaways": ["先决定确定性项和滞后，再解释检验", "DF/EG/Johansen 使用各自非标准临界值", "约化动态和结构冲击严格分开"],
+        "practice": "提交 ADF/KPSS 设定表、VAR 根和协整敏感性说明",
+        "extensions": ["Johansen 系统实现", "结构突变检验", "SVAR 外部工具"],
+        "links": [
+            ("Ch.15 习题解答", "docs/ch15/Hansen_Ch15_Exercises_Solutions.md", "https://github.com/sunfang3/hansen-econometrics-solutions/blob/master/docs/ch15/Hansen_Ch15_Exercises_Solutions.md"),
+            ("Ch.16 习题解答", "docs/ch16/Hansen_Ch16_Exercises_Solutions.md", "https://github.com/sunfang3/hansen-econometrics-solutions/blob/master/docs/ch16/Hansen_Ch16_Exercises_Solutions.md"),
+        ],
+    },
+    {
+        "number": 33, "semester": 2,
+        "title": "面板、动态 GMM 与 DiD",
+        "subtitle": "个体内识别、聚类和设计诊断",
+        "chapters": "Ch.17–18", "book_pages": "597–664", "pdf_pages": "617–684",
+        "position": "把静态 FE、动态面板工具和 DiD 反事实放入一份面板审计表",
+        "objectives": ["复现双向 FE/DiD 并手工个体聚类", "比较普通与聚类标准误", "为动态面板写出工具和 AR(2) 诊断"],
+        "prerequisites": ["会做 within 和双向 FE", "知道 AB 滞后工具条件", "能陈述 DiD 平行趋势"],
+        "research_question": "一项在第 5 期对半数个体实施的政策如何估计？个体序列相关、固定效应和动态结果分别要求哪些处理？",
+        "data_status": "::: {.data-status}\n固定种子 20260802，自生成平衡面板 $N=80,T=8$；真实政策效应 1.2。代码仅用 base R。\n:::",
+        "sample": "640 个个体—时期观测。前 40 个体自第 5 期持续处理，后 40 个从未处理；没有缺失和错位实施，以隔离聚类与 FE。",
+        "variables": r"$Y_{it}=\alpha_i+\lambda_t+0.4X_{it}+1.2D_{it}+u_{it}$；$u_{it}$ 个体内 AR(1)，系数 0.5；$X$ 与 $\alpha_i$ 有相关。",
+        "identification": "基准设计以无提前反应和未处理趋势平行为识别。个体 FE 处理时间不变相关异质性，时间 FE 处理共同冲击；二者不消除差异趋势。",
+        "estimator": "用含个体和时间虚拟变量的 OLS 实现双向 FE；对个体簇的 score 求和构造 cluster sandwich。动态扩展另写差分方程和滞后水平工具。",
+        "inference": "处理在个体层变化且误差个体内相关，按个体聚类。只有 80 簇时报告簇数和自由度修正；若政策在更高地区层分配，应上移聚类层级。",
+        "workflow": "面板键唯一性 → 每期处理份额 → 个体内变换 → TWFE → 个体聚类 → 事件时间图 → 动态规格的 AR(2)/工具数 → 设计敏感性。",
+        "code_setup": clean(r"""
+            ~~~r
+            set.seed(20260802)
+            N <- 80L; TT <- 8L
+            id <- rep(seq_len(N), each = TT)
+            tt <- rep(seq_len(TT), N)
+            alpha <- rnorm(N)
+            x <- rnorm(N * TT) + rep(.3 * alpha, each = TT)
+            treat <- rep(as.integer(seq_len(N) <= 40), each = TT) *
+              as.integer(tt >= 5)
+            # 完整源码继续按个体生成 AR(1) 误差与时间效应。
+            ~~~
+        """),
+        "code_estimate": clean(r"""
+            ~~~r
+            fit <- lm(y ~ treat + x + factor(id) + factor(tt))
+            X <- model.matrix(fit)
+            e <- resid(fit)
+            bread <- solve(crossprod(X))
+            score_g <- rowsum(X * e, id, reorder = FALSE)
+            G <- nrow(score_g); nobs <- nrow(X); k <- ncol(X)
+            V_cl <- G / (G - 1) * (nobs - 1) / (nobs - k) *
+              bread %*% crossprod(score_g) %*% bread
+            ~~~
+        """),
+        "results": "| 规格 | 政策系数 | SE |\n|---|---:|---:|\n| 无个体/时间 FE | 1.226 | — |\n| 双向 FE，i.i.d. SE | 1.146 | 0.135 |\n| 双向 FE，个体聚类 SE | 1.146 | 0.218 |\n\n观测数 640、个体簇 80；真实效应 1.2。",
+        "diagnostics": "验证个体—时期键唯一、处理吸收路径正确。事件研究检查预趋势；动态面板报告差分残差 AR(1)/AR(2)、工具数和折叠/滞后限制。",
+        "sensitivity": "加入组别线性趋势；删去可能提前反应窗口；动态模型比较 FE、差分 GMM 和限制工具的系统 GMM。",
+        "misconception": "因聚类 SE 较大就改回普通 SE 以保持显著。标准误由抽样和依赖结构决定，不能按结果选择；FE 系数仍依赖平行趋势。",
+        "check": {"question": "若政策由 10 个省实施，数据有 1000 家企业，应按企业还是省聚类？", "answer": "至少按政策分配和共同冲击所在的省聚类；1000 家企业不等于 1000 个独立政策实验。只有 10 簇时还需少簇修正。", "diagnosis": "若按企业，回到处理分配层级；若双向聚类，仍需说明第二维来源"},
+        "takeaways": ["FE、GMM、DiD 解决不同识别问题", "聚类层级由独立冲击和处理分配决定", "动态面板必须公开工具矩阵和诊断"],
+        "practice": "提交聚类手算核对、事件研究设定和一页 AB 工具矩阵",
+        "extensions": ["异质稳健 staggered DiD", "wild cluster bootstrap", "Mundlak RE 对照"],
+        "links": [
+            ("Ch.17 习题解答", "docs/ch17/Hansen_Ch17_Exercises_Solutions.md", "https://github.com/sunfang3/hansen-econometrics-solutions/blob/master/docs/ch17/Hansen_Ch17_Exercises_Solutions.md"),
+            ("Ch.18 习题解答", "docs/ch18/Hansen_Ch18_Exercises_Solutions.md", "https://github.com/sunfang3/hansen-econometrics-solutions/blob/master/docs/ch18/Hansen_Ch18_Exercises_Solutions.md"),
+        ],
+    },
+    {
+        "number": 40, "semester": 2,
+        "title": "全年综合项目",
+        "subtitle": "从研究问题、识别、估计到局部推断的完整闭环",
+        "chapters": "Ch.19–29；全年整合", "book_pages": "666–944", "pdf_pages": "686–964",
+        "position": "用一个 sharp RDD 项目复用全年四层框架并完成课程交付",
+        "objectives": ["写出明确局部因果对象和连续性假设", "实现局部线性 RDD 与 HC1 方差", "用带宽、密度/协变量和外推边界完成审计"],
+        "prerequisites": ["会做局部线性和 robust SE", "理解 RDD 左右极限识别", "能区分预测拟合、统计显著和政策外推"],
+        "research_question": "资格分数跨过 0 是否提高结果？目标是阈值处平均处理效应，而非全样本平均；最终报告必须从制度规则讲到局部区间。",
+        "data_status": "::: {.data-status}\n固定种子 20260802，生成 $n=2000$ 的 sharp RDD；真实阈值效应 1.2。无外部依赖，适合作为结课模板。\n:::",
+        "sample": r"$X\sim U[-3,3]$，处理 $D=1\{X\ge0\}$。主带宽 $h=1$；同时报告 0.6 和 1.5。不得删除不利结果后才宣布主带宽。",
+        "variables": r"$Y=1+0.5X+0.3X^2+1.2D+0.2DX+u$，$u\sim N(0,0.9^2)$。曲率刻意让宽带宽产生可见函数形式偏差。",
+        "identification": r"Sharp 规则、阈值处潜在结果连续、无法精确操纵 $X$。模拟中条件成立；实际项目必须用制度细节、密度和预处理协变量诊断。",
+        "estimator": r"在 $|X|\le h$ 内估 $Y=\alpha+\tau D+\beta_-X+\delta(DX)+e$，即阈值两侧独立局部线性斜率；$\hat\tau$ 为阈值跳跃。",
+        "inference": "主表用 HC1 作教学实现，并明确正式 RDD 应采用带宽选择与 robust bias correction 配套区间。若 running variable 有簇或重复值，还要调整方差。",
+        "workflow": "研究对象 → 制度/样本 → running variable 图 → 密度/协变量 → 预定主带宽 → 局部线性 → robust 区间 → 带宽敏感性 → 外推限制。",
+        "code_setup": clean(r"""
+            ~~~r
+            set.seed(20260802)
+            n <- 2000L
+            x <- runif(n, -3, 3)
+            d <- as.integer(x >= 0)
+            y <- 1 + .5 * x + .3 * x^2 + 1.2 * d +
+              .2 * d * x + rnorm(n, sd = .9)
+            ~~~
+        """),
+        "code_estimate": clean(r"""
+            ~~~r
+            rd_once <- function(h) {
+              keep <- abs(x) <= h
+              fit <- lm(y ~ d + x + d:x, subset = keep)
+              X <- model.matrix(fit); e <- resid(fit)
+              nn <- nrow(X); kk <- ncol(X)
+              bread <- solve(crossprod(X))
+              V <- nn / (nn - kk) * bread %*%
+                crossprod(X, X * e^2) %*% bread
+              c(tau = coef(fit)["d"], se = sqrt(V["d", "d"]), n = nn)
+            }
+            sapply(c(.6, 1, 1.5), rd_once)
+            ~~~
+        """),
+        "results": "| 带宽 $h$ | $\\hat\\tau$ | HC1 SE | 局部样本 |\n|---:|---:|---:|---:|\n| 0.6 | 1.427 | 0.172 | 404 |\n| 1.0（主） | 1.282 | 0.130 | 676 |\n| 1.5 | 1.273 | 0.106 | 1008 |\n\n真阈值效应 1.2；宽带宽更精确但依赖更远处函数形状。",
+        "diagnostics": "同时画原始分箱均值、左右局部线性、running variable 密度和预处理协变量。模拟密度连续；真实数据出现堆积时必须解释制度。",
+        "sensitivity": "带宽网格 0.4–1.8、删去阈值极近观测的 donut 规格、局部二次仅作对照；明确哪些改变 estimand，哪些只改变估计近似。",
+        "misconception": "从多个带宽中挑最显著的一个作主结果。这把研究者选择引入推断；主设定应由设计和预先规则决定，敏感性表完整呈现。",
+        "check": {"question": "主带宽结果显著且密度检验不拒绝连续，能否把 1.282 外推为所有分数者的平均政策效应？", "answer": "不能。RDD 识别阈值处局部效应；密度不拒绝也只是诊断。外推需要额外结构、实验或可辩护同质性。", "diagnosis": "若答能，区分内部局部识别与外部有效性；若只看显著性，回到 estimand"},
+        "takeaways": ["最终报告按对象—识别—估计—推断—限制闭环", "每个敏感性改变都要说明理由", "可复现代码、固定数字表和谨慎语言同等重要"],
+        "practice": "提交 6 页项目报告、可运行 QMD、固定结果表、诊断图和 3 分钟口头汇报",
+        "extensions": ["替换为本地 Hansen 数据的研究设计", "fuzzy RDD 与弱第一阶段", "DML 控制高维协变量但不替代 RDD 识别"],
+        "links": [
+            ("Ch.21 习题解答", "docs/ch21/Hansen_Ch21_Exercises_Solutions.md", "https://github.com/sunfang3/hansen-econometrics-solutions/blob/master/docs/ch21/Hansen_Ch21_Exercises_Solutions.md"),
+            ("Ch.28 习题解答", "docs/ch28/Hansen_Ch28_Exercises_Solutions.md", "https://github.com/sunfang3/hansen-econometrics-solutions/blob/master/docs/ch28/Hansen_Ch28_Exercises_Solutions.md"),
+        ],
     },
 ]
 
