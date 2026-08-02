@@ -9,6 +9,9 @@ book:
   date: last-modified
   chapters:
     - index.qmd
+  appendices:
+    - appendix-a.qmd
+    - appendix-b.qmd
 
 lang: zh-CN
 bibliography: ../presentation/references.bib

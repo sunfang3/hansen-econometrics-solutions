@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import re
 import sys
 from pathlib import Path
@@ -20,10 +21,18 @@ EXPECTED = {
     "appendix-a.qmd": (23, "A", 3500),
     "appendix-b.qmd": (5, "B", 2200),
 }
+SCOPES = {
+    "appendices": {"appendix-a.qmd", "appendix-b.qmd"},
+    "chapters": {f"ch{i:02d}.qmd" for i in range(1, 7)},
+    "foundation": set(EXPECTED),
+}
 PLACEHOLDER = re.compile(r"\b(?:TODO|TBD)\b|待补|占位|Lorem", re.I)
 CHINESE = re.compile(r"[\u3400-\u9fff]")
 TAG = re.compile(r"\\tag\{([1-9]\d*|[AB])\.(\d+)\}")
 ANCHOR = re.compile(r"\{#hansen-eq-([1-9]\d*|[ab])-(\d+)\}")
+FENCED_ANCHOR = re.compile(
+    r"^::: \{#hansen-eq-([1-9]\d*|[ab])-(\d+)\}\s*$", re.M
+)
 REFERENCE = re.compile(r"\[式 \(([1-9]\d*|[AB])\.(\d+)\)\]\(([^)]+)\)")
 
 
@@ -50,6 +59,9 @@ def check_file(path: Path, minimum_sections: int, prefix: str, minimum_chinese: 
 
     tags = TAG.findall(text)
     anchors = ANCHOR.findall(text)
+    fenced_anchors = FENCED_ANCHOR.findall(text)
+    if sorted(anchors) != sorted(fenced_anchors):
+        issues.append(error(path, "ANCHOR_BLOCK", "公式锚点必须放在 fenced div 起始行，不能写在公式末尾。"))
     normalized_anchors = [(a.upper(), b) for a, b in anchors]
     if sorted(tags) != sorted(normalized_anchors):
         issues.append(error(path, "FORMULA_PAIR", "原书公式 tag 与稳定 anchor 不是一一对应。"))
@@ -71,15 +83,25 @@ def check_file(path: Path, minimum_sections: int, prefix: str, minimum_chinese: 
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--scope",
+        choices=SCOPES,
+        default="foundation",
+        help="检查附录、Ch.1–6，或整个基础阶段（默认）。",
+    )
+    args = parser.parse_args()
     issues: list[str] = []
     for name, requirements in EXPECTED.items():
+        if name not in SCOPES[args.scope]:
+            continue
         issues.extend(check_file(NOTES / name, *requirements))
     for message in issues:
         print(message)
     if issues:
         print(f"NOTES_CHECK_FAILED: {len(issues)} 个错误。")
         return 1
-    print("NOTES_CHECK_OK: Ch.1–6 与 Appendix A–B 达到结构、详细度和公式编号门槛。")
+    print(f"NOTES_CHECK_OK: {args.scope} 达到结构、详细度和公式编号门槛。")
     return 0
 
 

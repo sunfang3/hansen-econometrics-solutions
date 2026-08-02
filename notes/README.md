@@ -12,6 +12,7 @@ quarto render notes
 
 ~~~bash
 python3 notes/scripts/check_notes.py
+python3 notes/scripts/check_notes.py --scope appendices
 ~~~
 
 章节写作要求：

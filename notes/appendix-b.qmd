@@ -1,0 +1,274 @@
+---
+title: "附录 B　常用不等式"
+subtitle: "从有限样本界到概率收敛的证明工具"
+hansen-chapter: "Appendix B"
+book-pages: "966–985"
+pdf-pages: "986–1005"
+status: "完整初稿"
+---
+
+::: {.book-map}
+**原书位置与本章路线**　对应 Hansen Appendix B（书内 pp. 966–985；PDF pp. 986–1005）。前四节依次整理实数、向量、矩阵和概率不等式，B.5 给出证明。阅读顺序不是背诵名单，而是学会识别：当前要控制的是绝对值、范数、二次型、尾概率还是最大部分和？目标确定后，再选择能把它转化为已知矩或方差的界。
+:::
+
+::: {.bridge}
+**本科桥接**　本科阶段常用“依概率收敛”作为结论，证明只写“大数定律”。Hansen 的渐近推导经常需要先把坏事件的概率变成期望或方差的上界，再证明该上界趋于零。Markov、Chebyshev、Cauchy–Schwarz 与矩阵范数不等式就是这条证明流水线的连接件。
+:::
+
+## 实数不等式（Inequalities for Real Numbers）
+
+最基础的三角不等式是
+
+::: {#hansen-eq-b-1}
+$$
+\left|\sum_{j=1}^m x_j\right|
+\le \sum_{j=1}^m|x_j|.
+\tag{B.1}
+$$
+:::
+
+它把“和的绝对值”换成“绝对值的和”，代价是上界可能较松。渐近证明中这一步常用于逐项控制误差。方向不能反过来：正负抵消会让左边远小于右边。
+
+若 $g$ 是凸函数、$a_j\ge0$ 且 $\sum_j a_j=1$，Jensen 不等式为
+
+::: {#hansen-eq-b-2}
+$$
+g\!\left(\sum_{j=1}^m a_jx_j\right)
+\le \sum_{j=1}^m a_jg(x_j).
+\tag{B.2}
+$$
+:::
+
+理解方向的办法是看 $g(x)=x^2$：先平均再平方不超过先平方再平均。若 $g$ 凹，方向反转。几何平均不等式、Loève 的 $c_r$ 不等式和范数单调性都是把幂、和与绝对值重新安排。使用前必须检查指数区间；$0<r\le1$ 与 $r\ge1$ 的常数和方向不同。
+
+计量中一个常见凹函数是 $\log x$。因此正数样本满足 $\log(\sum_ja_jx_j)\ge\sum_ja_j\log x_j$：平均值的对数不小于对数的平均值。这个结论解释了为什么“平均工资取对数”与“对数工资取平均”不是同一个统计量。另一个常见凸函数是绝对值的幂 $|x|^r$（$r\ge1$），它把条件 Jensen 与矩的控制连接起来。每次使用 Jensen 都应明确写出函数、定义域、凸凹性与期望存在性，不能只凭公式外形判断方向。
+
+## 向量不等式（Inequalities for Vectors）
+
+Hölder 不等式要求 $p,q>1$ 且 $1/p+1/q=1$：
+
+::: {#hansen-eq-b-11}
+$$
+|a'b|\le \lVert a\rVert_p\lVert b\rVert_q.
+\tag{B.11}
+$$
+:::
+
+令 $p=q=2$，得到最常用的 Schwarz 不等式：
+
+::: {#hansen-eq-b-12}
+$$
+|a'b|\le \lVert a\rVert\lVert b\rVert.
+\tag{B.12}
+$$
+:::
+
+这不是抽象装饰。若要控制样本交叉项 $n^{-1}\sum_iX_ie_i$，可把它看作两个 $n$ 维向量的内积，再由两者平方和控制。等号出现于两个向量共线，因此该界也有清楚的几何含义。
+
+Minkowski 不等式是 $p$ 范数的三角不等式。证明思路是：先把 $\lVert a+b\rVert_p^p$ 写成 $|a_j+b_j|\,|a_j+b_j|^{p-1}$ 的和，再分别对含 $a_j$、$b_j$ 的部分用 Hölder，最后约去共同的 $\lVert a+b\rVert_p^{p-1}$。这条路线说明各不等式并非孤立：Hölder 控制内积，Minkowski 控制和。
+
+## 矩阵不等式（Inequalities for Matrices）
+
+对相容矩阵，Frobenius 范数和谱范数都满足
+
+::: {#hansen-eq-b-15}
+$$
+\lVert AB\rVert\le \lVert A\rVert\lVert B\rVert.
+\tag{B.15}
+$$
+:::
+
+因此若 $A_n$ 有界、$B_n\to0$，则 $A_nB_n\to0$。证明渐近等价时常把一个复杂矩阵余项拆成这两个因子。对秩为 $r$ 的矩阵，原书的范数等价界为
+
+::: {#hansen-eq-b-20}
+$$
+\lVert A\rVert\le\lVert A\rVert_F
+\le\sqrt r\,\lVert A\rVert.
+\tag{B.20}
+$$
+:::
+
+当维数固定，$\sqrt r$ 是固定常数；当 $r$ 随样本增长，这个因子可能不再无害。高维计量中不能只说“范数等价”而省略维数。
+
+矩阵界也必须保留阶数信息。例如 $A$ 为 $m\times k$、$B$ 为 $k\times q$ 时，$AB$ 为 $m\times q$；若用谱范数，$\lVert A\rVert$ 控制的是所有单位方向上的最大放大率。证明 $A_nB_n=o_p(1)$ 时，一个充分路线是 $\lVert A_n\rVert=O_p(1)$ 且 $\lVert B_n\rVert=o_p(1)$，再由 [式 (B.15)](#hansen-eq-b-15) 得乘积范数为 $o_p(1)$。这里 $O_p(1)$ 表示随机有界，不能误读为每个样本点都有统一确定上界。
+
+若 $A$ 对称、$B\succeq0$，迹不等式把 $\operatorname{tr}(AB)$ 控制在 $\lVert A\rVert\operatorname{tr}(B)$ 内；令 $B=bb'$ 即得到 $b'Ab\le\lVert A\rVert b'b$。核心念头是用谱分解把 $A$ 对角化，再利用 $B$ 旋转后对角元非负。
+
+## 概率不等式（Probability Inequalities）
+
+这一节可按用途分成五组。
+
+第一组控制事件并集。Boole（union bound）说明
+
+::: {#hansen-eq-b-24}
+$$
+\Pr(A\cup B)\le \Pr(A)+\Pr(B).
+\tag{B.24}
+$$
+:::
+
+扩展到多个事件后，可把“至少一个分量超界”拆成各分量超界概率之和。上界不要求事件独立，因此非常稳健，但可能保守。
+
+第二组把凸性移到随机变量上。若 $g$ 凸且相关期望存在，
+
+::: {#hansen-eq-b-27}
+$$
+g\{\mathbb E(X)\}\le \mathbb E\{g(X)\}.
+\tag{B.27}
+$$
+:::
+
+条件版本为
+
+::: {#hansen-eq-b-28}
+$$
+g\{\mathbb E(Y\mid X)\}
+\le \mathbb E\{g(Y)\mid X\}.
+\tag{B.28}
+$$
+:::
+
+取 $g(u)=|u|^r$、$r\ge1$，再对两边取无条件期望并用迭代期望，得到
+
+::: {#hansen-eq-b-29}
+$$
+\mathbb E|\mathbb E(Y\mid X)|^r
+\le \mathbb E|Y|^r<\infty.
+\tag{B.29}
+$$
+:::
+
+这说明条件期望是一种平滑：它不会增加 $r$ 阶矩。向量版本的基本界为
+
+::: {#hansen-eq-b-30}
+$$
+\lVert\mathbb E(Y)\rVert\le\mathbb E\lVert Y\rVert.
+\tag{B.30}
+$$
+:::
+
+第三组控制乘积矩。随机矩阵的 Cauchy–Schwarz 不等式写作
+
+::: {#hansen-eq-b-32}
+$$
+\mathbb E\lVert X'Y\rVert
+\le
+\{\mathbb E\lVert X\rVert^2\}^{1/2}
+\{\mathbb E\lVert Y\rVert^2\}^{1/2}.
+\tag{B.32}
+$$
+:::
+
+它不仅给出上界，也告诉我们为何有限二阶矩足以推出乘积的一阶矩有限。引用时应明确两个二阶矩确实存在。
+
+一个典型用法是处理交叉矩 $\mathbb E|Xe|$。若分别知道 $\mathbb E X^2<\infty$ 与 $\mathbb E e^2<\infty$，则 Cauchy–Schwarz 给出 $\mathbb E|Xe|\le(\mathbb EX^2)^{1/2}(\mathbb Ee^2)^{1/2}<\infty$。逻辑顺序是“两个二阶矩存在”推出“乘积一阶矩存在”，不是反过来；仅知道 $\mathbb E|X|$ 与 $\mathbb E|e|$ 有限，并不足以保证乘积期望有限。
+
+第四组把矩转为尾概率。Markov 不等式是母公式：若 $g(X)\ge0$，则
+
+::: {#hansen-eq-b-36}
+$$
+\Pr\{g(X)>\epsilon\}
+\le\epsilon^{-1}\mathbb E\{g(X)\}.
+\tag{B.36}
+$$
+:::
+
+取 $g(X)=(X-\mathbb EX)^2$ 就得到
+
+::: {#hansen-eq-b-38}
+$$
+\Pr\{|X-\mathbb E(X)|>\epsilon\}
+\le \epsilon^{-2}\operatorname{var}(X).
+\tag{B.38}
+$$
+:::
+
+这正是 Chebyshev 不等式。证明依概率收敛的标准路线是：固定任意 $\epsilon>0$，用 [式 (B.36)](#hansen-eq-b-36) 或 [式 (B.38)](#hansen-eq-b-38) 上界坏事件概率，再证明右边趋于零。不能只证明期望趋零而不说明如何转成概率结论。
+
+以独立同分布样本均值为例，若 $\mathbb EX_i=\mu$、$\operatorname{var}(X_i)=\sigma^2<\infty$，则 $\operatorname{var}(\bar X_n)=\sigma^2/n$。代入 Chebyshev：
+
+$$
+\Pr(|\bar X_n-\mu|>\epsilon)
+\le \frac{\sigma^2}{n\epsilon^2}\longrightarrow0.
+$$
+
+因此 $\bar X_n\to_p\mu$。这四步分别是：确定中心、算方差、套不等式、让上界趋零。教学补充式没有 Hansen 编号。若观测相关，$\operatorname{var}(\bar X_n)$ 不再自动等于 $\sigma^2/n$；此时必须先处理协方差项，不能照抄独立样本结论。
+
+第五组给出更锋利的和与最大值界。若独立、均值零、$|X_i|\le M$ 且 $\sigma^2=\sum_i\mathbb E X_i^2$，Bernstein 界控制和的双侧尾概率：
+
+::: {#hansen-eq-b-40}
+$$
+\Pr\!\left(\left|\sum_{i=1}^nX_i\right|>\epsilon\right)
+\le 2\exp\!\left\{-\frac{\epsilon^2}{4\sigma^2+4M\epsilon}\right\}.
+\tag{B.40}
+$$
+:::
+
+它比 Chebyshev 的多项式衰减更快，但代价是独立与有界等更强条件。Kolmogorov 不等式进一步控制所有部分和的最大值：
+
+::: {#hansen-eq-b-51}
+$$
+\Pr\!\left(
+\max_{1\le j\le n}
+\left|\sum_{i=1}^jX_i\right|>\epsilon
+\right)
+\le \epsilon^{-2}\sum_{i=1}^n\mathbb E(X_i^2).
+\tag{B.51}
+$$
+:::
+
+它是从点态控制走向一致控制的重要桥梁。Rademacher 随机变量、对称化、Khintchine、Marcinkiewicz–Zygmund、Whittle 与 Rosenthal 不等式，则服务于经验过程和高阶矩控制。初读时先掌握它们各自的输入条件与输出形状，不必一开始记住所有常数。
+
+选择工具时可按“信息强弱”判断。只知道非负变量的一阶矩，用 Markov；知道中心化变量的二阶矩，用 Chebyshev；知道独立、中心化且有界，希望获得指数尾界，用 Bernstein；要控制随 $j$ 变化的全部部分和，用 Kolmogorov 或相应最大不等式。条件越强，通常可得到越快的尾部衰减。证明中应把条件写在使用不等式之前，让读者能看到这笔交换。
+
+还应区分“界成立”和“界有用”。例如 Chebyshev 对任何有限方差变量都成立，但若方差上界不随 $n$ 缩小，它不能推出概率趋零。反过来，一个常数略大的 Bernstein 界仍可能有用，因为指数项随样本迅速衰减。判断不等式时，最终关注的是上界关于 $n$、维数和阈值 $\epsilon$ 的数量级，而不是常数是否看起来漂亮。
+
+换言之，先看阶数，再看常数。
+
+## 证明（Proofs）*
+
+原书把证明集中在此节。阅读证明时可反复识别三种动作。
+
+第一，归一化。以 Hölder 为例，先令 $\lVert a\rVert_p=\lVert b\rVert_q=1$；一般情形最后通过齐次性恢复。关键逐项界是
+
+::: {#hansen-eq-b-53}
+$$
+|a_jb_j|
+\le \frac{|a_j|^p}{p}+\frac{|b_j|^q}{q}.
+\tag{B.53}
+$$
+:::
+
+对 $j$ 求和后右边为 $1/p+1/q=1$，得到归一化 Hölder；再乘回两个范数即得到 [式 (B.11)](#hansen-eq-b-11)。
+
+第二，构造非负对象。矩阵 Cauchy–Schwarz 的证明定义投影误差
+
+$$
+e=Y-\mathbb E(YX')\{\mathbb E(XX')\}^{-}X.
+$$
+
+因为 $\mathbb E(ee')\succeq0$，展开后把目标矩阵留在一边，就得到所需半正定次序。这与 OLS “残差平方和不能为负”的证明结构完全同源。
+
+第三，指数化尾事件。Gaussian 与 Bernstein 界都把 $\{S>\epsilon\}$ 改写为 $\{\exp(tS)>\exp(t\epsilon)\}$，再用 Markov 控制，并选择 $t$ 平衡上界。这里不是魔法：指数函数把独立变量之和变成乘积，使矩母函数可以逐项处理。
+
+第四，先标出最终要趋于零的量，再逆向安排不等式。假设目标是 $R_n=o_p(1)$：先写任意 $\epsilon>0$ 下的 $\Pr(\lVert R_n\rVert>\epsilon)$；若能控制 $\mathbb E\lVert R_n\rVert^q$，就对 $g(R_n)=\lVert R_n\rVert^q$ 用 Markov；若 $R_n$ 是若干项之和，再用三角或 Minkowski 拆开；若每一项是矩阵乘积，再用次乘性。这样形成“概率—矩—和—乘积”的逆向分解，最后只需分别证明简单因子有界或趋零。
+
+::: {.common-error}
+**常见误用**
+
+- 忘记 Jensen 的方向由凸/凹决定；
+- 使用 Cauchy–Schwarz 却没有验证二阶矩存在；
+- 用 Bernstein 却漏掉独立、中心化或有界条件；
+- 把“上界有限”误写成“上界趋于零”；一致性证明需要后一个结论；
+- 在维数增长时忽略 [式 (B.20)](#hansen-eq-b-20) 中的 $\sqrt r$。
+:::
+
+::: {.book-map}
+**章末自检**
+
+1. 给定 $\Pr(|Z_n|>\epsilon)$，能否判断用 Markov、Chebyshev 还是指数界最合适，并逐项核对条件？
+2. 能否从条件 Jensen 推出 [式 (B.29)](#hansen-eq-b-29)，同时说出用了哪一次迭代期望？
+3. 能否解释 union bound 为什么不需要独立，以及它为何可能保守？
+4. 能否区分“控制一个固定和”与“控制所有部分和最大值”？
+5. 能否在一个矩阵余项中用次乘性拆分因子，并追踪随维数变化的常数？
+:::
