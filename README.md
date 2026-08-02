@@ -36,7 +36,24 @@ Bruce E. Hansen《Econometrics》习题解答（按 Hansen 体系完整解题）
 
 解答位于 `docs/chXX/`。
 
-## R / Quarto 版（分支 `r-toolset`）
+## 全年中文 Quarto 课程
+
+`presentation/` 提供一套从本科计量平缓过渡到 Hansen 全书的研究生课程：
+
+- 40 次课，每次 90 分钟：32 次主课 + 8 次工作坊；
+- 覆盖 Ch.1–29 与 Appendix A–B；
+- 7 份中文补充讲义，包括矩阵、概率、渐近、记号、复现、练习导航和[全书缩写总表](presentation/supplements/07-abbreviations-glossary.qmd)；
+- 每页课堂演示均有中文讲者备注，工作坊含固定种子的代码和数值结果。
+
+课程入口为 [presentation/index.qmd](presentation/index.qmd)，全年安排见 [presentation/syllabus.qmd](presentation/syllabus.qmd)。一键检查并渲染：
+
+~~~bash
+presentation/scripts/render.sh
+~~~
+
+详细构建、讲者视图、PDF 和数据说明见 [presentation/README.md](presentation/README.md)。
+
+## 习题解答的 R / Quarto 版
 
 各章 **Markdown 理论 + notebook 代码** 已融合为 Quarto：
 

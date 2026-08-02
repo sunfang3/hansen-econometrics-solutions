@@ -19,7 +19,7 @@ docs/chXX 逐步习题解答 ──链接──┤        │
                               │        ├─> 中文教师备注
 R companions / 本地数据 ─可选─┘        └─> 课堂检查与课后练习
 
-Appendix A/B + Ch.6 ──> 6 份中文补充讲义 ──> 可滚动 HTML
+Appendix A/B + Ch.6 + 全书缩写 ──> 7 份中文补充讲义 ──> 可滚动 HTML
 课程覆盖表 + syllabus ──> 章节、课次、补充材料双向导航
 静态检查脚本 ──> 数量、结构、链接、备注、阅读页码检查
 ```
@@ -125,7 +125,7 @@ Appendix A/B + Ch.6 ──> 6 份中文补充讲义 ──> 可滚动 HTML
 
 **Planning-time unknowns:** 无。用户已安装 Quarto 1.10.18，`quarto check` 的基础 Markdown 渲染通过。
 
-### Unit 2: 课程主页、教学大纲与六份辅助讲义
+### Unit 2: 课程主页、教学大纲与七份辅助讲义
 
 **Goal:** 给学生和教师提供全年导航、先修桥梁、统一记号与复现指南。
 
@@ -143,8 +143,9 @@ Appendix A/B + Ch.6 ──> 6 份中文补充讲义 ──> 可滚动 HTML
 - `presentation/supplements/04-notation-map.qmd` — 本科教材与 Hansen 记号/术语映射。
 - `presentation/supplements/05-r-data-reproducibility.qmd` — R、数据路径、执行与复现规范。
 - `presentation/supplements/06-reading-exercise-guide.qmd` — 分层阅读、带星内容、现有习题解答导航。
+- `presentation/supplements/07-abbreviations-glossary.qmd` — Ch.1–29 与 Appendix A/B 的缩写、算子、中英文释义和易混点总表。
 
-**Approach:** 六份材料均为完整中文 Quarto 文档，使用定义—直觉—公式—维数/前提—例子—自检结构；syllabus 用表格将 31 个书稿单元（29 章 + A/B）逐项映射到课次，并在五个课程模块结束处列出可观察的掌握门槛，而不是只列“讲过哪些章节”。
+**Approach:** 七份材料均为完整中文 Quarto 文档，使用定义—直觉—公式—维数/前提—例子—自检结构；第 7 份按全书学习顺序整理缩写、算子、英文全称、中文释义和易混点；syllabus 用表格将 31 个书稿单元（29 章 + A/B）逐项映射到课次，并在五个课程模块结束处列出可观察的掌握门槛，而不是只列“讲过哪些章节”。
 
 **Patterns:** 复用 AGENTS.md 的“题意翻译—已知与目标—路线图—逐步推导—结论回扣”；不复制教材长段文字。
 
@@ -155,7 +156,7 @@ Appendix A/B + Ch.6 ──> 6 份中文补充讲义 ──> 可滚动 HTML
 - [ ] Error path: 覆盖矩阵遗漏任一章或附录时静态检查失败。
 - [ ] Edge case: 同一章跨两次课时，覆盖表明确区分前半/后半且不重复宣称完整覆盖。
 
-**Verification:** 31 个书稿单元全部在覆盖矩阵中出现；六份补充 QMD 均有实质内容和内部导航。
+**Verification:** 31 个书稿单元全部在覆盖矩阵中出现；七份补充 QMD 均有实质内容和内部导航。
 
 **Planning-time unknowns:** 正式评分权重为 **Deferred to Planning**；只提供可调整建议，不把未确认权重写成既定政策。
 
@@ -411,7 +412,7 @@ Appendix A/B + Ch.6 ──> 6 份中文补充讲义 ──> 可滚动 HTML
 - [ ] Error path: 任一 QMD 解析失败时记录准确文件，修复后重新全量验证。
 - [ ] Edge case: 渲染后 `git status --short` 不出现 `_output/` 或 `.quarto/`。
 
-**Verification:** 静态检查通过；40 次课与 6 份补充材料全部真实渲染；抽查基础矩阵课、GMM 课、单位根工作坊、机器学习课和一份长篇补充材料的首屏/公式/表格/备注；`git diff --check` 通过；工作树只含预期源文件变更。
+**Verification:** 静态检查通过；40 次课与 7 份补充材料全部真实渲染；抽查基础矩阵课、GMM 课、单位根工作坊、机器学习课和缩写总表的首屏/公式/表格/备注；`git diff --check` 通过；工作树只含预期源文件变更。
 
 **Planning-time unknowns:** 无。HTML 全量渲染可直接执行；本机未安装 Chrome Headless，因此 PDF 打印和浏览器像素级截图属于非阻塞的环境限制，不能替代 HTML 结构与公式检查。
 

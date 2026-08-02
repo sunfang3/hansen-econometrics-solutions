@@ -1,0 +1,395 @@
+---
+title: "补充讲义 7：Hansen《Econometrics》缩写、算子与符号总表"
+subtitle: "覆盖 Appendix A–B 与 Ch.1–29 的中英文阅读词典"
+date: last-modified
+---
+
+## 0. 这份词典解决什么问题
+
+Hansen 的正文会同时使用三类“短写法”：
+
+1. **方法缩写**：OLS、IV、GMM、VAR、RDD、DML；
+2. **概率缩写**：i.i.d.、MDS、LLN、CLT、FCLT、w.p.a.1；
+3. **算子与极限记号**：$\operatorname{var}$、$\operatorname{rank}$、$\otimes$、$\to_p$、$O_p(1)$。
+
+它们不能只按字面翻译。看到一个缩写时，至少要补齐四件事：
+
+- 英文全称和中文名称；
+- 它是总体对象、样本估计量、检验还是渐近工具；
+- 它首次进入哪一类模型；
+- 与哪个相近缩写最容易混淆。
+
+本表按全书学习顺序编排，而不是只按字母排序。浏览器中可用页面查找快速定位；最后一节给出按字母检索表。
+
+::: {.misconception}
+同一个缩写在不同章节可能有不同含义。例如 AR 在时间序列中通常是 autoregressive，在弱工具推断中又可能是 Anderson–Rubin；RF 既可能是 reduced form，也可能是 random forest。必须结合所在章节和公式判断。
+:::
+
+## 1. Appendix A–B：概率、统计与矩阵语言
+
+### 1.1 概率与分布
+
+| 缩写/符号 | 英文全称 | 中文释义 | 阅读时要补的一句 |
+|---|---|---|---|
+| r.v. | random variable | 随机变量 | 大写常表示随机变量，小写常表示一次实现 |
+| i.i.d. | independent and identically distributed | 独立同分布 | “独立”和“同分布”是两条不同限制 |
+| p.m.f. / pmf | probability mass function | 概率质量函数 | 用于离散随机变量 |
+| p.d.f. / pdf | probability density function | 概率密度函数 | 密度值本身不是概率 |
+| c.d.f. / CDF | cumulative distribution function | 累积分布函数 | $F(x)=P(X\le x)$ |
+| ch.f. / CF | characteristic function | 特征函数 | 不要与控制函数 control function 混淆 |
+| a.s. | almost surely | 几乎处处、几乎必然 | 除概率为零的集合外成立 |
+| w.p.1 | with probability one | 以概率 1 | 常与 a.s. 同义使用 |
+| w.p.a.1 | with probability approaching one | 以趋近于 1 的概率 | 是渐近表述，不是每个样本量都必然 |
+| DGP | data-generating process | 数据生成过程 | 总体如何产生可观察样本的完整机制 |
+| $E[X]$ | expectation | 期望 | 总体平均，不是样本均值 |
+| $\operatorname{var}(X)$ | variance | 方差 | 标量随机变量的二阶离散程度 |
+| $\operatorname{cov}(X,Y)$ | covariance | 协方差 | 零协方差一般不推出独立 |
+| MGF | moment-generating function | 矩母函数 | 存在性比特征函数要求更强 |
+
+### 1.2 收敛与渐近工具
+
+| 缩写/符号 | 英文全称 | 中文释义 | 典型用途 |
+|---|---|---|---|
+| LLN | law of large numbers | 大数定律 | 让样本矩靠近总体矩 |
+| WLLN | weak law of large numbers | 弱大数定律 | 通常给依概率收敛 |
+| SLLN | strong law of large numbers | 强大数定律 | 通常给几乎必然收敛 |
+| CLT | central limit theorem | 中心极限定理 | 给中心化和的渐近正态 |
+| CMT | continuous mapping theorem | 连续映射定理 | 把收敛传递给连续函数 |
+| FCLT | functional central limit theorem | 函数型中心极限定理 | 部分和过程收敛到 Brownian motion |
+| BM | Brownian motion | 布朗运动 | 单位根极限中的随机函数 $W(r)$ |
+| $\to_p$ | convergence in probability | 依概率收敛 | 一致性的常用语言 |
+| $\to_d$ / $\Rightarrow$ | convergence in distribution | 依分布收敛、弱收敛 | 渐近分布的语言 |
+| $\to_{a.s.}$ | almost-sure convergence | 几乎必然收敛 | 强于依概率收敛 |
+| plim | probability limit | 概率极限 | $\operatorname{plim}\hat\theta=\theta_0$ 表示一致 |
+| $O_p(1)$ | bounded in probability | 依概率有界 | 随机量不按概率逃向无穷 |
+| $o_p(1)$ | convergence to zero in probability | 依概率趋于零 | 常表示可忽略余项 |
+| $O_p(a_n)$ | stochastic order | 随机阶不超过 $a_n$ | $X_n/a_n=O_p(1)$ |
+| $o_p(a_n)$ | smaller stochastic order | 比 $a_n$ 更小的随机阶 | $X_n/a_n\to_p0$ |
+| Delta method | delta method | Delta 方法 | 用 Taylor 展开传递渐近分布 |
+| Slutsky | Slutsky’s theorem | Slutsky 定理 | 合并依概率常数与依分布极限 |
+| ULLN | uniform law of large numbers | 一致大数定律 | 极值估计一致性的关键 |
+
+### 1.3 矩阵算子
+
+| 记号 | 英文全称 | 中文释义 | 维数提醒 |
+|---|---|---|---|
+| p.d. | positive definite | 正定 | $x'Ax>0$，非零 $x$ |
+| p.s.d. | positive semidefinite | 半正定 | $x'Ax\ge0$ |
+| $\operatorname{rank}(A)$ | rank | 秩 | 独立行/列方向数 |
+| $\operatorname{tr}(A)$ | trace | 迹 | 方阵对角元素之和 |
+| $\det(A)$ | determinant | 行列式 | 非零等价于方阵可逆 |
+| $\operatorname{diag}(a)$ | diagonal matrix/operator | 对角矩阵/取对角算子 | 结合输入对象判断含义 |
+| $\operatorname{vec}(A)$ | vectorization | 向量化 | 通常按列堆叠矩阵 |
+| $\otimes$ | Kronecker product | Kronecker 积 | 多方程、面板和 VAR 常见 |
+| $A^{-1}$ | inverse | 逆矩阵 | 只有方阵满秩时存在 |
+| $A^+$ | generalized inverse | 广义逆 | 不等于普通逆 |
+| $\lVert x\rVert$ | norm | 范数 | 必须结合上下文判断具体范数 |
+| $I_n$ | identity matrix | $n$ 阶单位矩阵 | 维数不可省略 |
+| $\mathbf 1_n$ | vector of ones | $n$ 维全 1 向量 | 常用于常数项和去均值 |
+| $e_j$ | selection vector | 第 $j$ 个单位向量 | 也可能表示误差，依上下文判断 |
+| $\arg\min$ | argument minimizing | 使目标最小的参数 | 返回参数，不是最小函数值 |
+| $\inf/\sup$ | infimum/supremum | 下确界/上确界 | 未必在参数空间中取到 |
+
+## 2. Ch.1–11：回归、推断与多方程
+
+### 2.1 条件均值、投影与最小二乘
+
+| 缩写 | 英文全称 | 中文释义 | 易混点 |
+|---|---|---|---|
+| CEF | conditional expectation function | 条件期望函数 | $E[Y\mid X]$，可非线性 |
+| BLP | best linear predictor | 最佳线性预测 | 只在线性函数类中最佳 |
+| LS | least squares | 最小二乘 | 泛指平方损失方法 |
+| OLS | ordinary least squares | 普通最小二乘 | 样本线性投影估计量 |
+| FOC | first-order condition | 一阶条件 | 极值必要条件，未必充分 |
+| SOC | second-order condition | 二阶条件 | 用曲率判断局部极值 |
+| FWL | Frisch–Waugh–Lovell theorem | Frisch–Waugh–Lovell 定理 | 系数等于双残差化后的回归系数 |
+| OVB | omitted-variable bias | 遗漏变量偏误 | 需同时看相关方向与作用方向 |
+| BLUE | best linear unbiased estimator | 最佳线性无偏估计量 | “最佳”限于线性无偏类和相应假设 |
+| WLS | weighted least squares | 加权最小二乘 | 权重与条件方差相关 |
+| GLS | generalized least squares | 广义最小二乘 | 已知误差协方差结构时变换 |
+| FGLS | feasible generalized least squares | 可行广义最小二乘 | 用估计协方差替代未知协方差 |
+
+### 2.2 拟合、方差和检验
+
+| 缩写 | 英文全称 | 中文释义 | 使用提醒 |
+|---|---|---|---|
+| RSS / SSE | residual sum of squares / sum of squared errors | 残差平方和 | 不同教材命名略有差异 |
+| TSS | total sum of squares | 总离差平方和 | 与是否含常数项有关 |
+| ESS | explained sum of squares | 解释平方和 | 有些文献用 ESS 指 error sum of squares，先看定义 |
+| $R^2$ | coefficient of determination | 判定系数 | 拟合度，不是因果可信度 |
+| adj. $R^2$ | adjusted R-squared | 调整判定系数 | 对增加回归元作自由度惩罚 |
+| SE | standard error | 标准误 | 估计量抽样波动的估计 |
+| SD | standard deviation | 标准差 | 描述变量本身的离散 |
+| CI | confidence interval | 置信区间 | 频率解释针对重复抽样程序 |
+| df | degrees of freedom | 自由度 | 精确分布或有限样本修正常见 |
+| HC0–HC5 | heteroskedasticity-consistent covariance estimators | 异方差稳健协方差估计 HC0–HC5 | 差别在杠杆和自由度修正 |
+| EHW | Eicker–Huber–White | Eicker–Huber–White 稳健方差 | 常泛指异方差稳健 sandwich |
+| CRVE | cluster-robust variance estimator | 聚类稳健方差估计 | 簇应对应独立抽样/共同冲击层级 |
+| LR | likelihood-ratio test | 似然比检验 | 比较受约束与无约束似然 |
+| LM | Lagrange-multiplier test | Lagrange 乘子/得分检验 | 通常只估受约束模型 |
+| MD | minimum distance | 最小距离 | 将初步估计投到限制集合 |
+| DWH | Durbin–Wu–Hausman test | Durbin–Wu–Hausman 内生性检验 | 与一般 Hausman 比较同源 |
+
+### 2.3 重抽样与多方程
+
+| 缩写 | 英文全称 | 中文释义 | 使用提醒 |
+|---|---|---|---|
+| JK | jackknife | 刀切法 | 逐一删除观测估计偏差/方差 |
+| BS / Boot. | bootstrap | 自助法 | 必须说明重抽单位和生成世界 |
+| BC | bias-corrected interval | 偏差校正区间 | 只修正中位偏差 |
+| BCa | bias-corrected and accelerated interval | 偏差校正加速区间 | 同时调偏差与偏斜 |
+| SUR | seemingly unrelated regressions | 似不相关回归 | 利用跨方程误差相关提高效率 |
+| PCA | principal component analysis | 主成分分析 | 无监督降维，不自动有结构含义 |
+| PC | principal component | 主成分 | 方差最大方向的线性组合 |
+
+## 3. Ch.12–13：IV、LATE 与 GMM
+
+| 缩写 | 英文全称 | 中文释义 | 核心条件或提醒 |
+|---|---|---|---|
+| IV | instrumental variables | 工具变量法 | 相关性、外生性和排除限制 |
+| 2SLS / TSLS | two-stage least squares | 两阶段最小二乘 | 两阶段是计算表示，SE 不能用第二阶段普通 OLS |
+| FS | first stage | 第一阶段 | 工具对内生变量的预测关系 |
+| RF | reduced form | 约化式 | 工具对结果的总关联；勿与 random forest 混淆 |
+| CF | control function | 控制函数法 | 勿与 characteristic function 混淆 |
+| LIML | limited-information maximum likelihood | 有限信息最大似然 | 弱/多工具下常比 2SLS 偏误小 |
+| k-class | k-class estimators | k 类估计量 | OLS、2SLS、LIML 可纳入同一族 |
+| AR test | Anderson–Rubin test | Anderson–Rubin 检验 | 对弱识别稳健；勿与 autoregression 混淆 |
+| CLR | conditional likelihood ratio | 条件似然比检验 | 弱工具稳健推断方法 |
+| ATE | average treatment effect | 平均处理效应 | 全体总体平均 |
+| ATT | average treatment effect on the treated | 已处理者平均处理效应 | 条件在实际处理者上 |
+| ATU | average treatment effect on the untreated | 未处理者平均处理效应 | 条件在实际未处理者上 |
+| LATE | local average treatment effect | 局部平均处理效应 | 二元工具下 complier 的平均效应 |
+| CACE | complier average causal effect | 服从者平均因果效应 | 常与 LATE 同义 |
+| MTE | marginal treatment effect | 边际处理效应 | 按未观测选择阻力刻画异质效应 |
+| GMM | generalized method of moments | 广义矩估计 | 从总体矩条件和权重矩阵出发 |
+| GMM1 / GMM2 | one-step / two-step GMM | 一步/两步 GMM | 两步更新矩条件方差权重 |
+| CUE | continuously updated estimator | 连续更新 GMM | 参数和权重在同一准则中更新 |
+| $J$ test | Hansen’s J test | Hansen 过度识别 $J$ 检验 | 自由度为矩数减参数数 |
+| $G$ | Jacobian of moments | 矩函数 Jacobian | 满列秩对应局部识别 |
+| $S$ | covariance of moments | 矩函数长期/抽样协方差 | 有效权重通常为 $S^{-1}$ |
+| $W$ | weighting matrix | GMM 权重矩阵 | 不要与 Brownian motion $W(r)$ 混淆 |
+
+## 4. Ch.14–16：时间序列与非平稳性
+
+### 4.1 平稳动态与预测
+
+| 缩写 | 英文全称 | 中文释义 | 阅读提醒 |
+|---|---|---|---|
+| TS | time series | 时间序列 | 同一随机过程沿时间的观测 |
+| WN | white noise | 白噪声 | 零自相关不等于独立 |
+| MDS | martingale difference sequence | 鞅差序列 | $E[u_t\mid\mathcal F_{t-1}]=0$ |
+| ACF | autocorrelation function | 自相关函数 | 描述不同滞后线性相关 |
+| PACF | partial autocorrelation function | 偏自相关函数 | 控制中间滞后的相关 |
+| AR(p) | autoregressive process of order p | p 阶自回归过程 | AR 也可能指 Anderson–Rubin |
+| MA(q) | moving-average process of order q | q 阶移动平均过程 | 这里是冲击的有限滞后表示 |
+| ARMA(p,q) | autoregressive moving-average | 自回归移动平均过程 | 适用于平稳序列 |
+| ARIMA(p,d,q) | autoregressive integrated moving-average | 差分整合 ARMA | $d$ 表示差分阶数 |
+| DL | distributed lag | 分布滞后模型 | 解释变量效应跨期分布 |
+| ADL / ARDL | autoregressive distributed lag | 自回归分布滞后模型 | 同时含因变量和解释变量滞后 |
+| ARCH | autoregressive conditional heteroskedasticity | 自回归条件异方差 | 条件方差依赖过去平方冲击 |
+| GARCH | generalized ARCH | 广义 ARCH | 条件方差还依赖自身滞后 |
+| LRV | long-run variance | 长期方差 | 得分所有滞后协方差之和 |
+| HAC | heteroskedasticity and autocorrelation consistent | 异方差—自相关稳健 | 核和带宽是实质设定 |
+| NW | Newey–West | Newey–West HAC 估计 | 常使用 Bartlett 权重 |
+
+### 4.2 多元时间序列
+
+| 缩写 | 英文全称 | 中文释义 | 阅读提醒 |
+|---|---|---|---|
+| VAR | vector autoregression | 向量自回归 | 约化式多变量动态系统 |
+| VMA | vector moving average | 向量移动平均表示 | VAR 稳定时的冲击表示 |
+| SVAR | structural vector autoregression | 结构向量自回归 | 需额外结构限制识别冲击 |
+| IRF | impulse-response function | 脉冲响应函数 | 先说明约化冲击还是结构冲击 |
+| FEVD | forecast-error variance decomposition | 预测误差方差分解 | 依赖冲击正交化/结构识别 |
+| GC | Granger causality | Granger 因果/预测因果 | 是信息集相对的预测概念 |
+| IC | information criterion | 信息准则 | 统称 AIC、BIC 等 |
+| AIC | Akaike information criterion | Akaike 信息准则 | 偏重预测，惩罚较轻 |
+| BIC / SIC | Bayesian / Schwarz information criterion | Bayesian/Schwarz 信息准则 | 惩罚随 $\log T$ 增长 |
+| HQIC | Hannan–Quinn information criterion | Hannan–Quinn 信息准则 | 惩罚强度介于常见准则之间 |
+
+### 4.3 单位根与协整
+
+| 缩写 | 英文全称 | 中文释义 | 阅读提醒 |
+|---|---|---|---|
+| RW | random walk | 随机游走 | 最基本的单位根过程 |
+| $I(d)$ | integrated of order d | d 阶单整 | 差分 $d$ 次后平稳 |
+| UR | unit root | 单位根 | 普通平稳 t 极限失效 |
+| DF | Dickey–Fuller test | Dickey–Fuller 检验 | 使用非标准 DF 临界值 |
+| ADF | augmented Dickey–Fuller test | 增广 Dickey–Fuller 检验 | 加滞后差分吸收创新相关 |
+| PP | Phillips–Perron test | Phillips–Perron 检验 | 对序列相关作非参数修正 |
+| KPSS | Kwiatkowski–Phillips–Schmidt–Shin test | KPSS 平稳性检验 | 原假设是平稳，方向与 ADF 相反 |
+| EG | Engle–Granger procedure | Engle–Granger 两步法 | 生成残差检验需专用临界值 |
+| ECM | error-correction model | 误差修正模型 | 短期变化加长期偏离调整 |
+| VECM | vector error-correction model | 向量误差修正模型 | 协整 VAR 的系统表示 |
+| CV / CI vector | cointegrating vector | 协整向量 | 此处 CV 不指 cross-validation |
+| Johansen trace | Johansen trace test | Johansen 迹检验 | 检验协整秩 |
+| max-eigen | maximum-eigenvalue test | 最大特征根检验 | 另一种协整秩检验 |
+
+## 5. Ch.17–18：面板、动态 GMM 与 DiD
+
+| 缩写 | 英文全称 | 中文释义 | 核心提醒 |
+|---|---|---|---|
+| PD | panel data | 面板数据 | 同一个体跨期观测 |
+| FE | fixed effects | 固定效应 | 允许个体效应与解释变量相关 |
+| RE | random effects | 随机效应 | 需要个体效应与整条解释变量正交 |
+| BE | between estimator | 组间估计量 | 使用个体时间均值之间变化 |
+| FD | first differences | 一阶差分 | 面板中消去个体效应；时间序列中也用于单位根 |
+| LSDV | least-squares dummy variables | 最小二乘虚拟变量法 | 与静态线性 FE 的 within 系数等价 |
+| CRE | correlated random effects | 相关随机效应 | 常用 Mundlak 均值参数化 |
+| LDV | lagged dependent variable | 滞后因变量 | 短面板 FE 中引出 Nickell 偏误 |
+| AB | Arellano–Bond | Arellano–Bond 差分 GMM | 滞后水平作差分方程工具 |
+| BB | Blundell–Bond | Blundell–Bond 系统 GMM | 再加入水平方程矩条件 |
+| FD-GMM | first-difference GMM | 差分 GMM | 工具矩阵按时期形成块状结构 |
+| SYS-GMM | system GMM | 系统 GMM | 高持久性时可增强，但假设更强 |
+| AR(1)/AR(2) test | serial-correlation tests | 差分残差一/二阶相关检验 | AB 中预期 AR(1)，不应有 AR(2) |
+| DiD / DD | difference in differences | 双重差分 | 识别依赖未处理潜在结果平行趋势 |
+| DDD | difference in difference in differences | 三重差分 | 再增加一个比较维度 |
+| TWFE | two-way fixed effects | 双向固定效应 | 个体和时间 FE；错位处理异质时需谨慎 |
+| PT | parallel trends | 平行趋势 | 针对未处理潜在结果，不是观察均值口号 |
+| ES | event study | 事件研究 | lead/lag 描述动态并诊断预趋势 |
+| $ATT(g,t)$ | group-time average treatment effect | 群组—时期已处理者平均效应 | 错位处理下的透明基本对象 |
+
+## 6. Ch.19–21：非参数、级数与 RDD
+
+| 缩写 | 英文全称 | 中文释义 | 核心提醒 |
+|---|---|---|---|
+| NP | nonparametric | 非参数 | 不是“无假设”，而是用平滑/复杂度假设替代有限维形状 |
+| KDE | kernel density estimation | 核密度估计 | 带宽控制平滑程度 |
+| NW | Nadaraya–Watson estimator | Nadaraya–Watson 核回归 | NW 也可能指 Newey–West |
+| LL / LLR | local linear regression | 局部线性回归 | 边界处优于局部常数 |
+| LPR | local polynomial regression | 局部多项式回归 | 阶数和带宽共同决定偏差 |
+| MISE | mean integrated squared error | 平均积分平方误差 | 非参数整体风险 |
+| AMISE | asymptotic MISE | 渐近平均积分平方误差 | 常用于推导规则带宽 |
+| CV | cross-validation | 交叉验证 | 此处是调参，不是协整向量 |
+| PLM / PLR | partially linear model/regression | 部分线性模型/回归 | 参数部分加未知函数部分 |
+| NPIV | nonparametric instrumental variables | 非参数工具变量 | 条件期望逆问题通常病态 |
+| RD / RDD | regression discontinuity design | 断点回归设计 | 阈值处局部因果设计 |
+| SRD | sharp regression discontinuity | 清晰断点回归 | 处理在阈值确定跳变 |
+| FRD | fuzzy regression discontinuity | 模糊断点回归 | 处理概率跳变，Wald 比率识别局部效应 |
+| RBC | robust bias correction | 稳健偏差校正 | RDD/局部多项式区间应与带宽配套 |
+| IK | Imbens–Kalyanaraman bandwidth | IK 带宽 | 经典 RDD 数据驱动带宽 |
+| CCT | Calonico–Cattaneo–Titiunik | CCT 稳健偏差校正方法 | 现代 RDD 推断常用 |
+
+## 7. Ch.22–27：M 估计、分位数、选择与删失
+
+| 缩写 | 英文全称 | 中文释义 | 核心提醒 |
+|---|---|---|---|
+| M-est. | M-estimator | M 估计量 | 极小化/极大化样本准则的统一类 |
+| NLS | nonlinear least squares | 非线性最小二乘 | 数值收敛不等于统计识别 |
+| MLE | maximum likelihood estimator | 最大似然估计量 | 依赖完整条件分布规范 |
+| QMLE | quasi-maximum likelihood estimator | 准最大似然估计量 | 部分分布错设下仍可针对特定矩一致 |
+| QR | quantile regression | 分位数回归 | 估计条件分位数，不是条件均值 |
+| LAD | least absolute deviations | 最小绝对离差 | 中位数回归的特例 |
+| check loss | quantile check loss | 分位数检查损失 | 不对称绝对值损失 $\rho_\tau$ |
+| LPM | linear probability model | 线性概率模型 | 预测可越界，但系数直接是线性概率差 |
+| AME / APE | average marginal/partial effect | 平均边际/平均偏效应 | 先逐观测算效应再平均 |
+| MEM | marginal effect at the mean | 均值处边际效应 | 与 AME 一般不同 |
+| MNL | multinomial logit | 多项 Logit | 多类别离散选择 |
+| IIA | independence of irrelevant alternatives | 无关备择独立性 | MNL 的强替代模式限制 |
+| Tobit | Tobin censored regression model | Tobit 删失回归 | 单一潜变量同时约束参与与强度 |
+| IMR | inverse Mills ratio | 逆 Mills 比率 | 正态选择修正中的截断均值项 |
+| Heckit | Heckman two-step estimator | Heckman 两步选择修正 | 最好有可信排除变量 |
+
+## 8. Ch.28–29：模型选择、预测与机器学习
+
+| 缩写 | 英文全称 | 中文释义 | 核心提醒 |
+|---|---|---|---|
+| IS / OOS | in-sample / out-of-sample | 样本内/样本外 | 预测评价要看 OOS |
+| Train / Val / Test | training / validation / test sets | 训练/验证/测试集 | 测试集不应反复用于调参 |
+| K-fold CV | K-fold cross-validation | K 折交叉验证 | 调整复杂度或惩罚参数 |
+| LOOCV | leave-one-out cross-validation | 留一交叉验证 | 每次留一个观测验证 |
+| MSE | mean squared error | 均方误差 | 平方损失的平均 |
+| MSPE | mean squared prediction error | 均方预测误差 | 强调新样本预测 |
+| RMSE | root mean squared error | 均方根误差 | 与因变量同单位 |
+| MAE | mean absolute error | 平均绝对误差 | 对极端误差较不敏感 |
+| AIC | Akaike information criterion | Akaike 信息准则 | 也用于时间序列选阶 |
+| BIC | Bayesian information criterion | Bayesian 信息准则 | 模型维数惩罚更强 |
+| $C_p$ | Mallows’ $C_p$ | Mallows 模型选择准则 | 估计预测风险 |
+| JS | James–Stein estimator | James–Stein 收缩估计 | 以少量偏差换总体风险下降 |
+| MMA | Mallows model averaging | Mallows 模型平均 | 用风险准则选择模型权重 |
+| JMA | jackknife model averaging | Jackknife 模型平均 | 用留一思想选择权重 |
+| LASSO | least absolute shrinkage and selection operator | 最小绝对收缩与选择算子 | $L_1$ 惩罚产生稀疏 |
+| Ridge | ridge regression | 岭回归 | $L_2$ 惩罚，通常不产生精确零 |
+| EN | elastic net | 弹性网 | 结合 $L_1$ 与 $L_2$ |
+| CART | classification and regression trees | 分类与回归树 | 递归切分，单树常高方差 |
+| RF | random forest | 随机森林 | RF 也可能指 reduced form |
+| GBM | gradient boosting machine | 梯度提升机 | 逐步拟合当前残差/负梯度 |
+| NN | neural network | 神经网络 | 参数多、函数逼近灵活 |
+| ML | machine learning | 机器学习 | ML 在旧文献中也可能指 maximum likelihood |
+| DML | double/debiased machine learning | 双重/去偏机器学习 | 识别 + 正交得分 + cross-fitting |
+| CFitting | cross-fitting | 交叉拟合 | 在未训练 nuisance 的折上算得分 |
+| OOS risk | out-of-sample risk | 样本外风险 | 与因果参数识别是两类目标 |
+
+## 9. 高频算子与回归矩阵
+
+| 记号 | 名称 | 中文含义 | 出现场景 |
+|---|---|---|---|
+| $P_X=X(X'X)^{-1}X'$ | projection matrix | 投影矩阵 | 把 $Y$ 投到 $X$ 列空间 |
+| $M_X=I-P_X$ | annihilator/residual-maker matrix | 消去/残差生成矩阵 | 得到对 $X$ 残差化的变量 |
+| $\hat e=M_XY$ | OLS residual | OLS 残差 | $X'\hat e=0$ 是样本代数 |
+| $Q=E[XX']$ | regressor second-moment matrix | 回归元二阶矩阵 | OLS 识别和 bread |
+| $\Omega=E[XX'e^2]$ | score covariance | 得分协方差 | 异方差稳健 meat |
+| $Q^{-1}\Omega Q^{-1}$ | sandwich covariance | 夹心渐近方差 | OLS/GMM/M 估计反复出现 |
+| $\dot X_{it}$ | within-transformed regressor | 个体内去均值变量 | 面板 FE |
+| $\Delta X_t$ | first difference | 一阶差分 | 时间序列和面板 |
+| $L X_t=X_{t-1}$ | lag operator | 滞后算子 | ARMA 与动态多项式 |
+| $\mathcal F_t$ | information set/filtration | 截至 $t$ 的信息集/滤过 | MDS、预测和动态外生性 |
+| $\nabla q$ | gradient | 梯度 | 一阶条件 |
+| $\nabla^2q$ / $H$ | Hessian | Hessian/二阶导矩阵 | 曲率与 M 估计线性化 |
+| $\operatorname{avar}$ | asymptotic variance | 渐近方差 | 指根号样本量极限方差时要看定义 |
+
+## 10. 同形缩写：必须先看章节
+
+| 缩写 | 含义 1 | 含义 2 | 判断办法 |
+|---|---|---|---|
+| AR | autoregressive，自回归 | Anderson–Rubin，弱 IV 检验 | 看是否出现滞后 $Y_{t-j}$ 或 IV 零假设 |
+| RF | reduced form，约化式 | random forest，随机森林 | 看是在 IV/VAR 还是机器学习章节 |
+| CF | characteristic function，特征函数 | control function，控制函数 | 看是在概率附录还是内生性模型 |
+| CV | cross-validation，交叉验证 | cointegrating vector，协整向量 | 看是在调参还是 VECM |
+| FE | fixed effects，固定效应 | forecast error，预测误差（部分文献） | Hansen 面板章节通常指前者 |
+| ML | maximum likelihood，最大似然 | machine learning，机器学习 | 看是否有 likelihood 或预测算法 |
+| MD | minimum distance，最小距离 | missing data，缺失数据（其他文献） | 本书估计章节通常指前者 |
+| NW | Newey–West | Nadaraya–Watson | 看是在 HAC 还是核回归 |
+| PC | principal component，主成分 | probability limit correction 等其他短写 | 以本章明确定义为准 |
+| SE | standard error，标准误 | structural equation，结构方程（其他文献） | 本书推断表格通常指标准误 |
+
+## 11. 按字母快速检索
+
+| 字母 | 本书高频缩写 |
+|---|---|
+| A | AB, ACF, ADF, ADL/ARDL, AIC, AME, AMISE, APE, AR, ARCH, ARIMA, ARMA, ATE, ATT |
+| B | BB, BC, BCa, BE, BIC, BLP, BLUE, BM, BS |
+| C | CACE, CART, CDF, CEF, CF, CI, CLT, CMT, CCT, CLR, CRE, CRVE, CUE, CV |
+| D | DD/DiD, DDD, DF, df, DGP, DL, DML, DWH |
+| E | ECM, EG, EHW, EN, ESS, ES |
+| F | FCLT, FD, FD-GMM, FE, FEVD, FGLS, FOC, FRD, FS, FWL |
+| G | GARCH, GBM, GC, GLS, GMM |
+| H | HAC, HC0–HC5, Heckit, HQIC |
+| I | IC, i.i.d., I(d), IIA, IMR, IRF, IS/ OOS, IV |
+| J | JK, JMA, JS, $J$ test |
+| K | KDE, KPSS, K-fold CV, k-class |
+| L | LAD, LASSO, LATE, LDV, LIML, LL/LLR, LLN, LM, LOOCV, LPM, LR, LRV, LS, LSDV |
+| M | MA, MAE, MDS, MD, MEM, M-est., MGF, MISE, ML, MLE, MMA, MNL, MSE, MSPE, MTE |
+| N | NLS, NN, NP, NPIV, NW |
+| O | OLS, OOS, $O_p/o_p$, OVB |
+| P | PACF, PCA/PC, PD, pdf/pmf, PLM/PLR, PP, PT |
+| Q | QMLE, QR |
+| R | $R^2$, RBC, RD/RDD, RE, RF, Ridge, RMSE, RSS, RW |
+| S | SD, SE, SIC, SLLN, SOC, SRD, SUR, SVAR, SYS-GMM |
+| T | Train/Test, TS, TSLS, TSS, TWFE |
+| U | ULLN, UR |
+| V | Val, VAR, VECM, VMA |
+| W | Wald, WLLN, WLS, WN, w.p.1, w.p.a.1 |
+
+## 12. 自检：看到缩写后能否展开
+
+1. 看到 HC、HAC、CRVE，能否分别说出它们允许哪种误差依赖？
+2. 看到 CEF、BLP、OLS，能否区分总体函数、总体线性投影和样本估计量？
+3. 看到 LLN、CLT、FCLT，能否分别说明它们控制样本矩、中心化和、还是部分和过程？
+4. 看到 ATE、ATT、LATE、$ATT(g,t)$，能否指出各自的目标总体？
+5. 看到 FE、AB、BB、TWFE，能否说出它们分别依靠个体内变化、滞后工具、额外水平方程矩和群组—时期比较？
+6. 看到 RF、AR、CF、CV、ML、NW，能否先判断本章语境再翻译？
+
+::: {.takeaway}
+最有效的阅读习惯不是背缩写，而是在页边把缩写展开成一句完整陈述。例如，不写“用 HAC”，而写“用核加权的得分长期方差估计，使标准误允许异方差与弱序列相关”。当这句话写不出来时，说明还没有真正理解该缩写。
+:::

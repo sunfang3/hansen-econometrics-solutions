@@ -49,6 +49,7 @@ format:
 4. [本科记号到 Hansen 记号](supplements/04-notation-map.html)
 5. [R、数据与可复现性](supplements/05-r-data-reproducibility.html)
 6. [阅读与练习导航](supplements/06-reading-exercise-guide.html)
+7. [全书缩写、算子与符号总表](supplements/07-abbreviations-glossary.html)
 
 ## 两学期入口
 
@@ -100,7 +101,7 @@ format:
 
 ## 课堂与课后如何配合
 
-课堂课件只承载一条可讲、可追问的主线。完整习题解答仍位于仓库 `docs/chXX/`；每次课末会给出对应路径和在线阅读链接。带星技术证明、模型变体和第二个经验例子放在课件末尾“备查与延伸”或六份补充讲义中。
+课堂课件只承载一条可讲、可追问的主线。完整习题解答仍位于仓库 `docs/chXX/`；每次课末会给出对应路径和在线阅读链接。带星技术证明、模型变体、第二个经验例子和缩写总表放在课件末尾“备查与延伸”或七份补充讲义中。
 
 ::: {.takeaway}
 判断自己是否真正掌握，不看“读完多少页”，而看能否回答四个问题：估计对象是什么？识别靠什么？估计量为什么收敛？标准误为什么有效？
@@ -121,4 +122,3 @@ quarto render presentation --profile instructor
 ```
 
 打开任一 RevealJS 课件后，按 `S` 打开讲者视图，按 `R` 切换滚动阅读，按 `E` 进入打印视图。更完整的构建和数据说明见 `presentation/README.md`。
-
