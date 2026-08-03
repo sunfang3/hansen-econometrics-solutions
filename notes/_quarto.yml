@@ -38,6 +38,7 @@ book:
     - part: "第五部分　非参数方法"
       chapters:
         - ch19.qmd
+        - ch20.qmd
   appendices:
     - appendix-a.qmd
     - appendix-b.qmd

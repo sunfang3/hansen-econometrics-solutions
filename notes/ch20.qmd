@@ -1,0 +1,778 @@
+---
+title: "级数回归"
+subtitle: "多项式、样条、渐近推断与非参数工具变量"
+hansen-chapter: "Chapter 20"
+book-pages: "700–738"
+pdf-pages: "720–758"
+status: "完整初稿"
+---
+
+::: {.book-map}
+**原书位置与本章路线**　对应 Hansen Chapter 20（书内 pp. 700–738；PDF pp. 720–758）。20.1–20.7从级数投影、多项式和样条建立估计量；20.8–20.15讨论逼近误差、增长维度矩阵、一致性、收敛率与渐近分布；20.16–20.21处理预测误差、交叉验证、方差和置信带；20.22–20.30扩展到部分线性、面板、多元函数与非参数工具变量；20.31–20.32给出关键证明与习题。
+:::
+
+::: {.bridge}
+**本科桥接**　本科多项式回归通常固定二次或三次项，把它看成一个参数模型。本章把多项式阶数或样条结点数 $K$ 也随样本量增加，于是有限维 OLS 成为逼近未知条件期望函数的非参数方法。核心权衡与第 19 章完全平行：核回归用较小 $h$ 降低偏差，级数回归用较大 $K$ 降低偏差；两者都会同时提高方差。
+:::
+
+## 引言（Introduction）
+
+总体对象仍是条件期望函数 $m(x)=E(Y\mid X=x)$：
+
+::: {#hansen-eq-20-1}
+$$
+Y=m(X)+e,qquad E(e\mid X)=0,qquad E(e^2\mid X)=\sigma^2(X).
+\tag{20.1}
+$$
+:::
+
+选择 $K\times1$ 基函数向量 $X_K(X)$，用线性组合逼近未知函数：
+
+::: {#hansen-eq-20-2}
+$$
+Y=X_K'\beta_K+e_K.
+\tag{20.2}
+$$
+:::
+
+$e_K$ 不是 [式 (20.1)](#hansen-eq-20-1) 的结构误差 $e$。它还包含有限项逼近误差，故随 $K$ 改变。总体投影系数定义为
+
+::: {#hansen-eq-20-3}
+$$
+\beta_K=E(X_KX_K')^{-1}E(X_KY)
+=E(X_KX_K')^{-1}E\{X_Km(X)\}.
+\tag{20.3}
+$$
+:::
+
+相应的总体级数逼近是
+
+::: {#hansen-eq-20-4}
+$$
+m_K(x)=X_K(x)'\beta_K.
+\tag{20.4}
+$$
+:::
+
+样本中仍用 OLS：
+
+::: {#hansen-eq-20-5}
+$$
+\hat\beta_K=
+\left(\sum_{i=1}^nX_{Ki}X_{Ki}'\right)^{-1}
+\left(\sum_{i=1}^nX_{Ki}Y_i\right)
+=(\mathbf X_K'\mathbf X_K)^{-1}\mathbf X_K'Y.
+\tag{20.5}
+$$
+:::
+
+::: {#hansen-eq-20-6}
+$$
+\hat m_K(x)=X_K(x)'\hat\beta_K.
+\tag{20.6}
+$$
+:::
+
+维数要始终跟踪：$X_K(x)$、$\beta_K$ 是 $K\times1$，样本设计矩阵 $\mathbf X_K$ 是 $n\times K$。参数情形固定 $K$ 后让 $n\to\infty$；非参数级数情形让 $n,K\to\infty$，但 $K$ 不能增长太快。证明困难正来自矩阵维数持续变化。
+
+## 多项式回归（Polynomial Regression）
+
+$p$ 阶幂基为 $X_K(x)=(1,x,\ldots,x^p)'$，参数个数 $K=p+1$。于是
+
+$$
+m_K(x)=\beta_0+\beta_1x+\cdots+\beta_px^p.
+$$
+
+每增加一阶就增加一个全局曲率方向。$K$ 小，函数形状限制强、逼近偏差大而估计稳定；$K$ 大，形状灵活却容易在边界振荡。系数本身通常没有稳定经济含义，因为增删高阶项会改变所有低阶系数；应报告 $\hat m_K(x)$、导数或两点差，而不是孤立解释 $\hat\beta_j$。
+
+## 多项式回归示例（Illustrating Polynomial Regression）
+
+原书以 2009 年 CPS 中大学教育女性的对数工资—经验曲线为例。白人女性样本 $n=4682$，四、八、十二阶拟合在主要支撑区相近；黑人女性样本只有 $n=517$，高阶曲线明显扭动。相同函数类在不同样本量下表现不同，说明复杂度必须随可用信息而变。
+
+阅读图形时依次检查：散点或分箱均值是否支持弯曲；高阶曲线的波动是否集中于稀疏边界；相邻阶数的结论是否稳定；交叉验证是否选择更简约的模型。不能因为十二阶曲线穿过更多局部起伏，就断言它更接近总体条件均值。
+
+## 正交多项式（Orthogonal Polynomials）
+
+直接使用 $1,X,X^2,\ldots$ 时，各列尺度相差巨大且高度相关，$\mathbf X_K'\mathbf X_K$ 可能病态。先把 $X$ 缩放到 $[-1,1]$，或对各列做正交化，可明显改善数值条件。若 $X_K^*=A_KX_K$ 且 $A_K$ 可逆，两组基张成同一个函数空间，所以拟合值完全相同；变化的是坐标，不是模型集合。
+
+样本 Gram–Schmidt 正交化最贴合本样本，但所得系数离开该样本难以解释。代数正交基则相对于指定权函数正交：有界变量可用 Legendre，非负变量可用 Laguerre，标准化后近似正态的变量可用 Hermite。正交化解决数值问题，不会修复过大的 $K$、错误支撑区或真实函数不可识别。
+
+## 样条（Splines）
+
+样条是由结点连接的分段多项式。一个结点 $\tau$ 的线性样条为
+
+$$
+m_K(x)=\beta_0+\beta_1x+\beta_2(x-\tau)1\{x\ge\tau\}.
+$$
+
+$x<\tau$ 时斜率为 $\beta_1$，$x>\tau$ 时为 $\beta_1+\beta_2$，所以 $\beta_2$ 是结点处斜率变化。一般 $p$ 阶、$N$ 个结点的截断幂基写成
+
+$$
+m_K(x)=\sum_{j=0}^p\beta_jx^j
++\sum_{k=1}^N\beta_{p+k}(x-\tau_k)^p1\{x\ge\tau_k\},
+\qquad K=N+p+1.
+$$
+
+线性样条连续但允许斜率突变；二次样条的一阶导数连续；三次样条的一、二阶导数连续。结点可等距放置，也可放在分位数上，使各段样本量更均衡。结点随 $K$ 改变时，严格说属于 sieve（筛）基；本章统一称级数方法。
+
+## 样条回归示例（Illustrating Spline Regression）
+
+原书第一个例子用 $n=394$ 的大学教育黑人男性样本，在经验 10、20、30、40 年设置四个结点，估计七参数二次样条，并与同为七参数的六阶多项式比较。样条把调整限制在相邻区段，曲线通常比全局高阶多项式稳定。
+
+第二个例子研究菲律宾家庭收入对私人转移支付的影响，在 10,000、20,000、50,000、100,000、150,000 比索设线性样条结点。低收入段估计斜率约为 $-0.7$ 和 $-0.3$，20,000 以上近乎水平，与利他转移模型的阈值含义相容。这里结点较密地放在低收入区，是因为该处观测多且理论预测变化强，而不是事后追逐显著性。
+
+## 级数回归的全局与局部性质（The Global/Local Nature of Series Regression）
+
+由 [式 (20.5)](#hansen-eq-20-5) 可把拟合值写成
+
+$$
+\hat m_K(x)=\frac1n\sum_{i=1}^n\hat w_K(x,X_i)Y_i,
+\qquad
+\hat w_K(x,u)=X_K(x)'\hat Q_K^{-1}X_K(u),
+$$
+
+其中 $\hat Q_K=n^{-1}\mathbf X_K'\mathbf X_K$。因此级数估计同样是加权平均。$K$ 小时，一个系数变化会影响整条曲线，具有全局性；$K$ 增大时，权重逐渐集中在 $u\approx x$，表现出局部性。与普通二阶核不同，级数的等价权重可以为负，这有助于降低偏差，也可能造成边界振荡。
+
+## Stone–Weierstrass 与 Jackson 逼近理论（Stone-Weierstrass and Jackson Approximation Theory）
+
+若 $m$ 在紧集 $\mathcal S$ 上连续，Stone–Weierstrass 定理说明：任意 $\epsilon>0$，总有足够大的 $K$ 使
+
+::: {#hansen-eq-20-7}
+$$
+\inf_\beta\sup_{x\in\mathcal S}
+|m(x)-X_K(x)'\beta|\le\epsilon.
+\tag{20.7}
+$$
+:::
+
+定义最佳一致逼近系数
+
+::: {#hansen-eq-20-8}
+$$
+\beta_K^*=\arg\min_\beta\sup_{x\in\mathcal S}
+|m(x)-X_K(x)'\beta|,
+\tag{20.8}
+$$
+:::
+
+其逐点误差为
+
+::: {#hansen-eq-20-9}
+$$
+r_K^*(x)=m(x)-X_K(x)'\beta_K^*,
+\tag{20.9}
+$$
+:::
+
+最大误差为
+
+::: {#hansen-eq-20-10}
+$$
+\delta_K^*=\inf_\beta\sup_{x\in\mathcal S}|m(x)-X_K(x)'\beta|
+=\sup_{x\in\mathcal S}|r_K^*(x)|.
+\tag{20.10}
+$$
+:::
+
+Jackson 理论进一步给出光滑性决定的速度：在相应阶数的多项式或样条基下，
+
+::: {#hansen-eq-20-11}
+$$
+\delta_K^*\le o(K^{-\alpha}).
+\tag{20.11}
+$$
+:::
+
+函数越光滑，少量基函数就越容易逼近。线性样条在二阶光滑下也有 $O(K^{-2})$。多项式可自适应达到函数光滑阶数的逼近率；适当阶数的样条还能同时逼近导数，这对边际效应尤其重要。
+
+但 OLS 的 $\beta_K$ 最小化的是均方误差，不是最大误差。定义投影逼近误差
+
+::: {#hansen-eq-20-12}
+$$
+r_K(x)=m(x)-X_K(x)'\beta_K,
+\tag{20.12}
+$$
+:::
+
+及其均方大小
+
+::: {#hansen-eq-20-13}
+$$
+\delta_K^2=E\{r_K(X)^2\}.
+\tag{20.13}
+$$
+:::
+
+投影的最小二乘性质给出
+
+::: {#hansen-eq-20-14}
+$$
+\delta_K
+\le\left(\int_{\mathcal S}[m(x)-X_K(x)'\beta_K^*]^2dF(x)\right)^{1/2}
+\le\delta_K^*.
+\tag{20.14}
+$$
+:::
+
+所以一致范数逼近率也控制投影的均方逼近率。注意方向：最大误差控制平均误差，反向一般不成立。
+
+## 回归量长度界（Regressor Bounds）
+
+令 $Q_K=E(X_KX_K')$，定义标准化回归量长度
+
+::: {#hansen-eq-20-15}
+$$
+\zeta_K(x)=\{X_K(x)'Q_K^{-1}X_K(x)\}^{1/2},
+\tag{20.15}
+$$
+:::
+
+以及最坏点长度
+
+::: {#hansen-eq-20-16}
+$$
+\zeta_K=\sup_x\zeta_K(x).
+\tag{20.16}
+$$
+:::
+
+于是每个观测满足
+
+::: {#hansen-eq-20-17}
+$$
+(X_K'Q_K^{-1}X_K)^{1/2}\le\zeta_K.
+\tag{20.17}
+$$
+:::
+
+$\zeta_K(x)$ 是函数估计在 $x$ 处的杠杆尺度，对可逆线性换基不变。紧支撑且密度严格为正时，多项式有 $\zeta_K=O(K)$，样条有 $O(K^{1/2})$；边界处通常最大。这解释了同一 $K$ 下高阶多项式比样条更容易产生边界高杠杆。
+
+## 矩阵收敛（Matrix Convergence）
+
+为处理增长维度，理论上把基函数总体正交化：
+
+::: {#hansen-eq-20-18}
+$$
+\widetilde X_{Ki}=Q_K^{-1/2}X_{Ki},
+\qquad
+\widetilde Q_K=\frac1n\sum_i\widetilde X_{Ki}\widetilde X_{Ki}'.
+\tag{20.18}
+$$
+:::
+
+此时 $E(\widetilde X_K\widetilde X_K')=I_K$。假设 $\lambda_{\min}(Q_K)$ 有正下界，且 $\zeta_K^2\log K/n\to0$，矩阵大数定律给
+
+::: {#hansen-eq-20-19}
+$$
+\|\widetilde Q_K-I_K\|\overset p\longrightarrow0.
+\tag{20.19}
+$$
+:::
+
+谱范数控制所有方向而非逐元素误差，因而还能推出
+
+::: {#hansen-eq-20-20}
+$$
+\|\widetilde Q_K^{-1}-I_K\|\overset p\longrightarrow0,
+\tag{20.20}
+$$
+:::
+
+以及
+
+::: {#hansen-eq-20-21}
+$$
+\lambda_{\max}(\widetilde Q_K^{-1})
+=\lambda_{\min}(\widetilde Q_K)^{-1}\overset p\longrightarrow1.
+\tag{20.21}
+$$
+:::
+
+多项式的充分增长条件约为 $K^2\log K/n\to0$，样条约为 $K\log K/n\to0$。这不是软件能否求逆的条件，而是样本矩阵在所有 $K$ 个方向上同时接近总体矩阵的概率条件。
+
+## 一致估计（Consistent Estimation）
+
+函数误差用积分平方误差衡量：
+
+::: {#hansen-eq-20-22}
+$$
+ISE(K)=\int[\hat m_K(x)-m(x)]^2dF(x).
+\tag{20.22}
+$$
+:::
+
+若矩阵增长条件成立且 $\delta_K=o(1)$，则
+
+::: {#hansen-eq-20-23}
+$$
+ISE(K)=o_p(1).
+\tag{20.23}
+$$
+:::
+
+逻辑由两部分组成：$K\to\infty$ 使函数空间足够丰富，压低逼近误差；$K/n\to0$ 等限制使每个新增方向仍有足够样本估计。只满足第一部分会过拟合，只满足第二部分则可能永远停留在有偏的低阶模型。
+
+## 收敛速度（Convergence Rate）
+
+在条件方差有上界时，
+
+::: {#hansen-eq-20-24}
+$$
+ISE(K)\le O_p\left(\delta_K^2+\frac Kn\right).
+\tag{20.24}
+$$
+:::
+
+若 $m''$ 一致连续，多项式或样条给
+
+::: {#hansen-eq-20-25}
+$$
+ISE(K)\le O_p\left(K^{-4}+\frac Kn\right).
+\tag{20.25}
+$$
+:::
+
+$K^{-4}$ 是平方逼近偏差，$K/n$ 是估计 $K$ 个系数付出的方差。令两项同阶：$K^{-4}\asymp K/n$，得到 $K^5\asymp n$，即 $K\asymp n^{1/5}$，最优 ISE 为 $n^{-4/5}$。这与核回归 $h\asymp n^{-1/5}$ 完全对应，可把 $K^{-1}$ 看成级数带宽。样本翻倍只使最优 $K$ 增加约 15%，复杂度增长应很缓慢。
+
+## 渐近正态性（Asymptotic Normality）
+
+令目标 $\theta=a(m)$ 是函数 $m$ 的线性泛函，如某点函数值、导数或加权积分。对 $\hat m_K$，有 $\hat\theta_K=a_K'\hat\beta_K$。设 $\Omega_K=E(X_KX_K'e^2)$，$V_K=a_K'Q_K^{-1}\Omega_KQ_K^{-1}a_K$。增长维度中心极限定理给
+
+::: {#hansen-eq-20-26}
+$$
+\frac{\sqrt n\{\hat\theta_K-\theta+a(r_K)\}}{V_K^{1/2}}
+\Rightarrow N(0,1).
+\tag{20.26}
+$$
+:::
+
+这里估计偏差是 $-a(r_K)$：因 $m=m_K+r_K$，估计量以 $a(m_K)=\theta-a(r_K)$ 为中心。条件尾部可积性用于 Lindeberg 条件，条件方差正下界避免分母退化，$\zeta_K\delta_K=o(1)$ 则让逼近误差与增长维度的相互作用消失。
+
+## 回归函数估计（Regression Estimation）
+
+固定 $x$ 时取 $a(m)=m(x)$、$a_K=X_K(x)$，便有
+
+::: {#hansen-eq-20-27}
+$$
+\frac{\sqrt n\{\hat m_K(x)-m(x)+r_K(x)\}}{V_K(x)^{1/2}}
+\Rightarrow N(0,1),
+\quad
+V_K(x)=X_K(x)'Q_K^{-1}\Omega_KQ_K^{-1}X_K(x).
+\tag{20.27}
+$$
+:::
+
+同方差时 $V_K(x)=\sigma^2\zeta_K(x)^2$，所以 [式 (20.15)](#hansen-eq-20-15) 不仅是证明工具，也直接决定点估计精度。支撑集边界 $\zeta_K(x)$ 大，标准误自然变宽；若图上边界置信带反而异常窄，应检查基函数、方差公式或外推网格。
+
+## 欠平滑（Undersmoothing）
+
+若进一步要求 $n\delta_K^{*2}\to0$，逼近偏差相对标准误可忽略：
+
+::: {#hansen-eq-20-28}
+$$
+\frac{\sqrt n\{\hat m_K(x)-m(x)\}}{V_K(x)^{1/2}}
+\Rightarrow N(0,1).
+\tag{20.28}
+$$
+:::
+
+这里的欠平滑意味着选取比 ISE 最优值更大的 $K$。二阶光滑时，$K\asymp n^{1/4}$ 可比 $n^{1/5}$ 更快地压低偏差，但会提高方差。Hansen 特别提醒：把偏差“假设掉”不等于有限样本无偏；实践必须报告实际 $K$、选择规则和对相邻阶数的敏感性。
+
+## 残差与回归拟合（Residuals and Regression Fit）
+
+普通残差 $\hat e_{Ki}=Y_i-X_{Ki}'\hat\beta_K$ 因观测参与自身拟合而偏小。利用 OLS 删除公式，逐一剔除预测误差为
+
+::: {#hansen-eq-20-29}
+$$
+\widetilde e_{Ki}=\hat e_{Ki}
+\left\{1-X_{Ki}'(\mathbf X_K'\mathbf X_K)^{-1}X_{Ki}\right\}^{-1}.
+\tag{20.29}
+$$
+:::
+
+花括号内是 $1-h_{ii}$。$K$ 越大或某点杠杆越高，$h_{ii}$ 越大，普通残差越乐观；$\tilde e_{Ki}$ 对这种自我拟合进行校正。聚类资料则应删除整组，而不是套用逐观测公式。
+
+## 交叉验证模型选择（Cross-Validation Model Selection）
+
+级数项数的交叉验证准则是
+
+::: {#hansen-eq-20-30}
+$$
+CV(K)=\sum_{i=1}^n\widetilde e_{Ki}^2
+=\sum_{i=1}^n\hat e_{Ki}^2
+\left\{1-X_{Ki}'(\mathbf X_K'\mathbf X_K)^{-1}X_{Ki}\right\}^{-2}.
+\tag{20.30}
+$$
+:::
+
+在预先规定的基函数族和 $K\le K_{\max}$ 上逐一计算，选择最小值。$CV(K)$ 是离散曲线；若多个阶数几乎相同，优先报告平台区与稳健性，而不是把某个整数当作精确真值。原书工资例中，白人女性选择三阶、较小黑人女性样本选择二阶，符合样本越少越需简约的直觉。若推断特别担心偏差，可在 CV 选择值上适度增加 $K$，但应透明说明。
+
+## 方差与标准误估计（Variance and Standard Error Estimation）
+
+独立样本下 OLS 系数的精确条件方差为
+
+::: {#hansen-eq-20-31}
+$$
+V_{\hat\beta_K}=(\mathbf X_K'\mathbf X_K)^{-1}
+\left(\sum_iX_{Ki}X_{Ki}'\sigma^2(X_i)\right)
+(\mathbf X_K'\mathbf X_K)^{-1}.
+\tag{20.31}
+$$
+:::
+
+Hansen 推荐以逐一剔除误差构造 HC3：
+
+::: {#hansen-eq-20-32}
+$$
+\widehat V_{\hat\beta_K}=(\mathbf X_K'\mathbf X_K)^{-1}
+\left(\sum_iX_{Ki}X_{Ki}'\widetilde e_{Ki}^2\right)
+(\mathbf X_K'\mathbf X_K)^{-1}.
+\tag{20.32}
+$$
+:::
+
+函数值方差再作线性变换：
+
+::: {#hansen-eq-20-33}
+$$
+\widehat V_K(x)=X_K(x)'(\mathbf X_K'\mathbf X_K)^{-1}
+\left(\sum_iX_{Ki}X_{Ki}'\widetilde e_{Ki}^2\right)
+(\mathbf X_K'\mathbf X_K)^{-1}X_K(x).
+\tag{20.33}
+$$
+:::
+
+中间矩阵和两侧逆矩阵均为 $K\times K$。最终标准误是 $\widehat V_K(x)^{1/2}$，不是再除以 $\sqrt n$；样本规模已经包含在 $\mathbf X_K'\mathbf X_K$ 中。
+
+## 聚类观察（Clustered Observations）
+
+设组间独立、组内任意相关。堆叠第 $g$ 组的 $Y_g$ 与设计矩阵 $\mathbf X_g$ 后，点估计仍为全样本 OLS；方差的“肉”改为 $\sum_g\mathbf X_g'\hat e_g\hat e_g'\mathbf X_g$。CR1 加 $G/(G-1)$ 修正，CR3 则用删除整组所得 $\tilde e_g$。
+
+复杂度选择也应最小化删除组交叉验证 $\sum_g\tilde e_g'\tilde e_g$。若学生共享学校冲击，删除一名学生仍可从同校同伴预测该冲击，会低估真正样本外误差。推断的独立单位和交叉验证的删除单位必须一致。
+
+## 置信带（Confidence Bands）
+
+常见图形画 $\hat m_K(x)\pm1.96\widehat V_K(x)^{1/2}$。它有两个限定：第一，未处理 $r_K(x)$，更接近有限 $K$ 伪真函数的区间；第二，它是逐点区间，不保证整条曲线同时覆盖。边界带变宽既来自样本稀疏，也来自 $\zeta_K(x)$ 增大。
+
+因此，不应从“一整段逐点带似乎都在零上方”直接宣称全区间显著，也不应把增加 $K$ 后变宽的带只解释为数据变差；那可能是复杂度提高所付出的估计方差。
+
+## 一致逼近（Uniform Approximations）
+
+整条学生化过程未必收敛到固定高斯过程，因为 $K$ 增加时过程缺乏随机等度连续性。强逼近方法转而用一个随 $K$ 变化的 $G_K\sim N(0,I_K)$ 高斯向量模拟整条曲线的联合波动。它可生成同时临界值，构造真正的统一置信带。
+
+统一带的临界值通常大于 1.96，因为它控制网格上最大绝对偏差。计算时应在足够细但位于数据支撑内的网格上模拟最大统计量，并让偏差处理、异方差或聚类结构与点估计保持一致。
+
+## 部分线性模型（Partially Linear Model）
+
+模型写成 $m(x_1,x_2)=x_1'\beta_1+m_2(x_2)$。用 $X_{2K}(x_2)'\beta_{2K}$ 逼近 $m_2$ 后，把 $X_1$ 与 $X_{2K}$ 合并成一个设计矩阵即可 OLS。离散控制和维数较高、愿意线性处理的变量放入 $X_1$，少数连续核心变量放入非参数部分。
+
+与第 19 章 Robinson 残差法相比，这里把未知函数直接展开并联合回归。二者目标相同，但有限样本实现不同。必须避免截距重复：若 $X_1$ 已含常数，级数基中再放常数会完全共线。
+
+## 面板固定效应（Panel Fixed Effects）
+
+模型为 $Y_{it}=m(X_{it})+u_i+\varepsilon_{it}$。先构造每个原始基函数 $X_K(X_{it})$，再对这些基函数和 $Y_{it}$ 分别组内去均值，最后回归 $\dot Y_{it}$ 对 $\dot X_{Kit}$。顺序不能颠倒：一般
+
+$$
+(X_{it}-\bar X_i)^2\ne X_{it}^2-\overline{X_i^2}.
+$$
+
+所以“先去均值再平方”估的是另一模型。标准误按个体聚类，$K$ 可用删除个体交叉验证选择。若 $T$ 很短，高阶基函数在组内可用变异更少，数值秩与过拟合问题会更严重。
+
+## 多个回归量（Multiple Regressors）
+
+$X\in\mathbb R^d$ 时，对各维基函数取张量积，才能包含非参数交互。例如每维使用 $p$ 个非恒定方向时，完整模型参数数约为 $1+p^d$。它允许 $x_1$ 的边际效应随 $x_2$ 任意变化，却迅速遭遇维数灾难。
+
+报告多元级数模型时应明确：各维最高阶数、是否含所有交互、总参数数 $K$、各变量缩放和有效支撑区。仅写“使用三阶多项式”无法判断是只含逐变量三次项，还是完整三阶张量积。
+
+## 加性可分模型（Additively Separable Models）
+
+限制
+
+$$
+m(x)=m_1(x_1)+\cdots+m_d(x_d)
+$$
+
+后，各维分别展开而不含交互，参数数从指数级 $1+p^d$ 降为约 $1+dp$。代价是强制任一变量的边际效应不随其他变量改变。这应由经济理论、可检验的交互项或模型选择支持，不能只因完整模型算不动便把可加性当作无害技术选择。
+
+## 非参数工具变量回归（Nonparametric Instrumental Variables Regression）
+
+基本 NPIV 模型是
+
+::: {#hansen-eq-20-34}
+$$
+Y=m(X)+e,qquad E(e\mid Z)=0,
+\tag{20.34}
+$$
+:::
+
+其中 $X$ 内生、$Z$ 为工具。用 $K$ 个基函数逼近结构函数得到
+
+::: {#hansen-eq-20-35}
+$$
+Y=X_K'\beta_K+e_K.
+\tag{20.35}
+$$
+:::
+
+$X$ 内生意味着 $X,X^2,\ldots$ 整个 $X_K$ 都内生，不能只为原始 $X$ 提供一个工具而忽略其变换。用 $L\ge K$ 个 $Z_L(Z)$ 作工具，可按 2SLS/GMM 估 $\beta_K$。当 $K=L=3$ 时，约化型系统写成
+
+::: {#hansen-eq-20-36}
+$$
+\begin{pmatrix}X\\X^2\\X^3\end{pmatrix}
+=
+\begin{pmatrix}
+\Gamma_{11}&\Gamma_{21}&\Gamma_{31}\\
+\Gamma_{12}&\Gamma_{22}&\Gamma_{32}\\
+\Gamma_{13}&\Gamma_{23}&\Gamma_{33}
+\end{pmatrix}
+\begin{pmatrix}Z\\Z^2\\Z^3\end{pmatrix}
++\begin{pmatrix}u_1\\u_2\\u_3\end{pmatrix}.
+\tag{20.36}
+$$
+:::
+
+有限 $K$ 的系数矩阵满秩只能说明该近似模型可识别，不能保证无限维结构函数被识别。这是下一节最重要的区分。
+
+## NPIV 识别（NPIV Identification）
+
+对 [式 (20.34)](#hansen-eq-20-34) 条件于 $Z=z$，得到第一类积分方程
+
+::: {#hansen-eq-20-37}
+$$
+\mu(z)=\int m(x)f(x\mid z)\,dx,
+\qquad \mu(z)=E(Y\mid Z=z).
+\tag{20.37}
+$$
+:::
+
+若存在非零函数 $\delta$ 满足
+
+::: {#hansen-eq-20-38}
+$$
+\int\delta(x)f(x\mid z)\,dx=0
+\quad\text{对所有 }z,
+\tag{20.38}
+$$
+:::
+
+则 $m$ 与 $m+\delta$ 产生相同的 $\mu(z)$，结构函数不唯一。完备性条件要求 [式 (20.38)](#hansen-eq-20-38) 只允许 $\delta=0$。它是 $X\mid Z$ 条件分布的性质，不是结构方程形状的性质。
+
+强线性第一阶段并不推出完备性。原书构造 $X=Z+u$、$u\sim U[-1,1]$ 的例子：尽管线性 $R^2$ 很高，某些周期函数在每个长度为 2 的移动区间上积分都为零，因而仍无法识别。NPIV 同时具有潜在不识别和病态逆问题：约化型的微小估计误差可能放大为结构函数的大误差。
+
+## NPIV 收敛速度（NPIV Convergence Rate）
+
+若结构函数平滑度为 $s$、联合密度的病态程度以 $r$ 表示，典型点态速度为
+
+::: {#hansen-eq-20-39}
+$$
+|\hat m_K(x)-m(x)|
+=O_p\left\{K^{-s}+K^r\left(\frac Kn\right)^{1/2}\right\}.
+\tag{20.39}
+$$
+:::
+
+第一项是级数偏差，第二项比外生回归多出放大因子 $K^r$。平衡得 $K\asymp n^{1/(2r+2s+1)}$，速度为 $n^{-s/(2r+2s+1)}$。$r>0$ 时明显慢于普通级数回归；越病态，$K$ 越应保守。普通预测交叉验证不再直接针对结构函数风险，实际选阶比外生回归更困难。
+
+## 非参数识别与参数识别（Nonparametric vs Parametric Identification）
+
+考虑只有外生控制 $X_1$ 和内生变量 $X_2$ 的线性模型
+
+::: {#hansen-eq-20-40}
+$$
+Y=\beta_0+\beta_1X_1+\beta_2X_2+e,
+\qquad E(e\mid X_1)=0.
+\tag{20.40}
+$$
+:::
+
+不能仅因 $E(X_1^2e)=0$ 就把 $X_1^2$ 当作 $X_2$ 的排除工具。把线性限制放松为
+
+::: {#hansen-eq-20-41}
+$$
+Y=m(X_1)+\beta_2X_2+e,
+\qquad E(e\mid X_1)=0,
+\tag{20.41}
+$$
+:::
+
+可见 $X_1^2$ 本应属于未知控制函数 $m(X_1)$，没有额外排除工具时 $\beta_2$ 不识别。线性模型里的“识别”完全依赖 $m$ 恰好线性，不能解释成对一般结构的近似。可靠原则是先问目标在放松函数形式后是否仍识别，再决定用简单参数式近似。
+
+## Angrist–Lavy（1999）示例（Example: Angrist and Lavy）
+
+以色列每班最多 40 人的规则生成预测班级规模工具：
+
+::: {#hansen-eq-20-42}
+$$
+p=\frac{\mathrm{enrollment}}
+{1+\left\lfloor(\mathrm{enrollment}-1)/40\right\rfloor}.
+\tag{20.42}
+$$
+:::
+
+原书在 4、5 年级 4,067 个班级中，用 $p$ 的一至三次幂及其与 disadvantaged 的交互，为 class size 的相应非线性项提供工具，并按学校聚类。变量除以 40、14 是为改善数值条件。四个涉及班级规模的系数联合 Wald 统计量为 12.7，渐近 $p=0.013$；把班级从 20 增至 40 人的预测阅读分数变化为 $-2.96$，标准误 1.21。
+
+单个多项式系数均不显著并不等于函数整体无效，联合限制和函数差更贴合经济问题。但这些结果仍依赖所选有限级数、工具排除性、聚类数和 NPIV 识别；图形的平滑外观不能替代这些条件。
+
+## 技术证明（Technical Proofs*）
+
+一致性证明先作基本分解：
+
+::: {#hansen-eq-20-43}
+$$
+\hat m_K(x)-m(x)=X_K(x)'(\hat\beta_K-\beta_K)-r_K(x).
+\tag{20.43}
+$$
+:::
+
+由于投影正交性 $E[X_Kr_K]=0$，积分平方后交叉项消失：
+
+::: {#hansen-eq-20-44}
+$$
+ISE(K)=(\hat\beta_K-\beta_K)'Q_K(\hat\beta_K-\beta_K)+\delta_K^2.
+\tag{20.44}
+$$
+:::
+
+标准化后用最大特征值控制估计误差：
+
+::: {#hansen-eq-20-45}
+$$
+(\hat\beta_K-\beta_K)'Q_K(\hat\beta_K-\beta_K)
+\le O_p(1)n^{-2}e_K'\mathbf X_KQ_K^{-1}\mathbf X_K'e_K.
+\tag{20.45}
+$$
+:::
+
+右侧期望为
+
+::: {#hansen-eq-20-46}
+$$
+E\!left[n^{-2}e_K'\mathbf X_KQ_K^{-1}\mathbf X_K'e_K\right]
+=n^{-1}E(X_K'Q_K^{-1}X_Ke_K^2).
+\tag{20.46}
+$$
+:::
+
+[式 (20.17)](#hansen-eq-20-17) 与增长率条件使其趋零；更精细地分开 $e_K=e+r_K$，便得到 $K/n+\delta_K^2$ 的速度。
+
+线性泛函的中心化统计量分成主随机项、样本矩阵替换项和逼近余项：
+
+::: {#hansen-eq-20-47}
+$$
+\frac{a_K'Q_K^{-1}\mathbf X_K'e}{\sqrt{nV_K}},
+\tag{20.47}
+$$
+:::
+
+::: {#hansen-eq-20-48}
+$$
+\frac{a_K'(\hat Q_K^{-1}-Q_K^{-1})\mathbf X_K'e}{\sqrt{nV_K}},
+\tag{20.48}
+$$
+:::
+
+::: {#hansen-eq-20-49}
+$$
+\frac{a_K'\hat Q_K^{-1}\mathbf X_K'r_K}{\sqrt{nV_K}}.
+\tag{20.49}
+$$
+:::
+
+主项可写成三角阵平均：
+
+::: {#hansen-eq-20-50}
+$$
+\frac1{\sqrt n}\sum_{i=1}^n
+\frac{a_K'Q_K^{-1}X_{Ki}e_i}{\sqrt{V_K}}.
+\tag{20.50}
+$$
+:::
+
+Lindeberg 条件要求对每个 $\epsilon>0$，
+
+::: {#hansen-eq-20-51}
+$$
+E\!\left[
+\frac{(a_K'Q_K^{-1}X_Ke)^2}{V_K}
+1\!\left\{\frac{(a_K'Q_K^{-1}X_Ke)^2}{V_K}\ge n\epsilon\right\}
+\right]\to0.
+\tag{20.51}
+$$
+:::
+
+条件方差正下界提供
+
+::: {#hansen-eq-20-52}
+$$
+V_K\ge a_K'Q_K^{-1}a_K\,\underline\sigma^2.
+\tag{20.52}
+$$
+:::
+
+结合条件尾部可积性，得到
+
+::: {#hansen-eq-20-53}
+$$
+\frac{a_K'Q_K^{-1}\mathbf X_K'e}{\sqrt{nV_K}}
+\Rightarrow N(0,1).
+\tag{20.53}
+$$
+:::
+
+样本矩阵项由 [式 (20.19)](#hansen-eq-20-19)–[式 (20.21)](#hansen-eq-20-21) 控制；逼近项满足
+
+::: {#hansen-eq-20-54}
+$$
+\left(
+\frac{a_K'\hat Q_K^{-1}\mathbf X_K'r_K}{\sqrt{nV_K}}
+\right)^2
+\le O_p(1)n^{-1}r_K'\mathbf X_KQ_K^{-1}\mathbf X_K'r_K=o_p(1).
+\tag{20.54}
+$$
+:::
+
+欠平滑结果只需再证明
+
+::: {#hansen-eq-20-55}
+$$
+\frac{\sqrt n}{V_K(x)^{1/2}}r_K(x)=o(1).
+\tag{20.55}
+$$
+:::
+
+方差下界为
+
+::: {#hansen-eq-20-56}
+$$
+V_K(x)\ge\zeta_K(x)^2\underline\sigma^2,
+\tag{20.56}
+$$
+:::
+
+而投影误差可由最佳一致逼近误差控制：
+
+::: {#hansen-eq-20-57}
+$$
+|r_K(x)|\le\{1+\zeta_K(x)\}\delta_K^*
+\le2\zeta_K(x)\delta_K^*.
+\tag{20.57}
+$$
+:::
+
+因此 $n\delta_K^{*2}\to0$ 即推出 [式 (20.55)](#hansen-eq-20-55)。整条证明的骨架是“逼近误差 + 估计误差”，正交性消交叉项，增长维度矩阵大数定律控制逆矩阵，三角阵 CLT 控制主随机项。
+
+## 习题阅读指南（Exercises）
+
+20.1–20.5 训练样条的分段斜率、单调性、凹性与结点位置。解题时先按区间写导数：每越过一个结点，就把相应斜率变化系数累加；凹性要求各区段二阶导数非正，不能只检查某一个系数。
+
+20.6–20.10 连接导数泛函、尺度变化、NPIV 约化型与实证复现。多项式导数仍是 $\hat\beta_K$ 的线性组合，可直接套 [式 (20.26)](#hansen-eq-20-26)；缩放 $Y$ 会等比例缩放 $CV$ 而不改变最优 $K$，缩放 $X$ 在同一函数空间和正确换基下不改变拟合。实证题需报告样本筛选、基函数、缩放、聚类层级、选阶准则、联合检验和函数差。
+
+::: {.callout-important title="章末自检"}
+1. 为什么 [式 (20.2)](#hansen-eq-20-2) 的 $e_K$ 不等于 [式 (20.1)](#hansen-eq-20-1) 的 $e$？
+2. 如何从 [式 (20.25)](#hansen-eq-20-25) 推出 $K\asymp n^{1/5}$，并与核带宽对应？
+3. 正交多项式为何改变系数却不改变拟合函数？
+4. [式 (20.26)](#hansen-eq-20-26) 为什么显式保留 $a(r_K)$，欠平滑付出什么代价？
+5. 面板级数回归为何必须“先生成基函数，再组内去均值”？
+6. 有限 $K$ 的工具矩阵满秩为何不等于 NPIV 结构函数满足完备性？
+7. 为什么 $X_1^2$ 不能仅凭矩条件就充当 [式 (20.40)](#hansen-eq-20-40) 中 $X_2$ 的排除工具？
+:::
