@@ -1,0 +1,554 @@
+---
+title: "非参数回归"
+subtitle: "核平滑、局部线性、带宽选择与半参数残差化"
+hansen-chapter: "Chapter 19"
+book-pages: "666–699"
+pdf-pages: "686–719"
+status: "完整初稿"
+---
+
+::: {.book-map}
+**原书位置与本章路线**　对应 Hansen Chapter 19（书内 pp. 666–699；PDF pp. 686–719）。19.1–19.10从 binned mean、Nadaraya–Watson（NW）、local linear（LL）到 bias–variance、AIMSE、ROT bandwidth 与 boundary；19.11–19.17处理 leave-one-out、cross-validation、极限分布、variance 和 pointwise bands；19.18–19.25讨论 local nature、应用、cluster、多 regressors、维数灾难和 partially linear model；19.26–19.27补证明与习题。
+:::
+
+::: {.bridge}
+**本科桥接**　OLS 假定 $E(Y\mid X=x)$ 在 $x$ 上线性；非参数回归不预设全局函数形状，而只用 $X_i$ 靠近 $x$ 的 observations 估 $m(x)$。代价是每个点只使用约 $nh$ 个有效 observations，收敛速度从 $\sqrt n$ 降为 $\sqrt{nh}$，并出现 smoothing bias。带宽不是画图参数，而是决定 estimand 的平滑程度、MSE 与 inference validity 的核心 tuning parameter。
+:::
+
+## 引言（Introduction）
+
+目标是 conditional expectation function（CEF）$m(x)=E(Y\mid X=x)$。写 $Y=m(X)+e$，$E(e\mid X)=0$，$E(e^2\mid X)=\sigma^2(X)$。本章先令 scalar continuous $X$，假设 i.i.d. observations，并在 support interior 的固定 $x$ 估计；vector $X$、clusters 和 semiparametric extension 后置。
+
+“非参数”不是没有假设。识别仍需 $f(x)>0$，一致性需 continuity，bias expansion 需 derivatives，inference 需 moments 和 bandwidth rates。结果只在有 data support 的区域可信，tails/extrapolation 尤其危险。
+
+阅读时要把四个问题分开。第一，$m(x)$ 由总体条件分布定义，是要估的对象；第二，核函数决定如何给邻近样本加权；第三，带宽 $h$ 决定“多近才算邻近”；第四，标准误只刻画抽样波动，不能自动消除平滑偏差。参数回归把函数形状的限制放在模型里，核回归则把限制转化为“局部平滑”假设，因此灵活性并非免费获得。
+
+## 分箱均值估计（Binned Means Estimator）
+
+连续 $X$ 几乎不会精确等于 $x$，所以用 $|X_i-x|\le h$ 的邻域平均：
+
+::: {#hansen-eq-19-1}
+$$
+\hat m(x)=
+\frac{\sum_{i=1}^n1\{|X_i-x|\le h\}Y_i}
+{\sum_{i=1}^n1\{|X_i-x|\le h\}}.
+\tag{19.1}
+$$
+:::
+
+$h>0$ 是 bandwidth。固定不重叠 bins 会产生人为 jumps；rolling window 可连续移动，却仍因 indicator weights 在 observations 进出窗口时跳动。$h$ 大时 observation 多、variance 小而局部差异被抹平；$h$ 小时反之。
+
+逐项看 [式 (19.1)](#hansen-eq-19-1)：分母是落入窗口 $[x-h,x+h]$ 的样本数，分子是这些观测的 $Y_i$ 之和，所以二者之比就是局部样本均值。若分母为零，估计量根本没有定义；这正是“某点附近缺少共同支撑”的样本版本。即使分母非零，只有两三个观测时估计也会非常不稳定，不能因为软件画出一条线就认为该处信息充足。
+
+## 核回归（Kernel Regression）
+
+kernel $K(u)$ 非负、bounded、symmetric、积分为 1；normalized second-order kernel 还满足 $\int u^2K(u)du=1$。以连续 weights 代替 indicator 得
+
+::: {#hansen-eq-19-2}
+$$
+\hat m_{nw}(x)=
+\frac{\sum_iK((X_i-x)/h)Y_i}
+{\sum_iK((X_i-x)/h)}.
+\tag{19.2}
+$$
+:::
+
+这是 NW/local-constant estimator。$h\to0$ 时在 sample points 几乎 interpolation，$h\to\infty$ 时退化为 $\bar Y$。Gaussian、Epanechnikov、triangular、rectangular kernels 的 efficiency 差很小；Gaussian 图形和 derivatives 更 smooth。kernel choice 通常不如 bandwidth 重要。
+
+把权重正规化为
+
+$$
+w_i(x)=\frac{K((X_i-x)/h)}{\sum_{j=1}^nK((X_j-x)/h)},
+\qquad \sum_iw_i(x)=1,
+$$
+
+便可写成 $\hat m_{nw}(x)=\sum_iw_i(x)Y_i$。这揭示了两个事实：它是 $Y_i$ 的局部加权平均；只要核函数非负，估计值便落在参与加权的 $Y_i$ 范围内。分子、分母都省略了 $1/h$，是因为同一因子在比值中抵消；到密度估计或渐近展开时，$1/(nh)$ 又必须显式出现。
+
+## 局部线性估计（Local Linear Estimator）
+
+NW 在 $x$ 附近近似 $m(X)\approx m(x)$；LL 用一阶 Taylor：$m(X)\approx m(x)+m'(x)(X-x)$。令 $Z_i(x)=(1,X_i-x)'$，解 weighted LS
+
+$$
+(\hat m_{LL}(x),\hat m'_{LL}(x))
+=\arg\min_{\alpha,\beta}\sum_iK((X_i-x)/h)
+[Y_i-\alpha-\beta(X_i-x)]^2.
+$$
+
+矩阵解 $(Z'KZ)^{-1}Z'KY$ 的 intercept 是 $\hat m_{LL}(x)$，slope 同时估 $m'(x)$。centering by $x$ 使 intercept 恰对应 evaluation point。$h\to\infty$ 时回到 global linear OLS，因此 LL 是 OLS 的 flexible local generalization。
+
+这里 $Z$ 是 $n\times2$ 矩阵，第 $i$ 行为 $Z_i(x)'$，$K=\operatorname{diag}(K_1,\ldots,K_n)$ 为 $n\times n$ 对角矩阵。加权正规方程意味着局部残差同时满足
+
+$$
+\sum_iK_i\hat e_i=0,
+\qquad
+\sum_iK_i(X_i-x)\hat e_i=0.
+$$
+
+第一式把局部平均误差配平，第二式再把局部线性趋势配平。因此，即使 $x$ 左右的样本密度不对称，只要真实回归函数在窗口内近似一条直线，局部线性拟合仍能正确还原截距。这正是它消除 NW “设计偏差”并改善边界表现的代数原因。
+
+## 局部多项式估计（Local Polynomial Estimator）
+
+用 $p$ 阶 Taylor basis $Z=(1,X-x,(X-x)^2/2!,\ldots,(X-x)^p/p!)'$，weighted LS 直接估 $(m,m',\ldots,m^{(p)})$。$p=0$ 是 NW，$p=1$ 是 LL。提高 $p$ 降低 approximation bias、允许较大 $h$，却增加 local parameter count 和 variance；实践常优先 odd order，尤其 LL。
+
+阶乘不是装饰：Taylor 展开中 $(X-x)^j/j!$ 的系数正好是 $m^{(j)}(x)$，所以第 $j+1$ 个系数可直接解释为 $j$ 阶导数估计。对给定 $x$，系数向量有 $(p+1)\times1$ 维；若窗口里有效观测不足以使 $Z'KZ$ 满秩，局部多项式便无法估计。高阶拟合在稀疏尾部尤其容易数值不稳。
+
+## 渐近偏差（Asymptotic Bias）
+
+NW conditional expectation 是
+
+::: {#hansen-eq-19-3}
+$$
+E[\hat m_{nw}(x)\mid X]=
+\frac{\sum_iK((X_i-x)/h)m(X_i)}{\sum_iK((X_i-x)/h)}.
+\tag{19.3}
+$$
+:::
+
+当 $h\to0$、$nh\to\infty$、$m,f,\sigma^2$ 在 $x$ 邻域连续且 $f(x)>0$，Taylor expansion 给
+
+$$
+E[\hat m_{nw}(x)\mid X]=m(x)+h^2B_{nw}(x)+o_p(h^2)+O_p(\sqrt{h/n}),
+$$
+
+$B_{nw}=m''/2+(f'/f)m'$；LL 则 $B_{LL}=m''/2$。LL 消除了 density slope 与 regression slope 共同造成的 design bias，只留下 curvature smoothing bias。concave 区域局部平均压低 peaks，convex 区域抬高 valleys。
+
+这个结论可以分三步理解。先在 $x$ 附近展开 $m(x+hu)$ 与 $f(x+hu)$；再用核函数对称性 $\int uK(u)du=0$ 消掉一阶奇次项；最后除以分母的极限 $f(x)$。交叉项 $m'(x)f'(x)$ 不会被对称性消掉，因为它乘的是 $u^2$，于是成为 NW 的额外偏差。LL 的局部斜率吸收了这一项。注意：这里说的 $O(h^2)$ 是内点、二阶光滑条件下的结论，不能未经检查搬到支撑集边界或函数折点。
+
+## 渐近方差（Asymptotic Variance）
+
+NW 的 exact conditional variance 是
+
+::: {#hansen-eq-19-4}
+$$
+\operatorname{var}[\hat m_{nw}(x)\mid X]=
+\frac{\sum_iK((X_i-x)/h)^2\sigma^2(X_i)}
+{[\sum_iK((X_i-x)/h)]^2}.
+\tag{19.4}
+$$
+:::
+
+NW 与 LL 的 leading variance 都是 $R_K\sigma^2(x)/[f(x)nh]$，$R_K=\int K^2$。它随 noise 增大，随 local density/effective sample $nh$ 增大而下降。tails 中 $f(x)$ 小，所以即使全样本 $n$ 很大，local precision 仍可差。
+
+为什么有效样本量是 $nh$？宽度为 $h$ 的邻域落入一个观测的概率近似为 $hf(x)$，$n$ 个观测中约有 $nhf(x)$ 个真正获得明显权重。每个局部平均权重大约为 $1/(nh)$，平方权重之和便是 $1/(nh)$ 量级。这个计数直觉既解释了方差公式，也解释了渐近条件为何要求 $nh\to\infty$。
+
+## AIMSE
+
+pointwise AMSE 是 $h^4B(x)^2+R_K\sigma^2(x)/[nhf(x)]$。加权积分得
+
+::: {#hansen-eq-19-5}
+$$
+\operatorname{AIMSE}=h^4\mathcal B+\frac{R_K}{nh}\mathcal S^2,
+\tag{19.5}
+$$
+:::
+
+其中 $\mathcal B=\int B(x)^2f(x)w(x)dx$、$\mathcal S^2=\int\sigma^2(x)w(x)dx$。一阶条件给
+
+::: {#hansen-eq-19-6}
+$$
+h_0=\left(\frac{R_K\mathcal S^2}{4\mathcal B}\right)^{1/5}n^{-1/5}.
+\tag{19.6}
+$$
+:::
+
+于是 optimal MSE rate 为 $n^{-4/5}$，慢于 parametric $n^{-1}$。Epanechnikov 最小化 $R_K$，但 relative gain 仅几个百分点；不应牺牲解释与 smooth derivatives 过度追求 kernel efficiency。
+
+把最优带宽推出来并不需要记忆。对 [式 (19.5)](#hansen-eq-19-5) 关于 $h$ 求导：
+
+$$
+4h^3\mathcal B-\frac{R_K\mathcal S^2}{nh^2}=0
+\quad\Longrightarrow\quad
+4h^5\mathcal B=\frac{R_K\mathcal S^2}{n}.
+$$
+
+取五次方根就是 [式 (19.6)](#hansen-eq-19-6)。在该点，增加带宽带来的边际平方偏差恰好等于减少方差的边际收益。再代回可见 $h^4$ 与 $(nh)^{-1}$ 都是 $n^{-4/5}$ 量级；这也说明只报告“最优 $h$”而不交代目标函数和权重区域是不完整的。
+
+## 参考带宽（Reference Bandwidth）
+
+single-peaked kernels 下近似
+
+::: {#hansen-eq-19-7}
+$$
+h_0\simeq0.58\left(\frac{\mathcal S^2}{n\mathcal B}\right)^{1/5}.
+\tag{19.7}
+$$
+:::
+
+Fan–Gijbels ROT 先用 $q\ge2$ global polynomial 作 pilot，估 $m''$，再计算
+
+::: {#hansen-eq-19-8}
+$$
+\widehat{\mathcal B}=\frac1n\sum_i
+\left\{\frac12\hat m''(X_i)\right\}^2
+1\{\xi_1\le X_i\le\xi_2\},
+\tag{19.8}
+$$
+:::
+
+以及
+
+::: {#hansen-eq-19-9}
+$$
+h_{rot}=0.58
+\left[\frac{\hat\sigma^2(\xi_2-\xi_1)}{n\widehat{\mathcal B}}\right]^{1/5}.
+\tag{19.9}
+$$
+:::
+
+ROT 是起点而非真理；检查 pilot order、trim region 和 tail sensitivity。若 pilot curvature 几乎为零，optimal $h$ 可很大，反映 data 更支持 global low-order fit。
+
+实际计算顺序是：先定研究区间 $[\xi_1,\xi_2]$；用至少二阶的全局多项式取得 $\hat m''(X_i)$；由 [式 (19.8)](#hansen-eq-19-8) 汇总区间内曲率；用先导回归残差估计同方差噪声；最后代入 [式 (19.9)](#hansen-eq-19-9)。每一步都带有近似：高阶多项式可能夸大尾部曲率，同方差假设可能过强，截尾区间也会改变平均曲率。因而应把 ROT 当作可复核的基准，并与交叉验证和若干倍数带宽作敏感性比较。
+
+## 边界处估计（Estimation at a Boundary）
+
+support boundary 一侧没有 observations。NW local average 因不对称，在 lower boundary 的 bias 为 $+hm'(x)\mu_K+o(h)$，upper boundary 为负号，是 $O(h)$；LL 通过 local slope extrapolate 回 $x$，bias 仍为 $O(h^2)$。因此 wage experience=0、RD cutoff、age limits 等边界问题应优先 LL/local polynomial。boundary-optimal kernel 是 triangular，但 bandwidth 和 polynomial order仍更关键。
+
+一个简单反例能看清问题。若真实函数恰为 $m(t)=a+bt$，在下边界 $x$ 附近只能观察到 $t\ge x$。NW 对右侧值求平均，$b>0$ 时必然得到高于 $m(x)$ 的结果；LL 则在右侧样本上拟合直线，再用截距回推至 $x$，在线性模型下没有这种偏差。这里的“回推”仍只发生在长度约为 $h$ 的局部窗口内，不等同于用全样本做危险的远距离外推。
+
+## 非参数残差与预测误差（Nonparametric Residuals and Prediction Errors）
+
+in-sample residual $\hat e_i=Y_i-\hat m(X_i)$ 会因 $Y_i$ 参与自身 local fit 而过小，$h\to0$ 时甚至趋零。leave-one-out fit $\tilde m_{-i}$ 给
+
+::: {#hansen-eq-19-10}
+$$
+\tilde e_i=Y_i-\tilde m_{-i}(X_i).
+\tag{19.10}
+$$
+:::
+
+它更接近 genuine prediction error。凡 bandwidth selection、variance-function estimation、fit comparison，尽量使用 LOO errors；clusters 时要删整个 cluster。
+
+若平滑器可写成 $\hat m(X_i)=\sum_js_{ij}Y_j$，那么对角元 $s_{ii}$ 衡量观测 $i$ 对自身拟合值的影响。小带宽使 $s_{ii}$ 很大，普通残差便机械地缩小。线性平滑器常可用 $\tilde e_i=\hat e_i/(1-s_{ii})$ 快速计算逐一剔除残差，但使用软件前要确认它针对的是相同核函数、相同带宽与相同局部阶数。
+
+## 交叉验证带宽选择（Cross-Validation Bandwidth Selection）
+
+weighted LOO criterion 是
+
+::: {#hansen-eq-19-11}
+$$
+CV(h)=\frac1n\sum_i\tilde e_i(h)^2w(X_i).
+\tag{19.11}
+$$
+:::
+
+其 expectation 为
+
+::: {#hansen-eq-19-12}
+$$E[CV(h)]=\mathcal S^2+IMSE_{n-1}(h).\tag{19.12}$$
+:::
+
+constant $\mathcal S^2$ 不影响 argmin，所以
+
+::: {#hansen-eq-19-13}
+$$h_{cv}=\arg\min_{h\ge h_\ell}CV(h).\tag{19.13}$$
+:::
+
+用 grid/golden search 并画 criterion，确认 minimum 不在搜索边界。若 $CV$ 随 $h$ 持续下降，$h=\infty$ 表示选择 global mean（NW）或 global line（LL），不是算法失败。CV curve 很平时应报告 bandwidth sensitivity。
+
+[式 (19.12)](#hansen-eq-19-12) 的关键不是代数技巧，而是样本拆分产生的独立性。条件于其余 $n-1$ 个观测，$\tilde m_{-i}$ 不使用 $e_i$，所以预测偏差与 $e_i$ 的交叉项期望为零；剩下不可约噪声 $\mathcal S^2$ 与一个 $n-1$ 样本的积分均方误差。若没有剔除第 $i$ 个观测，这个交叉项通常为负，准则会奖励过度拟合并偏向过小带宽。
+
+## 渐近分布（Asymptotic Distribution）
+
+除 continuity 外，再要求 conditional $r>2$ moment bound
+
+::: {#hansen-eq-19-14}
+$$E(|e|^r\mid X=x)\le\bar\sigma,\tag{19.14}$$
+:::
+
+以及
+
+::: {#hansen-eq-19-15}
+$$nh^5=O(1).\tag{19.15}$$
+:::
+
+则 NW 有
+
+::: {#hansen-eq-19-16}
+$$
+\sqrt{nh}\{\hat m_{nw}(x)-m(x)-h^2B_{nw}(x)\}
+\Rightarrow N\!\left(0,\frac{R_K\sigma^2(x)}{f(x)}\right),
+\tag{19.16}
+$$
+:::
+
+LL 同形但换 $B_{LL}$。rate $\sqrt{nh}$ 与 non-negligible $h^2B$ 是两项核心差异。$nh^5=O(1)$ 控制 higher-order bias；不能仅见 normal limit 就按 $\sqrt n$ 做普通回归推断。
+
+把误差按尺度拆开最清楚：
+
+$$
+\hat m(x)-m(x)
+=h^2B(x)+O_p((nh)^{-1/2})+\text{更高阶项}.
+$$
+
+乘以 $\sqrt{nh}$ 后，主偏差成为 $\sqrt{nh^5}B(x)$。若 $h\asymp n^{-1/5}$，它通常收敛到非零常数，故最小化均方误差的带宽并不自动适合以 $m(x)$ 为中心的置信区间。条件矩界 [式 (19.14)](#hansen-eq-19-14) 用于排除单个极端误差主导局部和，$nh^5=O(1)$ 则控制泰勒余项；两者服务的证明环节不同。
+
+## 欠平滑（Undersmoothing）
+
+若 $nh^5=o(1)$，bias 在 $\sqrt{nh}$ scale 消失，得到 centered-at-$m(x)$ normal limit。这要求 $h=o(n^{-1/5})$：更小 bandwidth、较高 variance。undersmoothing 只是让 bias asymptotically lower order，并未在 finite sample 消除未知 bias；应明确 bandwidth rule，而非在论文中一句“采用欠平滑”跳过。
+
+例如取 $h\asymp n^{-a}$。一致性要求 $0<a<1$，消除二阶偏差还要求 $1-5a<0$，即 $a>1/5$。所以 $a$ 必须落在 $(1/5,1)$ 中，但太接近 1 又会使 $nh$ 增长极慢、有限样本方差爆炸。实践中还可显式估计并校正偏差；无论采用哪条路线，都应让标准误与带宽规则配套。
+
+## 条件方差估计（Conditional Variance Estimation）
+
+$\sigma^2(x)=E(e^2\mid X=x)$ 可对 squared LOO errors 再做 NW：
+
+::: {#hansen-eq-19-17}
+$$
+\hat\sigma^2(x)=
+\frac{\sum_iK((X_i-x)/h)\tilde e_i^2}
+{\sum_iK((X_i-x)/h)}.
+\tag{19.17}
+$$
+:::
+
+mean 与 variance functions 可用不同 bandwidth；应分别 ROT/CV。NW 保证 nonnegative，LL 可能给负 variance，因此此处 NW 有结构优势。若 variance-CV 选择 $h=\infty$，表示 homoskedastic full-sample variance fit 最好。
+
+这里必须使用预测误差而非把 $e_i$ 当作已知量。第一步估 $m$，第二步构造 $\tilde e_i^2$，第三步再把它作为因变量平滑。均值函数平滑的是位置，方差函数平滑的是离散程度，两者曲率和噪声完全可能不同，因此强制共用一个 $h$ 没有理论理由。估计得到的只是条件均值周围的方差，不是新观测的完整预测区间；后者还需对误差分布作处理。
+
+## 方差估计与标准误（Variance Estimation and Standard Errors）
+
+local polynomial coefficient covariance 的 White analog 是
+
+::: {#hansen-eq-19-18}
+$$
+\widehat V_{\hat\beta(x)}=(Z'KZ)^{-1}
+\left[\sum_iK_i(x)^2Z_i(x)Z_i(x)'\tilde e_i^2\right]
+(Z'KZ)^{-1}.
+\tag{19.18}
+$$
+:::
+
+也可用 asymptotic formula 配 density estimator
+
+::: {#hansen-eq-19-19}
+$$
+\hat f(x)=\frac1{nb}\sum_iK((X_i-x)/b).
+\tag{19.19}
+$$
+:::
+
+推荐 [式 (19.18)](#hansen-eq-19-18) 配 LOO errors，因为最接近 finite-sample conditional variance。$\hat m(x)$ 的 variance 是矩阵第一对角元。
+
+维数核对有助于避免把权重平方漏掉：$Z'KZ$ 为 $(p+1)\times(p+1)$；中间“肉”矩阵中每项 $K_i^2Z_iZ_i'\tilde e_i^2$ 也是同维；左右两侧的逆矩阵构成三明治。之所以是 $K_i^2$，是因为估计误差里每个 $e_i$ 的系数含一次 $K_i$，计算方差时系数要平方。若直接写成普通 OLS 的 $Z'\hat D Z$，便错过了局部权重。
+
+## 置信带（Confidence Bands）
+
+常画
+
+::: {#hansen-eq-19-20}
+$$
+\hat m(x)\pm1.96\sqrt{\widehat V_{\hat m(x)}}.
+\tag{19.20}
+$$
+:::
+
+这是 pointwise interval，不是整条曲线 simultaneously 95% band；而且未修正 smoothing bias，严格说覆盖 smoothed pseudo-target $m(x)+h^2B(x)$。绘图应注明 pointwise/bandwidth，并避免用“某处 band 不含零”推断整段 function uniformly significant。
+
+“逐点 95%”的含义是：预先固定一个 $x$，重复抽样时该点区间的覆盖率约为 95%。若图上同时检查几十个点，至少一个区间漏掉真值的概率会累积，不能把整条上下界解释为 95% 同时置信带。更重要的是，[式 (19.20)](#hansen-eq-19-20) 只加减标准误；采用均方误差最优带宽时，偏差与标准误同阶，名义覆盖率可能明显失真。
+
+## 核回归的局部性质（The Local Nature of Kernel Regression）
+
+给定 $h$，$\hat m(x)$ 主要由 $X_i$ 靠近 $x$ 的 observations 决定，极限依赖 $m,f,\sigma^2$ 在 $x$ 的局部值。但 ROT/CV 是 global criterion，所以 global curvature/noise 会通过选定 $h$ 影响每个局部 estimate。local adaptive bandwidth 可能更灵活，也引入额外 tuning noise。
+
+## 工资回归应用（Application to Wage Regression）
+
+CPS 子样本为 Black male high-school graduates，$n=762$，估 $E[\log wage\mid experience]$ 于 0–40。因含 boundary 使用 LL；$h_{rot}=5.14$、$h_{cv}=4.32$。估计显示经验前约 20 年 wage 上升，此后 flatten；CV curve/两条 fit 一并展示，避免把小 bandwidth 的 wiggles 当经济结构。tails bands 较宽，对经验很少者结论更不精确。
+
+## 聚类观察（Clustered Observations）
+
+cluster $g$ 内任意依赖，LL 为
+
+::: {#hansen-eq-19-21}
+$$
+\hat\beta(x)=
+\left(\sum_gZ_g'K_gZ_g\right)^{-1}\sum_gZ_g'K_gY_g.
+\tag{19.21}
+$$
+:::
+
+删除整个 cluster 的 estimator 是
+
+::: {#hansen-eq-19-22}
+$$
+\tilde\beta_{(-g)}(x)=
+\left(\sum_{j\ne g}Z_j'K_jZ_j\right)^{-1}
+\sum_{j\ne g}Z_j'K_jY_j,
+\tag{19.22}
+$$
+:::
+
+预测误差
+
+::: {#hansen-eq-19-23}
+$$\tilde e_{ig}=Y_{ig}-\tilde\beta_{1(-g)}(X_{ig}).\tag{19.23}$$
+:::
+
+true covariance 为
+
+::: {#hansen-eq-19-24}
+$$
+V_{\hat\beta}=Q^{-1}\left(\sum_gZ_g'K_gS_gK_gZ_g\right)Q^{-1},
+\quad Q=\sum_gZ_g'K_gZ_g,
+\tag{19.24}
+$$
+:::
+
+feasible cluster estimator 用 $\tilde e_g\tilde e_g'$：
+
+::: {#hansen-eq-19-25}
+$$
+\widehat V_{\hat\beta}=Q^{-1}
+\left(\sum_gZ_g'K_g\tilde e_g\tilde e_g'K_gZ_g\right)Q^{-1}.
+\tag{19.25}
+$$
+:::
+
+bandwidth 也宜 delete-cluster CV，而非删单个 student；后者仍从同一 cluster 同伴泄露 information。
+
+设第 $g$ 组有 $n_g$ 个观测，则 $Z_g$ 为 $n_g\times2$、$K_g$ 为 $n_g\times n_g$、$S_g=E(e_ge_g'\mid X_g)$ 为 $n_g\times n_g$。组内非对角协方差通过 [式 (19.24)](#hansen-eq-19-24) 保留下来，组间独立才允许对 $g$ 求和。剔除单个学生时，其同校同伴仍把共同学校冲击带入预测，所得“样本外”误差并不真正样本外；整组剔除才与推断所依赖的独立单位一致。
+
+## 测试成绩应用（Application to Testscores）
+
+DDK tracking sample 中 girls $n=1487$、schools 为 clusters。standard CV 选 12.3，delete-cluster CV 选 6.2 且 5–11 很平；cluster SE 约 noncluster 的两倍。LL 与 global line 在 initial percentile<80 类似，top tail 上弯。结论必须同时呈现 flat CV、tail density 与 cluster bands，不能只挑选更戏剧化的曲线。
+
+## 多个回归量（Multiple Regressors）
+
+$X\in\mathbb R^d$ 时用 product kernel $K_i(x)=\prod_{j=1}^dK((X_{ji}-x_j)/h_j)$，LL basis $(1,(X_i-x)')'$。effective sample size 是 $n|h|$，$|h|=\prod_jh_j$；极限 rate $\sqrt{n|h|}$，bias 为 $\sum_jh_j^2B_j(x)$。CV 需同时 optimize $d$ 个 bandwidths，simple grid 很快失控。
+
+每个 $h_j$ 都用变量 $X_j$ 自己的量纲度量，所以实际计算前通常需要标准化，或至少按各变量尺度设置搜索区间。若所有维度共用 $h$，邻域体积是 $h^d$；要求每一维都靠近目标点，远比只要求一个标量接近苛刻。离散变量不应机械塞进连续核函数，可采用适合离散取值的核，或放入下一节的参数部分。
+
+## 维数灾难（Curse of Dimensionality）
+
+共同 $h$ 下 variance order 为 $(nh^d)^{-1}$，bias squared 仍 $h^4$。平衡两者得 $h\asymp n^{-1/(4+d)}$，AIMSE $O(n^{-4/(4+d)})$。$d$ 增加时 local neighborhood 迅速稀疏，这不是计算机慢，而是信息论上的 precision loss。实际 kernel regression 常只让 1–2 个 continuous variables 非参数化。
+
+推导方法和一维完全相同：令 $h^4\asymp (nh^d)^{-1}$，得到 $h^{4+d}\asymp n^{-1}$，再取 $(4+d)$ 次方根。比如 $d=1$ 时是 $n^{-1/5}$，$d=4$ 时已变为 $n^{-1/8}$。这里更慢的是统计收敛率；增加网格或更快的机器只能缩短运算时间，不能凭空增加目标点附近的观测。
+
+## 部分线性回归（Partially Linear Regression）
+
+为降低维数，将
+
+::: {#hansen-eq-19-26}
+$$
+Y=m(X)+Z'\beta+e,
+\qquad E(e\mid X,Z)=0.
+\tag{19.26}
+$$
+:::
+
+对 $X$ 条件期望后相减：$Y-E(Y\mid X)=[Z-E(Z\mid X)]'\beta+e$。Robinson 三步法分别 nonparametrically fit $E(Y\mid X)$、每个 $E(Z_j\mid X)$；用 residual-on-residual OLS 估 $\beta$；再对 $Y-Z'\hat\beta$ on $X$ 做 nonparametric regression 估 $m$。discrete controls 放 $Z$，continuous low-dimensional variables 放 $X$。
+
+orthogonality 使 first-stage errors 以 product 进入，若 nuisance rate $o_p(n^{-1/4})$，$\hat\beta$ 仍可 $\sqrt n$ normal；这也预示 modern double/debiased ML 的 residualization 思想。separability 与 linear-in-$Z$ 仍是实质 restrictions。
+
+三步法的“残差”含义要与普通 FWL 区分。普通 FWL 用线性投影从 $Y$ 和 $Z$ 中剔除控制变量；Robinson 方法用非参数条件均值剔除 $X$ 的任意平滑影响。写
+
+$$
+\tilde Y=Y-E(Y\mid X),\qquad
+\tilde Z=Z-E(Z\mid X),
+$$
+
+则总体矩条件是 $E[\tilde Z(\tilde Y-\tilde Z'\beta)]=0$。只要 $E(\tilde Z\tilde Z')$ 非奇异，$\beta$ 被识别。第一阶段要估 $k+1$ 个条件均值，不是只估 $m(X)$；第二步标准误还须遵守样本的异方差或聚类结构。
+
+## 计算（Computation）
+
+软件默认 kernel、local order、bandwidth selector 与 bands 含义不同。输出前保存 evaluation grid、sample support、ROT/CV curve、LOO definition、boundary method 和 variance formula。复现时用一个 evaluation point 手算 weights/weighted LS，核对 kernel scaling（有些写 $K_h=K(u/h)/h$，ratio estimator 中 $1/h$ 会抵消）。
+
+## 技术证明（Technical Proofs*）
+
+NW decomposition 先写
+
+::: {#hansen-eq-19-27}
+$$E[\hat m_{nw}(x)\mid X]=m(x)+\hat b(x)/\hat f(x),\tag{19.27}$$
+:::
+
+::: {#hansen-eq-19-28}
+$$
+\hat b(x)=\frac1{nh}\sum_iK((X_i-x)/h)[m(X_i)-m(x)].
+\tag{19.28}
+$$
+:::
+
+change variable $v=x+hu$：
+
+::: {#hansen-eq-19-29}
+$$E\hat b(x)=\int K(u)[m(x+hu)-m(x)]f(x+hu)du.\tag{19.29}$$
+:::
+
+Taylor terms为
+
+::: {#hansen-eq-19-30}
+$$m(x+hu)-m(x)=m'(x)hu+\tfrac12m''(x)h^2u^2+o(h^2),\tag{19.30}$$
+:::
+
+::: {#hansen-eq-19-31}
+$$
+\int K(u)[m'(x)hu+\tfrac12m''(x)h^2u^2+o(h^2)]
+[f(x)+f'(x)hu+o(h)]du,
+\tag{19.31}
+$$
+:::
+
+odd kernel moment 使一阶项
+
+::: {#hansen-eq-19-32}
+$$h\left(\int uK(u)du\right)m'(x)[f(x)+o(h)]=0.\tag{19.32}$$
+:::
+
+variance bound
+
+::: {#hansen-eq-19-33}
+$$
+\operatorname{var}(\hat b(x))
+\le\frac1{nh}\int K(u)^2[m(x+hu)-m(x)]^2f(x+hu)du=O(h/n),
+\tag{19.33}
+$$
+:::
+
+遂有
+
+::: {#hansen-eq-19-34}
+$$
+\hat b(x)/\hat f(x)=h^2B_{nw}(x)+o_p(h^2)+O_p(\sqrt{h/n}).
+\tag{19.34}
+$$
+:::
+
+CV proof 展开 LOO error，cross term 因 $e_i$ 与 $\tilde m_{-i}$ independent/mean zero 消失：
+
+::: {#hansen-eq-19-35}
+$$E[CV(h)]=\mathcal S^2+E\{[\tilde m_{-i}(X_i,h)-m(X_i)]^2w(X_i)\}.\tag{19.35}$$
+:::
+
+一致性/CLT 再写
+
+::: {#hansen-eq-19-36}
+$$\hat m_{nw}(x)=m(x)+\hat b(x)/\hat f(x)+\hat g(x)/\hat f(x),\tag{19.36}$$
+:::
+
+::: {#hansen-eq-19-37}
+$$\hat g(x)=\frac1{nh}\sum_iK((X_i-x)/h)e_i,\tag{19.37}$$
+:::
+
+且
+
+::: {#hansen-eq-19-38}
+$$nh\operatorname{var}[\hat g(x)]\to R_K\sigma^2(x)f(x).\tag{19.38}$$
+:::
+
+最后对 triangular array $h^{-1/2}K_ie_i$ 验证 Lindeberg，结合 bias expansion 与 Slutsky 得 [式 (19.16)](#hansen-eq-19-16)。
+
+证明的逻辑链可以概括为：分母 $\hat f(x)\overset p\to f(x)>0$；确定性平滑误差 $\hat b(x)$ 给出 $h^2B_{nw}(x)$；随机误差 $\hat g(x)$ 的方差为 $1/(nh)$ 量级；三角阵中心极限定理给 $\sqrt{nh}\hat g(x)$ 的正态极限；最后用 Slutsky 将随机分母换成 $f(x)$。每一步都对应一个假设：正密度保证可除，光滑性保证泰勒展开，$nh\to\infty$ 保证局部样本增加，矩界保证 Lindeberg 条件。
+
+## 习题阅读指南（Exercises）
+
+19.1–19.6 练 scale invariance、AIMSE minimization、curvature bias、NW design bias 与 $d$ 维 rate。解题先列 $h^4$ 与 $(nh^d)^{-1}$ 两项，再求导；若 $m$ constant，$\mathcal B=0$，有限 optimal $h$ 不存在，global mean 最优。
+
+19.7–19.11 的 empirical workflow：固定 subgroup/support；画 density/rug；并列 NW 与 LL、ROT 与 CV；报告 LOO/cluster rule；画 pointwise bands并注明 bias；检查 tails/boundaries；最后才讨论 nonlinearity。RR debt=90% 或 nonlinear AR 等问题不能仅凭曲线一个 kink 下因果结论。
+
+::: {.callout-important title="章末自检"}
+1. 为什么 LL 相比 NW 消除了 $(f'/f)m'$ bias，且 boundary bias order 更低？
+2. 能否从 $h^4+(nh)^{-1}$ 推出 $h\asymp n^{-1/5}$ 与 MSE $n^{-4/5}$？
+3. 为什么 in-sample residual 在小带宽下过度乐观，LOO error 如何解决？
+4. [式 (19.20)](#hansen-eq-19-20) 为何既非 uniform band，也未自动覆盖 unsmoothed $m(x)$？
+5. cluster data 为什么必须 delete-cluster CV/score，而不是 delete-observation？
+6. $d$ 增大时有效样本 $nh^d$ 如何导致 curse of dimensionality，partially linear model如何缓解？
+:::
