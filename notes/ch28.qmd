@@ -1,0 +1,674 @@
+---
+title: "模型选择、Stein 收缩与模型平均"
+subtitle: "信息准则、交叉验证、选择后推断、James–Stein 与组合估计"
+hansen-chapter: "Chapter 28"
+book-pages: "859–909"
+pdf-pages: "879–929"
+status: "完整初稿"
+---
+
+::: {.book-map}
+**原书位置与本章路线**　对应 Hansen Chapter 28（书内 pp. 859–909；PDF pp. 879–929）。28.1–28.18系统比较 BIC、AIC、Mallows、hold-out、CV、FIC 和逐步回归，并讨论选择一致性、预测最优与选择后推断；28.19–28.25发展 James–Stein 收缩；28.26–28.31把收缩推广为 SBIC/SAIC、MMA、JMA 等模型平均；28.32–28.33给技术证明和习题。
+:::
+
+::: {.bridge}
+**本科桥接**　本科常见做法是“看调整 $R^2$、逐步删不显著控制变量，再报告最终回归”。Hansen 把这件事拆成三个不同决策：预测新样本要估计 out-of-sample loss；寻找最简真模型要让复杂度惩罚随 $n$ 增长；对核心系数作置信区间则必须把规格搜索的随机性算进去。James–Stein 和模型平均进一步提醒我们：硬选一个模型并非唯一选择，平滑地收缩或加权有时能显著降低 MSE。
+:::
+
+## 引言（Introduction）
+
+本章讨论三类程序。模型选择在候选集合中只保留一个估计量；收缩把一个高方差估计平滑拉向预先有意义的目标；模型平均给多个估计量数据依赖权重。三者共同面对 bias–variance trade-off，但优化对象可以是完整密度的 KLIC、未来预测误差、某个焦点参数的 MSE，或整组参数的加权 MSE。
+
+应用前必须写下：候选模型是否在看结果前确定；所有模型是否用相同样本和同一目标变量；参数 $K$ 怎样计数；选择用于预测、结构解释还是推断；最后的标准误是否覆盖搜索过程。信息准则的一个最小值不是“数据证明该模型为真”，候选集合之外的模型甚至没有进入比较。
+
+可以把全章方法按决策对象快速定位。若真正损失是未来观测的 squared/log loss，优先从 CV、AIC 或 Mallows/JMA 出发；若研究假定候选中确有有限维正确 density 且关心最简表示，BIC 才对应那个问题；若核心只是一项政策效应 $\mu$ 的 MSE，FIC 比整模型准则更贴题；若多个规格都有可信依据且硬选择不稳定，收缩或平均能保留规格不确定性。选择方法之前先固定 loss，可防止看到不同结果后倒选最有利准则。
+
+## 模型选择（Model Selection）
+
+“模型选择”更准确地说常是估计量选择：短回归是长回归的受限估计，OLS 与 2SLS 也可能估计同一结构参数但使用不同识别信息。先看简化例。令 $\hat\theta\in\mathbb R^K$ 无偏，$\operatorname{Var}(\hat\theta)=V>0$；与把整组系数设为零的 $\widetilde\theta=0$ 比较，损失权重取 $W=V^{-1}$。则
+
+::: {#hansen-eq-28-1}
+$$
+\operatorname{wmse}(\hat\theta)=K,
+\tag{28.1}
+$$
+:::
+
+::: {#hansen-eq-28-2}
+$$
+\operatorname{wmse}(\widetilde\theta)
+=\theta'V^{-1}\theta\equiv\lambda.
+\tag{28.2}
+$$
+:::
+
+[式 (28.1)](#hansen-eq-28-1) 是标准化方差，随维数增加；[式 (28.2)](#hansen-eq-28-2) 是把真参数错误压为零的平方偏差。理想规则在 $\lambda>K$ 时用长估计。Wald 统计量 $W=\hat\theta'V^{-1}\hat\theta$ 满足 $E(W)=\lambda+K$，故 $W-K$ 无偏估计 $\lambda$；以它代替未知量得到 $W>2K$ 才保留长模型。这已预示 AIC 型惩罚的 $2K$。
+
+对 normal 线性回归，若 $\hat\sigma^2=n^{-1}\sum_i\hat e_i^2$，$K=k+1$ 同时数 $k$ 个回归系数和一个方差参数，原书列出
+
+::: {#hansen-eq-28-3}
+$$
+\mathrm{BIC}=n+n\log(2\pi\hat\sigma^2)+K\log n,
+\tag{28.3}
+$$
+:::
+
+::: {#hansen-eq-28-4}
+$$
+\mathrm{AIC}=n+n\log(2\pi\hat\sigma^2)+2K,
+\tag{28.4}
+$$
+:::
+
+::: {#hansen-eq-28-5}
+$$
+\mathrm{CV}=\sum_{i=1}^n\widetilde e_i^2,
+\tag{28.5}
+$$
+:::
+
+其中 $\widetilde e_i$ 是留一法预测误差。一般 likelihood 模型为
+
+::: {#hansen-eq-28-6}
+$$
+\mathrm{BIC}=-2\ell_n(\hat\theta)+K\log n,
+\tag{28.6}
+$$
+:::
+
+::: {#hansen-eq-28-7}
+$$
+\mathrm{AIC}=-2\ell_n(\hat\theta)+2K.
+\tag{28.7}
+$$
+:::
+
+所有这些准则都是**越小越好**。比较必须使用同一个观察样本；否则 likelihood 或 SSE 的变化混有样本构成变化。常数项在同一分布族内不影响排序，但跨不同密度族做 BIC/权重时不可随意删常数。
+
+$K$ 的计数也要逐模型统一。normal 回归的完整 likelihood 同时估 $k$ 个均值参数和 $\sigma^2$，故 $K=k+1$；ordered probit 还数阈值，mixed logit 还数随机系数分布参数，固定效应通常也属于估计参数。若一个软件把吸收 fixed effects 计入自由度、另一个不计，直接比较它们的 IC 已改变惩罚定义。CV 不显式使用 $K$，但复杂度会通过外样本拟合自动反映，这也是它在复杂算法中的实际优势。
+
+## 贝叶斯信息准则（Bayesian Information Criterion）
+
+给 likelihood $f(y,\theta)$ 和 prior $\pi(\theta)$，marginal likelihood 为 $p(y)=\int f(y,\theta)\pi(\theta)d\theta$。Schwarz 定理用 MLE 附近的二次展开/Laplace 积分得到
+
+$$-2\log p(Y)=-2\ell_n(\hat\theta)+K\log n+O(1).$$
+
+因此 [式 (28.6)](#hansen-eq-28-6) 近似负二倍 log marginal likelihood。若候选模型先验概率相等，最小 BIC 近似选择后验概率最大者；先验模型概率不同则还应加入相应项，不能把 BIC 天然解释成无条件 posterior probability。
+
+$K\log n$ 随样本增长，比 AIC 的 $2K$ 更强。BIC 适合“候选集中存在有限维真模型、希望识别最简真模型”的目标。若所有低维模型只是逼近、目标是预测，较强惩罚可能带来更大偏差。软件有时把 BIC 除以 $n$；排名不变，但数值差的尺度改变，报告时必须注明定义。
+
+Schwarz 展开还默认固定维参数、内点、局部唯一且 regular 的 MLE，以及 prior 在真值附近正且不随 $n$ 异常变化。混合模型的成分权重在边界、change-point、单位根或未识别 nuisance parameter 都可能使 $K\log n$ 的普通 Laplace 近似改变。此时“能算 BIC”与“Schwarz 定理支持该 BIC”是两句话，应查专门的非正规模型理论或改用诚实预测评价。
+
+## 回归的 Akaike 信息准则（Akaike Information Criterion for Regression）
+
+Akaike 的目标是让估计密度 $\hat f$ 接近真实密度 $g$。Kullback–Leibler information criterion 为 $\int g\log(g/f)$，非负且相等时为零。对随机 $\hat f$，期望 KLIC 是
+
+::: {#hansen-eq-28-8}
+$$
+E\{\mathrm{KLIC}(g,\hat f)\}
+=\int g(y)\log g(y)dy
+-E\!\left\{\int g(y)\log\hat f(y)dy\right\}.
+\tag{28.8}
+$$
+:::
+
+第一项不随候选模型变，故把待最小化目标写成
+
+::: {#hansen-eq-28-9}
+$$
+T=-2E\!\left\{\int g(y)\log\hat f(y)dy\right\},
+\tag{28.9}
+$$
+:::
+
+或令 $\widetilde Y$ 为与估计样本独立的同分布新样本：
+
+::: {#hansen-eq-28-10}
+$$
+T=-2E\{\log\hat f(\widetilde Y)\}.
+\tag{28.10}
+$$
+:::
+
+这一步说明 AIC 的对象是新样本 predictive log likelihood，不是“真模型概率”。normal 线性回归 log density 为
+
+KLIC 还具有特定加权含义：积分以真实密度 $g(y)$ 加权，常见区域占大权重，极端尾部即使相对误差很大也可能贡献有限。因此 AIC 最优不必等于金融尾部风险、罕见灾害概率或特定亚组预测最优；若研究 loss 对尾部额外加权，应直接用对应 weighted scoring rule/CV。另一方面，log score 会对给实际发生事件分配极小概率的模型施加强惩罚，这与只比较条件均值平方误差也不同。
+
+::: {#hansen-eq-28-11}
+$$
+\log f(Y,X,\theta)=-\frac n2\log(2\pi\sigma^2)
+-\frac1{2\sigma^2}\sum_{i=1}^n(Y_i-X_i'\beta)^2.
+\tag{28.11}
+$$
+:::
+
+已知 $\sigma^2$ 且真实回归条件同方差时，定理 28.2 给
+
+::: {#hansen-eq-28-12}
+$$
+T=n\log(2\pi\sigma^2)+n+K\equiv T_0+K,
+\tag{28.12}
+$$
+:::
+
+::: {#hansen-eq-28-13}
+$$
+E\{-2\ell_n(\hat\theta)\}
+=n\log(2\pi\sigma^2)+n-K\equiv T_0-K.
+\tag{28.13}
+$$
+:::
+
+估计 $K$ 个参数使真正的外样本目标比理想真参数差 $K$；同一数据上拟合又乐观了 $K$。两边相差 $2K$，所以给 maximized in-sample loss 加 $2K$ 是 $T$ 的无偏校正。这个“optimism”推导比背 [式 (28.4)](#hansen-eq-28-4) 更重要，并清楚暴露同方差假设。
+
+## Likelihood 的 Akaike 信息准则（Akaike Information Criterion for Likelihood）
+
+一般 MLE 下 [式 (28.7)](#hansen-eq-28-7) 依靠 likelihood 在真参数附近二次、MLE 渐近正态以及信息矩阵等式；定理 28.4 给出其对预测 KLIC 目标的近似无偏性。若只是 quasi-likelihood，$Q\ne\Omega$，经典 Wald 二次型不再是标准 $\chi^2_K$，固定 $2K$ optimism 校正未必正确。
+
+非线性模型在边界、混合分布、弱识别或维度随 $n$ 快速增长时也可能破坏局部二次近似。AIC 数字仍可由软件输出，不代表理论前提自动满足。应先确认 likelihood 是同一观察单位的完整 likelihood、参数计数含方差/阈值/混合参数，并对近似模型用 out-of-sample loss 作稳健性比较。
+
+## Mallows 准则（Mallows Criterion）
+
+在 $Y=m+e$、$E(e\mid X)=0$、$E(ee'\mid X)=\sigma^2I_n$ 下，线性平滑估计写成 $\hat m=AY$，$A$ 只依赖 $X$。OLS、series、kernel/local linear 都可落入此类。Mallows 定义
+
+::: {#hansen-eq-28-14}
+$$
+C_p=\hat e'\hat e+2\widetilde\sigma^2\operatorname{tr}(A),
+\tag{28.14}
+$$
+:::
+
+$\operatorname{tr}(A)$ 是 effective degrees of freedom；OLS 投影矩阵时等于系数数 $K$，故
+
+::: {#hansen-eq-28-15}
+$$
+C_p=n\hat\sigma^2+2K\widetilde\sigma^2.
+\tag{28.15}
+$$
+:::
+
+$\widetilde\sigma^2$ 应由足够大的基准模型独立/近无偏估计。$C_p-e'e$ 对 $R=E\{(\hat m-m)'(\hat m-m)\mid X\}$ 无偏，而 $e'e$ 对所有模型相同，故最小化 $C_p$ 等价于最小化估计的预测超额风险。异方差时 $E(e'Ae\mid X)$ 不再只是 $\sigma^2\operatorname{tr}(A)$，普通 Mallows 惩罚失准。
+
+## 留出准则（Hold-Out Criterion）
+
+随机分 training $N$ 与 test $P$，只用 training 估 $\widetilde\beta_N$，再在 test 算 $P^{-1}\sum(Y_i-X_i'\widetilde\beta_N)^2$。因为 test 未参与拟合，这对训练规模为 $N$ 的 MSFE 无偏；却不等于用全样本 $n$ 重估后的 MSFE，并对一次随机切分敏感。
+
+所有 preprocessing、变量筛选、超参数调节都必须只用 training 信息，否则 test leakage 使误差过度乐观。面板/聚类资料应按个体或簇切分，时间预测应按过去—未来切分而非随机打乱。若既调参又最终评估，需要 training/validation/test 三份或 nested CV；不能在同一个 test set 上反复挑模型后还称其为“未使用”。
+
+## 交叉验证准则（Cross-Validation Criterion）
+
+leave-one-out 对每个 $i$ 用其余 $n-1$ 个观测估 $\hat\beta_{(-i)}$，再计算 $\widetilde e_i=Y_i-X_i'\hat\beta_{(-i)}$；[式 (28.5)](#hansen-eq-28-5) 在原稿使用平方和，若除以 $n$ 排名不变。OLS 有快捷式
+
+$$\widetilde e_i=\frac{\hat e_i}{1-h_{ii}},qquad
+\mathrm{CV}=\frac1n\sum_i\frac{\hat e_i^2}{(1-h_{ii})^2}.$$
+
+高 leverage 观测被放大，因为删去它会显著改变拟合。CV 直接估计外样本 loss，不依赖条件同方差，可换 absolute、log loss 或分类 loss；但更换 loss 就更换统计目标，不能拿平方误差最优模型宣称 tail risk 或分类校准也最优。
+
+对 series/kernel，CV 选择阶数/带宽，是第 19–20 章 IMSE 思路的延续。变量筛选是拟合过程的一部分，必须在每次训练折内部重做；先在全样本筛变量、再 CV 最终模型仍有泄漏。
+
+例如比较“二次项、四次项、六次项”时，候选字典可预先固定，只需每折重估系数；但若结点位置、变量标准化、缺失值插补、PCA 维数或 lasso 的 $\lambda$ 也是数据选择的，就必须在训练折内重新计算。外层 test observation 只能输入训练折已经确定的变换。否则其 $Y$ 或分布信息已经间接影响 fitted rule，CV 估计的就不再是完整算法对新资料的误差。
+
+## K 折交叉验证（K-Fold Cross-Validation）
+
+把样本随机分为 $K_f$ 折（这里用 $K_f$ 避免与参数数 $K$ 混淆）。逐折留出 $I_k$、在其余样本估计、在 $I_k$ 评价，最后平均 $CV_k$。$K_f=n$ 退化为 LOO；常用 5 或 10 折在计算成本、训练样本偏差和方差之间折中。
+
+原书近似标准误为
+
+$$s(CV)=\left\{\frac1{K_f(K_f-1)}
+\sum_{k=1}^{K_f}(CV_k-CV)^2\right\}^{1/2},$$
+
+把折近似视为簇。由于 folds 共享大量训练资料，这只是近似，不应作精确检验。repeated CV 用多个随机划分减小分折偶然性，须报告种子、折数、重复数和分层/聚类规则。
+
+1-SE rule 选取 CV 不超过最小值加一个标准误的最简模型，偏向更平滑、更高 bias/更低 variance；这适合稳健预测，却不自动适合结构参数推断。推断为减小正则化偏差常需 undersmoothing，与 1-SE 的目标相反。
+
+## 许多选择准则彼此相似（Many Selection Criteria are Similar）
+
+当 $K/n$ 小，Shibata $\hat\sigma^2(1+2K/n)$、FPE、GCV、Mallows、AIC 通过 $\log(1+x)\simeq x$ 与 $(1-x)^{-1}\simeq1+x$ 化为同一“拟合误差 + 约 $2K$ 惩罚”。LOO-CV 展开中的 leverage 项在同方差下也收敛到 $2K\sigma^2$，故与它们相近。
+
+这个等价依赖低维近似和同方差；$K/n$ 大、高 leverage 或异方差时有限样本差异可显著，CV 的直接外样本构造更稳健。BIC 的 $K\log n$ 则不属于同一预测风险目标。选择准则前先选目标，比在十个近似等价公式间追逐最小小数点更重要。
+
+## 与似然比检验的关系（Relation with Likelihood Ratio Testing）
+
+两个 nested 模型参数数 $K_1<K_2$，$r=K_2-K_1$。AIC 选长模型等价于 $LR=2(\ell_2-\ell_1)>2r$；若写成每个限制的 $F$ 形式，临界值约为 2。$r=1$ 时对应 $|t|>\sqrt2\approx1.41$，比 5% 双侧的 1.96 更易纳入变量。
+
+BIC 选长模型需 $LR>r\log n$，样本越大越苛刻。这个代数相似不把信息准则变成假设检验：AIC 的阈值为估计预测风险而来，不控制固定 size；BIC 为简约识别增加发散惩罚。不能把“被 AIC 选中”报告成某变量在某显著性水平显著。
+
+## 一致选择（Consistent Selection）
+
+“真模型”随模型语言而变：完整 density 要包含真实密度；条件矩模型要在某 $\theta$ 满足真实条件矩；OLS 若只解释为最佳线性投影，just-identified 正规方程几乎总有解，使“真”变得很弱。候选模型常相交；短模型为真时，含冗余变量的长模型也真但过度参数化。
+
+统一准则写 $IC=-2\ell_n(\hat\theta)+c(n,K)$。若 $c(n,K)=o(n)$，对任何错模型的 $O(n)$ likelihood 损失最终压过惩罚，AIC/BIC 都会以概率趋一选到某个真模型。但固定惩罚如 AIC 在短模型为真时，长模型的 LR 仍有非退化 $\chi^2$ 分布，所以以正概率 over-select。
+
+要一致选最简真模型，需要长短惩罚差发散而惩罚仍低于 $n$：
+
+::: {#hansen-eq-28-16}
+$$
+c(n,K_2)-c(n,K_1)\longrightarrow\infty,
+\qquad K_2>K_1,
+\tag{28.16}
+$$
+:::
+
+并有 $c(n,K)=o(n)$。BIC 满足，AIC 不满足。这个结论不等于 BIC 在有限样本 MSE、预测或选择后推断上最佳；“识别最简真模型”只是多种目标之一。
+
+还要区分 pointwise 与 uniform。BIC 一致性固定一个非零 $\beta_2$ 后令 $n\to\infty$；现实中难判的变量常是 $\beta_{2n}=c/\sqrt n$ 一类 local alternative，信号与标准误同步缩小。对每个固定 $n$ 它都非零，但选择概率不会快速趋一，模型边界附近的风险与覆盖可长期很差。第 28.16–28.17 节的警告正发生在这种“接近限制”的区域，不能用点态一致性回避。
+
+## 渐近选择最优性（Asymptotic Selection Optimality）
+
+设真实条件均值可能有无限 series，前 $K$ 项 OLS 的风险为
+
+::: {#hansen-eq-28-17}
+$$
+R_n(K)=E\{(\hat m-m)'(\hat m-m)\mid X\}.
+\tag{28.17}
+$$
+:::
+
+不可行 oracle 选 $K_n^{opt}=\arg\min_KR_n(K)$。若 Mallows 选 $\hat K_n$，渐近预测最优定义为
+
+::: {#hansen-eq-28-18}
+$$
+\frac{R_n(\hat K_n)}{R_n^{opt}}\xrightarrow{p}1.
+\tag{28.18}
+$$
+:::
+
+Li 定理要求条件同方差、足够高阶矩、候选嵌套/数量受控，以及 $R_n^{opt}\to\infty$。最后条件实质排除一个固定维数完全正确模型：总有小项遗漏，因此增加 $K$ 持续减 bias 又增 variance。这个环境下 Mallows/AIC/Shibata/GCV/FPE/CV 可追上预测 oracle，即使它们不一致选最简模型。
+
+若确有固定有限真模型，简约一致与预测逼近的渐近框架不同，不能把两套定理直接排序。Andrews 的 CV 最优性可放松同方差，这是 CV 相对解析 $2K$ 惩罚的重要优势。
+
+## 聚焦信息准则（Focused Information Criterion）
+
+FIC 不评价整份 density，而聚焦一个标量 $\mu=g(\theta)$，例如教育回报。长模型 MLE 为 $\hat\mu$，限制 $r(\theta)=0$ 下短模型为 $\widetilde\mu$。短模型降低 variance 但可能给目标参数引入 bias；FIC 估计两者目标 MSE 之差。
+
+易于软件实现的 adjusted FIC 是
+
+::: {#hansen-eq-28-19}
+$$
+\mathrm{FIC}^*=n(\widetilde\mu-\hat\mu)^2
++2n\widehat V_{\widetilde\mu},
+\tag{28.19}
+$$
+:::
+
+::: {#hansen-eq-28-20}
+$$
+\mathrm{FIC}^*=n(\widetilde\mu-\hat\mu)^2
++2n\,s(\widetilde\mu)^2.
+\tag{28.20}
+$$
+:::
+
+第一项惩罚短模型目标与长模型 benchmark 相差太多，第二项惩罚短模型目标估计不精确；取最小值。它可为教育回报选出好规格，却不保证同一模型中的经验曲线或其他系数 MSE 也好。focus 必须预先定义；看过所有结果后挑最有利 focus 又会新增选择层。
+
+FIC 的 bias 代理 $(\widetilde\mu-\hat\mu)^2$ 本身含抽样方差，不能直接当限制偏差平方；推导中要减去长短估计差的 variance，再与短模型相对长模型节省的 variance 合并，才出现系数 2。两模型时可把估计差除以短模型 SE，绝对 $t$ 约超过 1.4 才偏向长模型，但这只是 FIC 的 MSE 阈值，不是 5% 检验。若长模型也严重错设，它不再是可靠 bias benchmark，FIC 的 correctly specified encompassing-model 前提便失败。
+
+## 最优子集与逐步回归（Best Subset and Stepwise Regression）
+
+$K$ 个候选变量有 $2^K$ 个子集；$K=40$ 已超过万亿，穷举不可行。backward stepwise 从全模型逐次删去使准则增加最少的变量；forward 从空/强制变量集逐次加入使准则下降最多的变量。它们只搜索一条路径，未保证找到全局 best subset；早期错误选择会改变后续候选。
+
+变量应按经济结构成组：一个分类变量的全部 dummy、多项式低阶与高阶、主效应与 interaction 遵守 hierarchy。逐个系数 $p$ 值驱动的老式 stepwise 既不对应清晰 loss，又让最终标准误失效。若用 AIC 路径，也应报告候选字典、强制控制、搜索方向、停止规则与全路径准则，而非只交付最终公式。
+
+## 模型选择估计量的 MSE（The MSE of Model Selection Estimators）
+
+令 $\hat\theta\sim N(\theta,I_K)$，post-model-selection（PMS）估计在 $\hat\theta'\hat\theta>c$ 时取 $\hat\theta$，否则取 0。AIC 用 $c=2K$，BIC 用 $K\log n$。定理 28.10 以 noncentral $\chi^2$ CDF 精确表示其 MSE。
+
+直觉是 hard threshold 在临界值附近不连续：非常接近的数据可输出 0 或完整估计，产生额外波动。$\lambda=\theta'\theta$ 很小时，压零可降低 MSE；中等 $\lambda$ 时短模型 bias 已有实质但选择仍常误判，MSE 可远高于未选择估计。BIC 临界值随 $n$ 发散，使最坏局部 MSE 尤其大。点态选择一致性并不控制随 $n$ 靠近零的局部参数序列，因此不与这一结论矛盾。
+
+定理的精确式为 $K+(2\lambda-K)F_{K+2}(c,\lambda)-\lambda F_{K+4}(c,\lambda)$，其中 $F_r$ 是 noncentral $\chi^2_r(\lambda)$ CDF。三部分可读为未选择估计的基准风险 $K$，在阈值内压零改变的交叉项，以及错压非零信号的偏差项。$c=0$ 恢复 $K$；$c\to\infty$ 时总取零，风险趋 $\lambda$。这些边界核对是理解第 28.32 节证明与发现符号错误的快捷方法。
+
+## 模型选择后的推断（Inference After Model Selection）
+
+若变量因其 $t$ 值过阈值才被保留，再对同一系数用普通 $t$ 分布显然忽略条件筛选。更隐蔽的是对始终关注的 $\beta_1$：选择与其相关的控制 $X_2$ 会改变 omitted-variable bias 和方差；当 $X_1,X_2$ 相关且 $\beta_2$ 处于“有时选短、有时选长”的中间区，所选 $\hat\beta_1$ 分布是非正规混合。
+
+原书模拟中 nominal 95% coverage 可在相关系数 0.8 时降到约 62%。$\beta_2=0$ 或极大时选择几乎固定，扭曲反而小；最危险的是不确定规格。可行防护包括预先固定核心控制、honest sample splitting、把全部筛选嵌入 bootstrap/选择后方法，或用对目标正交的高维推断。简单地给最终回归换 robust SE 只修正条件于该模型的异方差，不修正搜索随机性。
+
+诚实 sample splitting 的逻辑是：选择样本只决定模型，独立推断样本把该模型视为预定后估参数与标准误。这样恢复条件推断，但只用部分样本使区间变宽，并且最终 estimand 必须在各候选规格间有一致定义。cross-fitting 可轮换分割提高效率，却需把各折目标估计按预定方式合并。若研究者在看推断样本后又回头改模型，独立性立即失效；工作日志和可复现代码是统计设计的一部分。
+
+对于传统低维研究，一个务实方案是把处理/政策变量与基于因果图确定的 confounders 永远保留，只对明确的预测性辅助项选择；并同时报告长模型、预定主模型、选择模型的目标估计。若三者差异大，应该把差异当规格不确定性解释，而不是只保留标准误最小者。控制变量的职责是阻断混杂，不要求其自身在结果方程显著。
+
+## 实证示例（Empirical Illustration）
+
+原书用 CPS 中 1,149 名亚裔女性，估 log wage，目标是 0 到 30 年经验的预期工资百分比差。九个模型交叉组合三种教育规格（college dummy、单结点 spline、六个教育 dummy）和经验的 2/4/6 次多项式，始终控制婚姻与地区。
+
+估计回报跨模型为 13%–47%，HC1 标准误 7–18 个百分点，显示规格不确定性大于许多单模型抽样误差。BIC 选教育 spline+经验二次（22%）；AIC/CV 偏向教育 dummy+经验四次（37%）；FIC 因聚焦经验回报选 spline+四次（40%）。CV 最低附近非常平：模型 3、5、6、9 的 CV 几乎相同，却给 20%–45% 的回报。
+
+正确报告不应只说“CV 选 37%”，还应给整张准则/目标估计表，解释多个近最优模型产生的规格不确定性。正式选择指标与经济判断并用，但判断规则也应透明，避免在看见目标系数后挑最喜欢的准则。
+
+## 收缩方法（Shrinkage Methods）
+
+令 $\widetilde\theta=(1-w)\hat\theta$，$0\le w\le1$；$w=0$ 不收缩，$w=1$ 完全压到零。若 $E\hat\theta=\theta$、方差 $V$，则
+
+::: {#hansen-eq-28-21}
+$$
+\operatorname{bias}(\widetilde\theta)=-w\theta,
+\tag{28.21}
+$$
+:::
+
+::: {#hansen-eq-28-22}
+$$
+\operatorname{Var}(\widetilde\theta)=(1-w)^2V,
+\tag{28.22}
+$$
+:::
+
+::: {#hansen-eq-28-23}
+$$
+\operatorname{wmse}(\widetilde\theta)
+=K(1-w)^2+w^2\lambda,qquad \lambda=\theta'V^{-1}\theta.
+\tag{28.23}
+$$
+:::
+
+对 $w$ 求导得 oracle $w_0=K/(K+\lambda)$：信号小则多收缩，信号大则少收缩，最小 WMSE 为 $K\lambda/(K+\lambda)$。用 $\hat\lambda=\hat\theta'V^{-1}\hat\theta-K$ 代入可得
+
+::: {#hansen-eq-28-24}
+$$
+\hat w=\frac{K}{\hat\theta'V^{-1}\hat\theta}.
+\tag{28.24}
+$$
+:::
+
+把 $K$ 换为收缩常数 $c$ 得 Stein-rule 类：
+
+::: {#hansen-eq-28-25}
+$$
+\widetilde\theta=
+\left(1-\frac{c}{\hat\theta'V^{-1}\hat\theta}\right)\hat\theta.
+\tag{28.25}
+$$
+:::
+
+分母是检验整组系数为零的 Wald 统计量，所以这是对 hard selection 的平滑替代。
+
+加权损失 $V^{-1}$ 把每个方向按原估计的不确定性标准化；它不是坐标无关的“所有经济损失”。若研究者只在意预测 $a'\theta$、某些政策方向的误差代价远大于其他方向，最优中心与权重会改变。James–Stein 的支配结论是对规定的 joint quadratic loss，不是每一坐标 MSE 都同时下降，也不保证每个经济决策福利改善。应用时应先解释参数组为何共同评价。
+
+## James–Stein 收缩估计量（James-Stein Shrinkage Estimator）
+
+若 $\hat\theta\sim N(\theta,V)$ 且 $K>2$，James–Stein 定理表明 $0<c<2(K-2)$ 时 [式 (28.25)](#hansen-eq-28-25) 在 $V^{-1}$ 加权 MSE 下严格支配 $\hat\theta$；最优常数 $c=K-2$。可行版本以 $\hat V$ 替换 $V$。
+
+“支配 MLE”不违反 Cramér–Rao：后者在无偏估计类中比较 variance，JS 接受 bias 来换更大 variance 降幅；损失又是整组参数的特定加权平方损失。$K>2$、joint normal/渐近近似、收缩中心与损失选择都是结论的一部分，不能把它泛化为任意单系数总应收缩。
+
+## Stein 效应的解释（Interpretation of the Stein Effect）
+
+选择估计是硬阈值，在边界跳跃；Stein 权重随 Wald 统计连续变化，避免阈值附近的高方差。收益在 $\lambda$ 小、参数相对标准误接近收缩目标时最大；若目标离真值远，权重自然趋零但有限样本仍可能损失。
+
+收缩中心因此必须有实质依据：高阶项接近零、单位效应接近行业均值或灵活模型接近结构限制。事后挑一个靠近数据的中心又未计入选择，会破坏给定中心的风险比较。
+
+## 正部估计量（Positive Part Estimator）
+
+原 JS 因 $\hat\theta'V^{-1}\hat\theta<K-2$ 时权重为负，会越过零反向。positive-part 把乘数截在零：$\widetilde\theta^+=\{1-(K-2)/W\}_+\hat\theta$。它在信号很小时直接取零，中等时收缩，大时接近原估计。
+
+定理 28.13 给
+
+::: {#hansen-eq-28-26}
+$$
+\operatorname{wmse}(\widetilde\theta^+)
+<\operatorname{wmse}(\widetilde\theta).
+\tag{28.26}
+$$
+:::
+
+这说明施加符合参数逻辑的边界可进一步降风险。它仍是对整组 loss 的结论，positive-part 中在零处也有非光滑性，常规逐系数正态标准误并不由此自动成立。
+
+## 向限制收缩（Shrinkage Towards Restrictions）
+
+实证更常把长模型向 $q$ 个线性限制 $R'\theta=r$ 收缩。受限 minimum-distance 估计为 $\hat\theta_R=\hat\theta-\hat VR(R'\hat VR)^{-1}(R'\hat\theta-r)$。令
+
+$$J=(\hat\theta-\hat\theta_R)'\hat V^{-1}(\hat\theta-\hat\theta_R),$$
+
+则可行正部估计为
+
+::: {#hansen-eq-28-27}
+$$
+\widetilde\theta^+=\hat\theta-
+\left(\frac{q-2}{J}\right)_1(\hat\theta-\hat\theta_R),
+\qquad (a)_1=\min(a,1).
+\tag{28.27}
+$$
+:::
+
+$J$ 是限制的 MD/Wald 统计量：小则取受限模型，大则接近长模型，中间平滑平均。$q>2$ 才有 uniform WMSE improvement。OLS 同方差下可从短长 SSE 算
+
+::: {#hansen-eq-28-28}
+$$
+J=\frac{n(\hat\sigma_R^2-\hat\sigma^2)}{s^2}.
+\tag{28.28}
+$$
+:::
+
+robust/cluster $\hat V$ 原则上可用；但大量稀疏 dummy 时协方差逆可能不稳，需披露采用哪种 $J$ 及其理由。
+
+## 分组 James–Stein（Group James-Stein）
+
+把 $\theta=(\theta_1',\ldots,\theta_G')'$ 分块，每块 $K_g\ge3$，分别用其 covariance block 的 Wald 大小决定收缩。这样教育、经验、地区交互或高阶 series 可有不同权重；小信号块可能归零，大信号块保留。
+
+收益的代价是每块维度降低且要预定分组。理论 loss 使用 block-diagonal $W=\operatorname{diag}(V_1^{-1},\ldots,V_G^{-1})$，使总 WMSE 可分解逐块应用 JS。若实际决策依赖跨块组合，block-separable loss 未必合适；分组也不能根据同一数据反复搜索后仍套固定组定理。
+
+## 实证示例（Empirical Illustrations）
+
+原书三例展示合理收缩目标。亚裔女性工资把经验六次多项式向二次收缩，HC1 权重约 0.46，保留灵活曲线同时削弱 25 年经验附近波动；企业投资把 786 个 firm FE 向 19 个 industry effects 收缩，权重约 0.35，减少每企最多九期导致的 FE 噪声；黑人男性教育—地区交互向共同教育 profile 收缩，18 个限制的权重约 0.49，使地区曲线更平稳。
+
+这三例都不是“把全部系数缩到零”，而是长模型向有经济含义的短模型移动。报告应含长短模型、限制数、$J$、协方差选择、最终权重与目标曲线；样本上千仍有约 50% 收缩，说明关键是参数维数相对信息量，不只是绝对 $n$。
+
+## 模型平均（Model Averaging）
+
+给 $M$ 个模型估计 $\hat\theta_m$，权重 $w_m\ge0$、$\sum_mw_m=1$ 位于 probability simplex。原稿定义处出现 $w_i\ge1$ 的排印错误；概率单纯形应为非负。平均估计为
+
+::: {#hansen-eq-28-29}
+$$
+\hat\theta(w)=\sum_{m=1}^Mw_m\hat\theta_m.
+\tag{28.29}
+$$
+:::
+
+顶点权重就是模型选择，内部权重是平均；positive-part JS 是两个 nested 估计的特例。非负与和为一避免不稳定外推，通常改善有限样本。不同模型必须映射到同一目标参数：某模型缺少系数时可按其限制补零，非线性功能参数则先各模型计算同一 $g(\theta_m)$ 再平均。
+
+equal weights 简单且固定权重方差易算，但结果高度依候选集合：复制相近模型会人为加大该族总权重。它适合预筛过的小型合理集合或非技术共识汇总，不是完成的自动选权方法。
+
+同一参数的映射常比公式更难。长回归中的教育回报可能是六个 dummy 的 12→16 年预测差，短回归中是线性斜率乘 4；平均前应先把两者都转成同一功能参数，而不是逐坐标平均不相容系数。预测平均则要在每个观察点先算各模型预测再加权。若某模型改变 outcome 的变换或所代表总体，连目标都不同，不能仅靠权重和为一把它们变成可比估计。
+
+模型平均的不确定性至少有三层：每个 $\hat\theta_m$ 的抽样误差、不同模型估计之间的 covariance、估计权重 $\hat w$ 的随机性。固定权重下
+
+$$
+\operatorname{Var}\!\left(\sum_mw_m\hat\theta_m\right)
+=\sum_m\sum_jw_mw_j\operatorname{Cov}(\hat\theta_m,\hat\theta_j),
+$$
+
+已显示不能只加对角方差；数据依赖权重还会增加导数项。若目标只是 point prediction，可用外层 CV 直接评价整个平均算法；若要参数区间，应使用有理论支持的 influence function、完整重抽权重的 bootstrap，或明确只作描述性平均。
+
+## 平滑 BIC 与 AIC（Smoothed BIC and AIC）
+
+Schwarz 近似启发 BIC posterior-like weights：$w_m\propto e^{-BIC_m/2}$；AIC analog 用 $e^{-AIC_m/2}$。为防 exponent overflow，令 $IC^*=\min_mIC_m$、$\Delta IC_m=IC_m-IC^*$，再算
+
+$$w_m=\frac{e^{-\Delta IC_m/2}}{\sum_je^{-\Delta IC_j/2}}.$$
+
+$\Delta IC\ge10$ 的模型权重通常低于约 0.01。SBIC 比 SAIC 更集中，因为复杂度惩罚强；同分布族/同样本可比较，跨族必须保留完整 likelihood 常数。BIC 权重有 diffuse prior 与近似后验的来源；AIC 权重更多是自然平滑变换，不应直接称模型后验概率。
+
+平滑消除了 hard selection 的跳跃，却没有自动给平均估计正确标准误。权重本身随机、模型估计相关；把 $w_m$ 当固定并只平均各方差一般遗漏权重估计和 cross-model covariance。
+
+## Mallows 模型平均（Mallows Model Averaging）
+
+线性模型 $m$ 的第 $m$ 个拟合为 $P_mY$。固定权重下 $P(w)=\sum_mw_mP_m$、残差 $\hat e(w)=\sum_mw_m\hat e_m$。Mallows 目标为
+
+$$C(w)=\hat e(w)'\hat e(w)+2\widetilde\sigma^2\sum_mw_mK_m.$$
+
+权重选择写成
+
+::: {#hansen-eq-28-30}
+$$
+\hat w_{\mathrm{mma}}=\arg\min_{w\in\mathcal S}C(w).
+\tag{28.30}
+$$
+:::
+
+令残差矩阵 $\hat E=[\hat e_1,\ldots,\hat e_M]$，则 $C(w)=w'\hat E'\hat Ew+2\widetilde\sigma^2K'w$，是在 simplex 上的 quadratic programming。解常落在边/顶点，因此许多模型权重恰为零，同时完成选择与平均。$M=2$ nested 时权重化为 Stein-rule 形式；同方差与线性估计是风险理论关键前提。
+
+数值实现要检查二次矩阵半正定、权重和约束容差，并以 largest model 的 bias-corrected 方差作 $\widetilde\sigma^2$。候选模型若不 nested，仍可解优化，但原稿所引的 WMSE 改善与 oracle 理论有相应候选结构条件。把成百上千个近重复模型放入 simplex 也会改变可行预测凸包，候选集合本身仍是研究设计。
+
+## Jackknife（CV）模型平均（Jackknife (CV) Model Averaging）
+
+JMA/stacking 用每个模型的 leave-one-out 误差 $\widetilde e_{mi}$ 组成 $n\times M$ 矩阵 $\widetilde E$。平均预测的 LOO 误差是 $\widetilde E w$，故
+
+::: {#hansen-eq-28-31}
+$$
+\hat w_{\mathrm{jma}}=arg\min_{w\in\mathcal S}
+CV(w),qquad CV(w)=w'\widetilde E'\widetilde Ew.
+\tag{28.31}
+$$
+:::
+
+同样是 simplex quadratic program，但 criterion 直接来自外样本预测，可允许条件异方差。LOO 预测必须对每个模型完整重估；若模型本身含调参/筛选，需要 nested 处理。权重优化和最终模型用同一交叉拟合矩阵，候选 $M$ 极大时仍可能过拟合权重，需限制候选或外层验证。
+
+## Granger–Ramanathan 平均（Granger-Ramanathan Averaging）
+
+先在 training 估 $M$ 个模型，再在 evaluation 以真实 $Y$ 对各模型预测值做无截距回归，系数即组合权重。无约束 OLS 权重可能极大正负抵消，尤其预测高度相关、$M$ 大时不稳；推荐约束 $w_m\ge0$、和为一，并用 quadratic programming。
+
+该方法消耗独立 evaluation 样本，最适合非常大的数据。若再用同一 evaluation 挑候选或报告性能，就不再 honest；可另留 test 或交叉拟合组合权重。
+
+## 实证示例（Empirical Illustration）
+
+在前述九个工资模型中，SBIC 约 96% 权重给模型 2，平均经验回报 22%；SAIC 权重较分散，回报 38%；MMA 主要给模型 9 和 5，回报 39%；JMA 主要给模型 5，并给模型 1、9 等权重，回报 34%。
+
+SBIC 的结果接近硬 BIC，其他三者约 34%–39%。差异不是数值算法噪声，而是目标与惩罚不同。应同时报告权重矩阵和加权目标，而不只报一个平均系数；权重集中度能显示结论由单一模型驱动还是跨规格共识。
+
+复现这两个实证表时，应让九个模型在完全相同的 1,149 人上估计；把经验 0 与 30 的预测差先在 log scale 计算并说明如何换成百分比；HC1 只用于目标 SE，AIC/BIC 则来自相应 likelihood 约定；CV 每个候选使用同一 fold/LOO 规则。模型平均要保存每列权重之和、非负性和优化收敛信息。若因缺失值使某模型样本变化，先构造共同 complete-case 样本，否则准则与权重不可解释。
+
+## 技术证明（Technical Proofs*）
+
+定理 28.1 的 normal 回归证明从 MLE likelihood 开始：
+
+::: {#hansen-eq-28-32}
+$$
+L_n(\hat\beta)=(2\pi\sigma^2)^{-n/2}
+\exp\!\left(-\frac{\sum_{i=1}^n\hat e_i^2}{2\sigma^2}\right).
+\tag{28.32}
+$$
+:::
+
+用 OLS 平方和分解把 $L_n(\beta)$ 写成 [式 (28.32)](#hansen-eq-28-32) 乘以以 $\hat\beta$ 为中心的 normal kernel；对 diffuse prior 积分产生 $n^{-K/2}$，取 $-2\log$ 就给 $K\log n+O(1)$。
+
+AIC 一般证明令 $\widetilde\theta$ 是独立新样本 MLE，利用对称性：
+
+::: {#hansen-eq-28-33}
+$$
+T=-2E\{\log f(Y,\widetilde\theta)\}.
+\tag{28.33}
+$$
+:::
+
+在 $\hat\theta$ 附近二阶展开，MLE score 为零：
+
+::: {#hansen-eq-28-34}
+$$
+\log f(Y,\widetilde\theta)
+=\log f(Y,\hat\theta)
+-\frac n2(\widetilde\theta-\hat\theta)'H
+(\widetilde\theta-\hat\theta)+O_p(n^{-1/2}).
+\tag{28.34}
+$$
+:::
+
+若余项 uniform integrable，且正确规格 MLE 的 Wald 二次型满足
+
+::: {#hansen-eq-28-35}
+$$
+n(\hat\theta-\theta)'H(\hat\theta-\theta)
+\xrightarrow{d}\chi_K^2,
+\tag{28.35}
+$$
+:::
+
+两个独立估计各贡献 $K$，得到 $2K$ 校正。这也显示错设信息矩阵等式为何破坏普通 AIC。
+
+Mallows 预测最优证明先得 $R_n(K)=m'M_Km+\sigma^2K$：第一项随 $K$ 降是遗漏 bias，第二项随 $K$ 升是 estimation variance。核心是 adjusted criterion 对 risk 的相对误差在全部候选上 uniform 消失：
+
+::: {#hansen-eq-28-36}
+$$
+\sup_K\left|
+\frac{C_n^*(K)-R_n(K)}{R_n(K)}
+\right|\xrightarrow{p}0.
+\tag{28.36}
+$$
+:::
+
+再用“经验最小值不大于 oracle 处经验值”的 extremum argument 推出 [式 (28.18)](#hansen-eq-28-18)。逐点无偏不足以比较越来越多模型，uniform 是关键台阶。
+
+定理 28.6–28.8 的证明也可用同一量级图景记忆。错模型相对真模型的 log likelihood 差是 $O_p(n)$，任何 $o(n)$ 惩罚挡不住它，故最终不选错模型；两个都真的 nested 模型之间 LR 只有 $O_p(1)$，固定 AIC 惩罚无法把长模型概率压到零；BIC 的惩罚差趋无穷，又仍是 $o(n)$，所以既排错模型又排冗余真模型。三个结论分别比较 $n$、常数量级与发散但次线性量级。
+
+PMS 精确 MSE 证明使用 noncentral chi-square 密度的 Poisson mixture：
+
+::: {#hansen-eq-28-37}
+$$
+f_K(x,\lambda)=\sum_{i=0}^{\infty}
+\frac{e^{-\lambda/2}}{i!}
+\left(\frac\lambda2\right)^if_{K+2i}(x).
+\tag{28.37}
+$$
+:::
+
+若 $X\sim N(\theta,I_K)$、$Q_r\sim\chi_r^2(\lambda)$，Bock 恒等式为
+
+::: {#hansen-eq-28-38}
+$$
+E\{Xh(X'X)\}=\theta E\{h(Q_{K+2})\},
+\tag{28.38}
+$$
+:::
+
+::: {#hansen-eq-28-39}
+$$
+E\{X'Xh(X'X)\}
+=K E\{h(Q_{K+2})\}+\lambda E\{h(Q_{K+4})\}.
+\tag{28.39}
+$$
+:::
+
+标量基础结果是
+
+::: {#hansen-eq-28-40}
+$$
+E\{Zg(Z^2)\}=\mu E\{g(Q_3)\},
+\qquad Z\sim N(\mu,1),
+\tag{28.40}
+$$
+:::
+
+令 $y=x^2$ 后，左侧化为
+
+::: {#hansen-eq-28-41}
+$$
+E\{Zg(Z^2)\}
+=\int_0^\infty\frac{1}{2\sqrt{2\pi}}
+e^{-(y+\mu^2)/2}
+\left(e^{\sqrt y\mu}-e^{-\sqrt y\mu}\right)g(y)\,dy.
+\tag{28.41}
+$$
+:::
+
+展开双曲正弦项可识别为 $\mu$ 乘 3 自由度 noncentral $\chi^2$ 密度，从标量推广到各坐标即得 [式 (28.38)](#hansen-eq-28-38)，密度递推给 [式 (28.39)](#hansen-eq-28-39)。最后取 $h(u)=1\{u\le c\}$，展开 hard-threshold PMS 的平方误差，便得到定理 28.10 的 CDF 表达。
+
+## 习题阅读指南（Exercises）
+
+28.1–28.5 覆盖 WMSE、加权最小二乘 Mallows、逐步路径和选择后推断。验证 [式 (28.1)](#hansen-eq-28-1) 要用 $\operatorname{tr}(V^{-1}V)=K$；stepwise 题要从加入/删去变量导致的 SSE 变化与 $t/F$ 统计量关系推导，不能只引用软件行为。第 28.5 题应明确“只报告被选模型”使 conventional $p$ 值条件化在未披露搜索上。
+
+28.6–28.8 训练 shrinkage bias、variance、oracle weight 与向限制收缩。先从 [式 (28.23)](#hansen-eq-28-23) 对 $w$ 求导，再核对区间端点；证明 restriction 版本时把参数旋转到“满足限制的方向”和 $q$ 个偏离方向，后者套 JS。
+
+28.9–28.11 处理多个估计量的最优固定权重、Mallows/JMA 二次规划和方差。必须保留各估计量之间 covariance；把 $\operatorname{Var}(\sum w_m\hat\theta_m)$ 错写成 $\sum w_m^2V_m$ 会漏掉同一数据估计造成的 cross terms。若权重数据依赖，固定权重公式还不是最终无条件方差。
+
+28.12 用 CPS 西班牙裔女性复现 28.18：保持九个模型字典、同一有效样本和 HC1，逐模型报告目标回报、SE、BIC/AIC/CV/FIC，并说明各准则选谁、近最优区是否平坦。任何数据清洗、教育编码或经验定义差异都可能改变模型排序，必须在 Quarto 代码块旁记录。
+
+完成习题后还应做一次“算法层”审计：固定随机种子重新运行应复现 folds 与权重；改变种子后 repeated-CV 结论不应剧烈翻转；每个候选模型的参数数、样本量和 loss 单位应可从表中核对；所有硬选择后的区间都应标明是否只具有 conditional-on-selected-model 含义。这样才能把计算结果转化为可审查的计量证据。
+
+::: {.callout-important title="章末自检"}
+1. AIC、BIC、CV 与 FIC 分别优化什么对象？为什么不能只问“哪个最好”？
+2. 从 [式 (28.12)](#hansen-eq-28-12)–[式 (28.13)](#hansen-eq-28-13) 如何得到 $2K$ optimism 校正？
+3. 为什么 AIC 可预测最优却 over-select，BIC 可简约一致却有较差局部 MSE？
+4. hold-out/CV 中哪些 preprocessing 必须放入每个训练折？聚类和时间资料怎样切分？
+5. FIC 为核心参数选出的模型为何不宜用来解释其他参数？
+6. PMS 的 hard threshold 为什么伤害 MSE 与置信区间？robust SE 能否修复？
+7. James–Stein 支配结论依赖怎样的维数、中心、分布与 loss？positive part 修正什么问题？
+8. MMA 与 JMA 的目标函数、同方差要求和计算方法有何异同？
+9. 模型平均中为何要报告完整权重，并为何不能忽略 cross-model covariance 与随机权重？
+:::
