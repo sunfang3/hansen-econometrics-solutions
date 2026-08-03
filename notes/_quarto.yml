@@ -39,6 +39,7 @@ book:
       chapters:
         - ch19.qmd
         - ch20.qmd
+        - ch21.qmd
   appendices:
     - appendix-a.qmd
     - appendix-b.qmd
