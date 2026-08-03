@@ -46,6 +46,7 @@ book:
         - ch23.qmd
         - ch24.qmd
         - ch25.qmd
+        - ch26.qmd
   appendices:
     - appendix-a.qmd
     - appendix-b.qmd

@@ -1,0 +1,485 @@
+---
+title: "多项选择"
+subtitle: "多项 Logit、IIA、嵌套与混合模型、有序/计数响应及 BLP 需求"
+hansen-chapter: "Chapter 26"
+book-pages: "819–841"
+pdf-pages: "839–861"
+status: "完整初稿"
+---
+
+::: {.book-map}
+**原书位置与本章路线**　对应 Hansen Chapter 26（书内 pp. 819–841；PDF pp. 839–861）。26.1–26.5从多项响应进入 multinomial/conditional logit，并诊断 IIA；26.6–26.9依次用嵌套、随机系数和一般协方差放松替代模式；26.10–26.11处理有序响应与计数数据；26.12把个体随机效用扩展为 BLP 市场需求；26.13–26.14补齐概率公式证明与习题路线。
+:::
+
+::: {.bridge}
+**本科桥接**　本科二元 logit/probit 只比较“选 1”与“选 0”。多项选择多出的难点不只是把类别数从 2 改成 $J$：每个选择有自己的效用，数据只告诉我们效用的**排序**，所以必须同时处理基准选项、效用尺度和跨选项误差相关。2SLS 中“内生价格找工具”的思想会在 BLP 中保留，但因市场份额是非线性随机系数概率，还要先把份额反演成平均效用，再做 GMM。
+:::
+
+## 引言（Introduction）
+
+本章的统一问题是：结果不再是连续标量，也不一定只是 0/1，我们应如何描述完整条件分布、建立可识别的概率模型并作经济解释？同一章实际包含四种资料结构：无序的有限类别、具有次序的有限类别、非负整数计数，以及市场层面的产品份额。它们都以条件概率为核心，但样本单位、归一化和可解释功能参数并不相同。
+
+阅读时应始终分清三层：第一层是可由数据直接识别的 $P_j(x)$；第二层是帮助组织概率的潜在效用；第三层是为计算方便而施加的 GEV、normal 或 Poisson 分布。概率拟合得好，不自动证明潜在误差真的服从所设分布；分布错设时，MLE 至多收敛到第 22 章所说的伪真值。
+
+## 多项响应（Multinomial Response）
+
+令 $Y\in\{1,\ldots,J\}$，$X\in\mathbb R^k$。第 $j$ 类的响应概率为 $P_j(x)=P(Y=j\mid X=x)$，必须满足 $P_j(x)\ge0$ 且 $\sum_{j=1}^JP_j(x)=1$。这些概率本身是条件分布，因而原则上可非参数识别。分别对 $1\{Y=j\}$ 做 $J$ 个二元回归虽容易，却未利用“各类互斥且穷尽”的系统约束；有限样本拟合值一般不会恰好加总为 1。
+
+随机效用表示把第 $j$ 个选择写成
+
+::: {#hansen-eq-26-1}
+$$
+U_j^*=X'\beta_j+\varepsilon_j.
+\tag{26.1}
+$$
+:::
+
+其中 $\beta_j\in\mathbb R^k$，误差向量 $\varepsilon=(\varepsilon_1,\ldots,\varepsilon_J)'$ 收集未观测的选项特有因素；个体选择 $Y=j$ 当且仅当 $U_j^*\ge U_\ell^*$ 对所有 $\ell$ 成立。这个表述立即暴露两种不变性。
+
+1. 给每个效用同时加 $X'c$，所有效用差不变。因此 $\beta_j$ 不能逐个识别，只识别 $\beta_j-\beta_\ell$；通常令基准类别 $J$ 的 $\beta_J=0$。
+2. 给所有效用乘同一个正数 $a$，排序仍不变。因此系数与误差的共同尺度不能分开；必须把误差尺度归一化。
+
+这里的“基准类别归一化”解决位置不识别，“误差方差归一化”解决尺度不识别，二者不能互相替代。改变基准会改变报告的原始系数，却不会改变预测概率；改变误差分布的标准尺度会改变系数数值，所以跨 logit/probit 不应机械比较原始系数。
+
+## 多项 Logit（Multinomial Logit）
+
+简单多项 logit 直接把 $J$ 个线性指数 softmax 化：
+
+::: {#hansen-eq-26-2}
+$$
+P_j(x)=\frac{\exp(x'\beta_j)}{\displaystyle\sum_{\ell=1}^J\exp(x'\beta_\ell)}.
+\tag{26.2}
+$$
+:::
+
+分子为正保证概率非负，分母是全部分子的和，故概率严格小于 1 且总和为 1。若对所有 $\beta_j$ 加同一个向量 $c$，分子分母共同乘 $e^{x'c}$ 后抵消，这从概率式再次说明只识别系数差。
+
+Hansen 用联合广义极值分布连接潜在效用与 [式 (26.2)](#hansen-eq-26-2)：
+
+::: {#hansen-eq-26-3}
+$$
+F(\varepsilon_1,\ldots,\varepsilon_J)
+=\exp\!\left[-\left\{\sum_{j=1}^J
+\exp\!\left(-\frac{\varepsilon_j}{\tau}\right)\right\}^{\tau}\right],
+\qquad 0<\tau\le1.
+\tag{26.3}
+$$
+:::
+
+$\tau$ 称 dissimilarity parameter；$\tau=1$ 时各误差是独立的 Type-I extreme value，$\tau<1$ 时相关系数为 $1-\tau^2$。定理 26.1 给出 $P_j(X)\propto\exp(X'\beta_j/\tau)$。但 $\beta_j$ 的尺度原本不可识别，所以数据只能看到 $\beta_j/\tau$，不能在简单多项 logit 中另行识别 $\tau$。极值分布在这里主要提供 closed form，不应被误读为已观察到效用误差的尾部形状。
+
+令 $d_{ij}=1\{Y_i=j\}$，单观测质量函数是 $\prod_jP_j(X_i)^{d_{ij}}$，故
+
+$$
+\ell_n(\beta)=\sum_{i=1}^n\sum_{j=1}^Jd_{ij}\log P_j(X_i\mid\beta).
+$$
+
+需在如 $\beta_J=0$ 的归一化后数值最大化；目标函数全局凹，但完全/近完全分离仍会令某些估计发散或数值不稳。报告基准类别、样本中每类频数和是否存在稀有类别，是复现估计不可省略的部分。
+
+对向量 $x$ 求导，先用 $\partial e^{x'\beta_j}/\partial x=e^{x'\beta_j}\beta_j$，再用商法则：
+
+::: {#hansen-eq-26-4}
+$$
+\delta_j(x)=\frac{\partial P_j(x)}{\partial x}
+=P_j(x)\left\{\beta_j-\sum_{\ell=1}^J\beta_\ell P_\ell(x)\right\}.
+\tag{26.4}
+$$
+:::
+
+括号内是“选择 $j$ 的系数”减去按当前概率加权的平均系数，所以 $\beta_{jr}>0$ 并不保证变量 $x_r$ 提高第 $j$ 类概率。把 [式 (26.4)](#hansen-eq-26-4) 对 $j$ 求和应为零，因为一个变量引起的各类概率变化必须相互抵消。平均边际效应估计量为
+
+::: {#hansen-eq-26-5}
+$$
+\widehat{\operatorname{AME}}_j
+=\frac1n\sum_{i=1}^n\widehat\delta_j(X_i).
+\tag{26.5}
+$$
+:::
+
+离散解释变量应计算从 0 到 1 的概率离散变化再取样本平均，而不是把连续导数硬套到虚拟变量。系数表主要描述相对基准的 log odds；预测概率和 AME 才直接回答各结果概率怎样变化。
+
+## 条件 Logit（Conditional Logit）
+
+简单多项 logit 的 $X_i$ 随人变、但在同一人的选择之间不变；conditional logit 允许同一个人面对的价格、时间或产品属性 $X_{ij}\in\mathbb R^q$ 随选项变。最简效用为
+
+::: {#hansen-eq-26-6}
+$$
+U_j^*=X_j'\gamma+\varepsilon_j,
+\tag{26.6}
+$$
+:::
+
+其中 $\gamma\in\mathbb R^q$ 在选项间共同，表示“一单位成本/时间”对任一选项效用的共同影响。若再加入随人变但不随选项变的 $W\in\mathbb R^k$，它必须有选项特有系数：
+
+::: {#hansen-eq-26-7}
+$$
+U_j^*=W'\beta_j+X_j'\gamma+\varepsilon_j.
+\tag{26.7}
+$$
+:::
+
+为什么不能把共同 $W'\beta$ 原样放入所有选择？因为它会同时平移全部效用，完全抵消。只有 $\beta_j-\beta_J$ 可识别；设 $\beta_J=0$，再把误差尺度固定。若 $\varepsilon_j$ 独立同分布为 Type-I extreme value，响应概率是
+
+::: {#hansen-eq-26-8}
+$$
+P_j(w,x)=
+\frac{\exp(w'\beta_j+x_j'\gamma)}
+{\displaystyle\sum_{\ell=1}^J\exp(w'\beta_\ell+x_\ell'\gamma)}.
+\tag{26.8}
+$$
+:::
+
+数据常以 long format 储存：每个个体有 $J$ 行，行上记录选项属性和是否被选；likelihood 的独立单位仍是“个体”，不是 $nJ$ 条相互独立的行。选择集合若因人而异，还须明确哪些选项真实可得，不能把不可得选项当作零选择混入分母。
+
+对某个选项属性 $x_j$ 求导，自己的概率效应为
+
+::: {#hansen-eq-26-9}
+$$
+\delta_{jj}(w,x)=\frac{\partial P_j(w,x)}{\partial x_j}
+=\gamma P_j(w,x)\{1-P_j(w,x)\},
+\tag{26.9}
+$$
+:::
+
+而 $\ell\ne j$ 的交叉效应为
+
+::: {#hansen-eq-26-10}
+$$
+\delta_{j\ell}(w,x)=\frac{\partial P_j(w,x)}{\partial x_\ell}
+=-\gamma P_j(w,x)P_\ell(w,x).
+\tag{26.10}
+$$
+:::
+
+若 $\gamma_{cost}<0$，提高本选项成本降低其概率、提高其他选项概率。线性属性下 $\delta_{j\ell}=\delta_{\ell j}$ 是模型限制，不是一般需求定律；加入非线性项或随机系数后可破坏这种对称。Koppelman 交通例中，成本与车内时间系数为负；但经济量级应由 AME、弹性或反事实概率表达，例如“火车时间缩短 33%”必须在每名旅客的整套选择属性上重新算概率，而非只用一个系数乘 0.33。
+
+## 无关替代项独立性（Independence of Irrelevant Alternatives）
+
+从 [式 (26.8)](#hansen-eq-26-8) 取两个选择的概率比，公共分母消失：
+
+::: {#hansen-eq-26-11}
+$$
+\frac{P_j(W,X\mid\theta)}{P_\ell(W,X\mid\theta)}
+=\frac{\exp(W'\beta_j+X_j'\gamma)}
+{\exp(W'\beta_\ell+X_\ell'\gamma)}.
+\tag{26.11}
+$$
+:::
+
+右边不含第三个选择 $m$ 的属性或是否出现，这就是 IIA。它不是“解释变量相互独立”，也不是抽样独立，而是任意两选项的相对 odds 不受其他备选项影响。
+
+红巴士/蓝巴士例最清楚：原来汽车与巴士各占 50%；把几乎相同的巴士复制成红、蓝两类，合理替代可能是汽车 50%、两种巴士各 25%。IIA 却要求汽车与原巴士类的相对 odds 保持 1，并把三类推成各 1/3，仿佛新增一个涂色相同的巴士会大幅减少驾车。这说明独立极值误差不能表示“某些选项特别相近”。
+
+IIA 是否严重取决于研究设计：若各选项差异鲜明且替代程度相近，conditional logit 可是有用基准；若存在明显簇群，应比较嵌套 logit、mixed logit 或一般 multinomial probit 的 AME 和反事实。单靠一个 IIA 检验的 $p$ 值不能替代经济上的选择集合与替代关系论证。
+
+## 嵌套 Logit（Nested Logit）
+
+把选择分为 $J$ 个组，组 $j$ 有 $K_j$ 个选项，以 $jk$ 标记具体选择。效用为
+
+::: {#hansen-eq-26-12}
+$$
+U_{jk}^*=W'\beta_{jk}+X_{jk}'\gamma+\varepsilon_{jk}.
+\tag{26.12}
+$$
+:::
+
+误差联合 CDF 设为
+
+::: {#hansen-eq-26-13}
+$$
+F(\varepsilon_{11},\ldots,\varepsilon_{J K_J})
+=\exp\!\left[-\sum_{j=1}^J
+\left\{\sum_{k=1}^{K_j}
+\exp\!\left(-\frac{\varepsilon_{jk}}{\tau_j}\right)
+\right\}^{\tau_j}\right].
+\tag{26.13}
+$$
+:::
+
+$0<\tau_j\le1$。同组误差按 GEV 相关，跨组独立；$\tau_j=1$ 退化为 conditional logit，$\tau_j$ 越小表示组内越相似。只有一个选择的组没有组内相关可识别，故其 $\tau_j$ 应固定为 1。组划分应依据替代关系并在看结果前说明；把“轿车/SUV”分组合理，是因为车型内更相近，不是因为消费者必然先选车身类型再选型号。嵌套模型的严格含义是相关/替代结构，所谓两阶段决策只是帮助理解的比喻。
+
+令 $\mu_{jk}=W'\beta_{jk}+X_{jk}'\gamma$，定义组内 inclusive sum
+
+$$I_j=\sum_{m=1}^{K_j}\exp(\mu_{jm}/\tau_j).$$
+
+定理 26.2 把联合概率分解为
+
+$$
+P_{jk}=P_{k\mid j}P_j,qquad
+P_{k\mid j}=\frac{\exp(\mu_{jk}/\tau_j)}{I_j},qquad
+P_j=\frac{I_j^{\tau_j}}{\sum_{\ell=1}^JI_\ell^{\tau_\ell}}.
+$$
+
+第一项是已进入组 $j$ 后选择 $k$ 的 conditional logit，第二项是选择该组的概率；二者相乘并不要求行为真的依时间顺序发生。log likelihood 对被选的 $jk$ 加 $\log P_{k\mid j}+\log P_j$。组内仍保留 IIA，组间 odds 也对第三组保持相应限制，所以 nested logit 是有结构的放松，而非完全自由的替代矩阵。若 $\hat\tau_j$ 落到边界 1，普通对称正态近似和常规标准误需谨慎；若无约束估计超出理论区间，也提示该嵌套结构不合适。
+
+## 混合 Logit（Mixed Logit）
+
+mixed logit 把 alternative-varying 属性的共同系数改成个体随机系数 $\eta$：
+
+$$
+U_j^*=W'\beta_j+X_j'\eta+\varepsilon_j,qquad
+\eta\sim F(\eta\mid\alpha).
+$$
+
+常见 $N(\gamma,D)$ 用对角 $D$ 降低参数量，$N(\gamma,\Sigma)$ 允许随机系数相关，lognormal 可强制成本系数具有预定符号。若 $E\eta=\gamma$，写 $V_j=X_j'(\eta-\gamma)+\varepsilon_j$，则
+
+$$E(V_jV_\ell\mid X_j,X_\ell)=X_j'\operatorname{Var}(\eta)X_\ell.$$
+
+同一个人的随机偏好同时进入全部选择，因而生成随属性变化的异方差和跨选项相关，IIA 不再成立。随机系数方差小表示偏好接近固定，方差大表示异质性强；但 normal 成本系数可能允许一部分人“偏好更高价格”，若经济上不合理应改分布或符号编码。
+
+给定 $\eta$ 时仍是 conditional logit；无条件概率要把异质性积分掉：
+
+::: {#hansen-eq-26-14}
+$$
+P_j(w,x)=\int P_j(w,x\mid\eta)\,dF(\eta\mid\alpha).
+\tag{26.14}
+$$
+:::
+
+参数 $\theta$ 包含固定系数和分布参数 $\alpha$，样本 log likelihood 为
+
+::: {#hansen-eq-26-15}
+$$
+\ell_n(\theta)=\sum_{i=1}^n\sum_{j=1}^J
+1\{Y_i=j\}\log P_j(W_i,X_i\mid\theta).
+\tag{26.15}
+$$
+:::
+
+积分一般无闭式。给定同一组伪随机抽样 $\eta_1,\ldots,\eta_G$，用 $\widetilde P_j=G^{-1}\sum_gP_j(\cdot\mid\eta_g)$ 近似。逐步理解是：内层 softmax 计算一种偏好类型的选择概率，外层平均计算总体混合概率，最后才取 log 并在样本上相加。不能先对 conditional log probability 求平均，因为 $\log E(P)\ne E\log P$。
+
+实现时应固定随机种子并在优化过程中复用 draws（common random numbers），否则目标函数本身会随迭代抖动；增加 $G$、改用 quasi-random draws 并从多组初值复核。AME 和反事实也必须对随机系数积分，不能只把 $\eta$ 换成其均值。
+
+## 简单多项 Probit（Simple Multinomial Probit）
+
+简单版本把极值误差换为独立标准正态。只有个体属性时为
+
+::: {#hansen-eq-26-16}
+$$
+U_j^*=W'\beta_j+\varepsilon_j,
+\tag{26.16}
+$$
+:::
+
+兼有选项属性时为
+
+::: {#hansen-eq-26-17}
+$$
+U_j^*=W'\beta_j+X_j'\gamma+\varepsilon_j,
+\tag{26.17}
+$$
+:::
+
+其中 $\varepsilon_j\stackrel{iid}{\sim}N(0,1)$。基准和尺度归一化与 logit 相同。换成 normal 并没有自动解决相近替代项：误差仍独立，所以其行为往往接近 IIA 基准。
+
+选择 $j$ 要求对每个 $\ell\ne j$ 都有 $\varepsilon_\ell\le \varepsilon_j+W'(\beta_j-\beta_\ell)+(X_j-X_\ell)'\gamma$。先条件于 $\varepsilon_j=v$，其余误差独立，使联合条件概率成为 $J-1$ 个 $\Phi$ 的乘积；再对 $v$ 的标准正态密度积分，得到
+
+::: {#hansen-eq-26-18}
+$$
+P_j(W,X)=\int_{-\infty}^{\infty}
+\prod_{\ell\ne j}
+\Phi\!\left[W'(\beta_j-\beta_\ell)
++(X_j-X_\ell)'\gamma+v\right]\phi(v)\,dv.
+\tag{26.18}
+$$
+:::
+
+虽然比较了 $J-1$ 个不等式，独立结构使计算只剩一维积分，可用 quadrature 稳定评价。然后把该概率代入与 [式 (26.15)](#hansen-eq-26-15) 同形的类别 likelihood。估计结果宜与 conditional logit 比较 AME 而非系数，因为 normal 与 extreme-value 的尺度归一化不同。
+
+## 一般多项 Probit（General Multinomial Probit）
+
+一般模型令 [式 (26.17)](#hansen-eq-26-17) 的 $\varepsilon\sim N(0,\Sigma)$，允许误差相关。为看清识别，以 $J$ 为基准做效用差：
+
+::: {#hansen-eq-26-19}
+$$
+U_j^*-U_J^*
+=W'(\beta_j-\beta_J)+(X_j-X_J)'\gamma+\varepsilon_{jJ},
+\qquad \varepsilon_{jJ}=\varepsilon_j-\varepsilon_J.
+\tag{26.19}
+$$
+:::
+
+真正进入选择概率的是 $(J-1)$ 维差分误差，而不是原 $J$ 维 $\varepsilon$ 的绝对水平。若原误差 iid $N(0,1)$，差分协方差为
+
+::: {#hansen-eq-26-20}
+$$
+\Sigma_J=
+\begin{bmatrix}
+2&1&\cdots&1\\
+1&2&\cdots&1\\
+\vdots&\vdots&\ddots&\vdots\\
+1&1&\cdots&2
+\end{bmatrix}.
+\tag{26.20}
+$$
+:::
+
+矩阵是 $(J-1)\times(J-1)$：对角为 $\operatorname{Var}(\varepsilon_j-\varepsilon_J)=2$，非对角因共享 $-\varepsilon_J$ 而为 1。即便原误差独立，差分误差也相关，这是常见易错点。效用差的整体尺度仍不可识别，因此需固定 $\Sigma_J$ 一个对角元；剩余自由协方差参数为 $(J-1)J/2-1$。基准选项决定差分坐标，scale alternative 决定方差单位，两者也不可混为一谈。
+
+一般相关结构能表示差异化替代，但概率是 $(J-1)$ 维正态区域积分。$J$ 稍大时直接 quadrature 很昂贵，GHK simulator 依次使用条件正态把高维概率写成可模拟的条件概率乘积，再做 simulated maximum likelihood。likelihood 往往非凹，故应从较简模型取得初值、使用多初值、检查梯度和模拟次数稳定性。更灵活不等于自动更可信：协方差参数多、选择频数少时可能弱识别，反事实对局部极值也会敏感。
+
+## 有序响应（Ordered Response）
+
+当 $Y\in\{1,\ldots,J\}$ 表示从低到高的等级时，普通多项模型忽略次序信息。ordered probit/logit 设
+
+$$U^*=X'\beta+\varepsilon,qquad
+Y=j\ \Longleftrightarrow\ \alpha_{j-1}<U^*\le\alpha_j,$$
+
+其中 $\alpha_0=-\infty<\alpha_1<\cdots<\alpha_{J-1}<\alpha_J=\infty$。$X$ 通常不含截距，因为给潜变量加截距与把所有阈值平移完全等价；误差尺度也要固定。normal CDF 得 ordered probit，logistic CDF 得 ordered logit。
+
+逐步把区间事件移到误差上：
+
+$$
+P_j(x)=P(\alpha_{j-1}-x'\beta<\varepsilon\le\alpha_j-x'\beta)
+=G(\alpha_j-x'\beta)-G(\alpha_{j-1}-x'\beta).
+$$
+
+因此累计概率 $P(Y\le j\mid X=x)=G(\alpha_j-x'\beta)$，连续变量的类别边际效应是
+
+$$
+\frac{\partial P_j(x)}{\partial x}
+=\beta\{g(\alpha_{j-1}-x'\beta)-g(\alpha_j-x'\beta)\}.
+$$
+
+$\beta_r>0$ 表示提高 $x_r$ 把潜变量向高等级推，却不表示每个类别概率都上升：最低类下降、最高类上升，中间类符号随 $x$ 而变。ordered logit 还隐含各累计切点共用同一斜率的 proportional-odds/parallel-lines 结构，应用中应诊断而不是把编码 1–5 当连续变量直接 OLS 后就结束。
+
+## 计数数据（Count Data）
+
+计数 $Y\in\{0,1,2,\ldots\}$ 的基准 Poisson 回归为
+
+$$
+P(Y=j\mid X=x)=e^{-\lambda(x)}\frac{\lambda(x)^j}{j!},
+\qquad \lambda(x)=e^{x'\beta}.
+$$
+
+指数 link 保证均值为正；完整 Poisson 分布进一步要求
+
+$$E(Y\mid X)=\operatorname{Var}(Y\mid X)=e^{X'\beta}.$$
+
+log likelihood（忽略不了但不影响最优化的 $-\log Y_i!$）为
+
+$$
+\ell_n(\beta)=\sum_i\{-e^{X_i'\beta}+Y_iX_i'\beta-\log(Y_i!)\}.
+$$
+
+score 是 $\sum_iX_i(Y_i-e^{X_i'\beta})$，Hessian 是 $-\sum_iX_iX_i'e^{X_i'\beta}$，所以目标全局凹。更重要的是，score 的总体一阶条件只要求条件均值 $E(Y\mid X)=e^{X'\beta}$ 正确；即使条件方差不是 Poisson，Poisson QMLE 对均值参数仍一致。此时必须使用 robust/sandwich 标准误。只正确设定条件均值并不能推出每个 $P(Y=j\mid X)$ 都正确；要解释完整质量函数仍需 Poisson 分布假设。
+
+系数的半弹性解释来自 $\partial\log E(Y\mid X)/\partial x_r=\beta_r$；虚拟变量从 0 到 1 的均值比例变化是 $e^{\beta_r}-1$。方差大于均值的 overdispersion 可能来自遗漏异质性、聚类或 excess zeros，不能只凭它宣布 Poisson 均值错设。令 $\lambda(X)=Ve^{X'\beta}$ 且 $V$ 服从 Gamma，积分掉 $V$ 得负二项分布，它允许均值与方差分开变化；零膨胀、截断、面板 FE 等则对应不同抽样/行为机制，应按数据生成过程选择。
+
+## BLP 需求模型（BLP Demand Model）
+
+BLP 把个体 conditional/mixed logit 用于市场层面的产品销量。市场通常是地区×时期；每个市场有 $J$ 个产品和 outside option。outside share 的定义依赖潜在消费者总数 $M_t$，所以“每人每期至多买一件”之类的市场规模假设会直接进入需求估计，不能藏在数据清洗里。
+
+个体对产品 $j$ 的效用写成
+
+::: {#hansen-eq-26-21}
+$$
+U_j^*=X_j'\eta+\xi_j+\varepsilon_j,
+\tag{26.21}
+$$
+:::
+
+$X_j$ 含价格和可观测特征；$\eta$ 是消费者随机系数；$\xi_j$ 是全市场共同看到、计量者没看到的质量；$\varepsilon_j$ 是个体—产品冲击。高质量但未观测的 $\xi_j$ 往往既提高需求又允许厂商定高价，故价格与 $\xi_j$ 正相关，直接 logit 会把质量溢价误归给价格。识别需工具 $Z_j$ 满足
+
+::: {#hansen-eq-26-22}
+$$
+E[Z_j\xi_j]=0.
+\tag{26.22}
+$$
+:::
+
+候选工具包括自身非价格特征、同厂其他产品特征和竞争者产品特征；其逻辑是供给侧产品组合影响加价/价格，却在控制本品特征后不直接进入该产品未观测需求质量。有效性依具体市场，不能因“BLP instruments”这个名字就视作外生；跨市场价格只有在需求冲击跨市场不相关等条件下才可用。
+
+令 $\gamma=E\eta$、$V=\eta-\gamma$，把平均效用定义为
+
+::: {#hansen-eq-26-23}
+$$
+\delta_j=X_j'\gamma+\xi_j.
+\tag{26.23}
+$$
+:::
+
+给定随机抽样 $V_1,\ldots,V_G$，选择份额的模拟值为
+
+::: {#hansen-eq-26-24}
+$$
+\widetilde P_j(\delta,\alpha)=\frac1G\sum_{g=1}^G
+\frac{\exp(\delta_j+X_j'V_g)}
+{\displaystyle\sum_{\ell=1}^J\exp(\delta_\ell+X_\ell'V_g)}.
+\tag{26.24}
+$$
+:::
+
+这里沿原稿保留 $1,\ldots,J$ 的记号；实际实现 outside good 时通常把其平均效用归一为 0，并在相应选择集合的分母中包含 outside option。观测销量 $Q_j$ 与市场规模 $M$ 给 $S_j=Q_j/M$。当 $M$ 足够大，WLLN 支持用份额近似个体选择概率，于是每个市场有 $J$ 个方程
+
+::: {#hansen-eq-26-25}
+$$
+S_j=\widetilde P_j(\delta,\alpha).
+\tag{26.25}
+$$
+:::
+
+给定异质性参数 $\alpha$，[式 (26.25)](#hansen-eq-26-25) 把 $J$ 个已知份额映射回 $J$ 个未知平均效用。BLP contraction 迭代为
+
+::: {#hansen-eq-26-26}
+$$
+\delta_j^{,i}=\delta_j^{,i-1}+log S_j
+-\log\widetilde P_j(\delta^{,i-1},\alpha).
+\tag{26.26}
+$$
+:::
+
+若模型预测份额低于实际份额，$\log S_j-\log\widetilde P_j>0$，下一轮提高 $\delta_j$；反之降低，直到预测与观察匹配。完整估计可按下面的内外循环理解：
+
+1. 外层给定候选随机系数参数 $\alpha$；
+2. 对每个市场反复用 [式 (26.26)](#hansen-eq-26-26)，求得 $\delta_{jt}(S_t,\alpha)$；
+3. 对候选平均系数 $\gamma$ 恢复 $\xi_{jt}=\delta_{jt}-X_{jt}'\gamma$；
+4. 构造 $g(\gamma,\alpha)=(TJ)^{-1}\sum_{t,j}Z_{jt}\xi_{jt}$；
+5. 外层最小化 $g'Wg$，更新权重矩阵并报告 GMM 标准误。
+
+这不是“先跑一次 logit 再 2SLS”：每次改变 $\alpha$ 都改变市场份额到 $\delta$ 的反演，进而改变结构误差与矩条件。应记录市场定义、outside share、随机抽样、收缩容差、工具构造、权重/聚类层级和多初值结果。人口特征可作为与产品特征的交互，以市场人口分布共同积分。Hansen 引用的渐近理论允许在条件下令产品数 $J\to\infty$，但大 $J$ 不能弥补弱或无效工具。
+
+## 技术证明（Technical Proofs*）
+
+定理 26.1 的核心不是背 softmax，而是把“$j$ 的效用最大”写成误差积分。令 $\mu_{j\ell}=X'(\beta_j-\beta_\ell)$，事件 $Y=j$ 等价于 $\varepsilon_\ell\le\varepsilon_j+\mu_{j\ell}$ 对所有 $\ell$ 成立。若 $F_j=\partial F/\partial\varepsilon_j$，先积分掉其余 $J-1$ 个误差便得
+
+::: {#hansen-eq-26-27}
+$$
+P[Y=j]=\int_{-\infty}^{\infty}
+F_j(\varepsilon_j+\mu_{j1},\ldots,
+\varepsilon_j+\mu_{jJ})\,d\varepsilon_j.
+\tag{26.27}
+$$
+:::
+
+把 [式 (26.3)](#hansen-eq-26-3) 的偏导代入 [式 (26.27)](#hansen-eq-26-27)，用
+
+$$
+P_j(X)=\left\{\sum_{\ell=1}^J
+e^{-\mu_{j\ell}/\tau}\right\}^{-1}
+$$
+
+收集含 $\varepsilon_j$ 的项，再令 $u=\varepsilon_j+\tau\log P_j(X)$。剩余积分正是 Type-I extreme-value 密度 $e^{-e^{-u}}e^{-u}$ 在实线上的积分，即 1，外部系数留下 $P_j(X)$。这解释了概率 closed form 来自极值密度的特殊代数结构。
+
+定理 26.2 采用同一路线，但对 $\varepsilon_{jk}$ 求偏导，并把指数和分成组内 $I_j$ 与跨组 $\sum_\ell I_\ell^{\tau_\ell}$；积分后分别留下 $P_{k\mid j}$ 和 $P_j$。定理 26.3 则从 [式 (26.27)](#hansen-eq-26-27) 出发：normal 独立性使给定 $\varepsilon_j=v$ 的 $J-1$ 个事件概率相乘为多个 $\Phi$，最后对 $\phi(v)$ 积分，正好得到 [式 (26.18)](#hansen-eq-26-18)。三项证明的共同模板是“最大效用事件 → 条件于一个误差 → 积掉其余误差”；不同分布决定积分能否闭式或低维计算。
+
+## 习题阅读指南（Exercises）
+
+26.1–26.9 是公式基本功。证明概率加总、基准不变性和 [式 (26.4)](#hansen-eq-26-4) 时，先把 softmax 分母单独记为 $D(x)$；推导 [式 (26.9)](#hansen-eq-26-9)–[式 (26.10)](#hansen-eq-26-10) 时分别判断被求导属性是否出现在分子。AME 应在每个观测先算导数再平均。
+
+26.10–26.11 要解释 nested logit 仍保留的局部 IIA：同组两个选择之比不依赖其他组变量，两个组概率之比不依赖第三组变量。答案不能只化简 odds，还要指出这意味着模型只在预设嵌套边界上允许差异化替代。
+
+26.12–26.14 使用 CPS 婚姻状态。先记录性别、年龄和教育筛选，报告各类别样本量与基准类别；画年龄上的预测概率并核查每点加总为 1。nested logit 的分组必须依据婚姻状态的相近性先给理由，再报告 $\tau$、边界情况和相对非嵌套基准的 likelihood。
+
+26.15–26.18 使用 Koppelman。每个模型都应保持同一有效样本和选择集合，清楚区分 `intime`、`outtime` 与总时间；变换为 log 后，零值处理必须披露。表格至少含 cost/time 的点估计与标准误、log likelihood、基准/scale alternative、模拟 draws 与随机种子。比较 conditional、nested、mixed 和 general probit 时，以 train 概率的 own/cross AME、弹性及“时间缩短”反事实为共同尺度，不能因某模型 likelihood 更高就跳过识别、收敛与替代模式诊断。
+
+::: {.callout-important title="章末自检"}
+1. 为什么多项模型要同时作基准类别与误差尺度两种归一化？改变基准后什么不变？
+2. 简单 multinomial logit 与 conditional logit 的解释变量结构有何不同？long-format 的独立抽样单位是什么？
+3. 从 [式 (26.11)](#hansen-eq-26-11) 如何看出 IIA？红巴士/蓝巴士为何暴露其问题？
+4. nested logit、mixed logit 和 general multinomial probit 分别怎样引入误差相关或异质性？
+5. 为什么 [式 (26.18)](#hansen-eq-26-18) 只是一维积分，而一般模型需要 $(J-1)$ 维概率？
+6. ordered 模型中为何通常不能同时自由估计截距、全部阈值和误差尺度？
+7. Poisson 条件均值正确但条件分布错设时，哪些估计仍一致，哪些概率解释不能保留？
+8. BLP 中价格为何内生？从市场份额到 GMM 矩条件之间依次经过哪四个对象？
+:::
