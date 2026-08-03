@@ -1,0 +1,1098 @@
+---
+title: "面板数据"
+subtitle: "固定效应、面板 IV 与动态面板 GMM"
+hansen-chapter: "Chapter 17"
+book-pages: "597–649"
+pdf-pages: "617–669"
+status: "完整初稿"
+---
+
+::: {.book-map}
+**原书位置与本章路线**　对应 Hansen Chapter 17（书内 pp. 597–649；PDF pp. 617–669）。17.1–17.17从 pooled、random effects 逐步过渡到 fixed effects、within/difference/dummy-variable 等价与方差估计；17.18–17.35给出 GMM、识别、unbalanced panel、two-way FE、IV、Hausman–Taylor 与重抽样；17.36–17.44建立 dynamic panel、Nickell bias、Anderson–Hsiao、Arellano–Bond（AB）、Blundell–Bond（BB）和 forward orthogonal deviations；17.45整理习题。
+:::
+
+::: {.bridge}
+**本科桥接**　本科“固定效应去均值”只是起点。本章要把它提升为识别语言：within transformation 消掉任意相关的 time-invariant $u_i$，同时也消掉所有 time-invariant regressors；strict exogeneity 必须覆盖同一个体的过去、当期和未来；有效样本单位是相互独立的个体 $i$，所以标准误通常按个体 cluster。加入 lagged dependent variable 后，demeaning 又会把 regressor 与 error 相关起来，必须转向动态面板 IV/GMM。
+:::
+
+## 引言（Introduction）
+
+panel data 对 $N$ 个 individuals 各观察多个 periods。individual 可以是人、家庭、企业、学校、州或国家；统计学常称 longitudinal data。它的优势是利用同一个体内部变化控制 time-invariant unobserved heterogeneity，允许 richer heterogeneity，并能刻画 dynamics。
+
+本章以 micro-panel asymptotics 为主：$N\to\infty$、$T$ 固定，同一个体内任意依赖、不同个体相互独立。因此 score 的 cluster 是整条 history，而不是单个 $(i,t)$。macro panels 中 countries 之间常有 common shocks，cross-sectional independence 更可疑，需 time effects、two-way clustering 或适合共同依赖的办法；本章的 one-way cluster 结论不能机械照搬。
+
+## 时间索引与非平衡面板（Time Indexing and Unbalanced Panels）
+
+$Y_{it}$ 表示个体 $i=1,\ldots,N$ 在时点 $t=1,\ldots,T$ 的观察。balanced panel 中每人都有 $T$ 期，$n=NT$；unbalanced panel 中个体 $i$ 只在集合 $S_i$ 被观察，$T_i=|S_i|$，总观察数 $n=\sum_iT_i$。
+
+unbalanced 不只是排版问题。退出/进入若与 outcome error 的条件均值相关，直接在 observed rows 上做 FE 可能有 selection bias。数据准备必须验证 `(id,time)` 唯一、时间顺序、gap、每个 $T_i$，并说明缺失机制。dynamic panel 的 lag/difference 还会因 gaps 额外丢失 observations。
+
+## 记号（Notation）
+
+$Y_i\in\mathbb R^{T_i}$ 按时间堆叠 $Y_{it}$，$X_i\in\mathbb R^{T_i\times k}$ 的第 $t$ 行为 $X_{it}'$。全样本 $Y=(Y_1',\ldots,Y_N')'\in\mathbb R^n$，$X=(X_1',\ldots,X_N')'\in\mathbb R^{n\times k}$。矩阵维数应始终随 unbalanced $T_i$ 改变；写 cluster sandwich 时中间 score $X_i'e_i$ 必须是 $k\times1$。
+
+## 混合回归（Pooled Regression）
+
+pooled model 是
+
+::: {#hansen-eq-17-1}
+$$
+Y_{it}=X_{it}'\beta+e_{it},
+\qquad E(X_{it}e_{it})=0.
+\tag{17.1}
+$$
+:::
+
+pooled OLS 为 $(\sum_iX_i'X_i)^{-1}\sum_iX_i'Y_i$。若要 finite-sample conditional unbiasedness，常使用严格均值独立
+
+::: {#hansen-eq-17-2}
+$$
+E(e_{it}\mid X_i)=0.
+\tag{17.2}
+$$
+:::
+
+$X_i$ 含该个体所有 periods 的 regressors，因此 [式 (17.2)](#hansen-eq-17-2) 排除 error 与 regressors 的 leads/lags 相关，也通常排除 lagged dependent variable。个体内 serial correlation 不使 point estimator 自动失效，但使 i.i.d. standard errors 失效；cluster meat 应为 $\sum_iX_i'\hat e_i\hat e_i'X_i$。
+
+可用政策反馈看清 timing restriction。若 $X_{it}$ 是本期政策，政策制定者在 $t+1$ 观察到 $e_{it}$ 后调整 $X_{i,t+1}$，则即使 $E(X_{it}e_{it})=0$，也有 $E(X_{i,t+1}e_{it})\ne0$，[式 (17.2)](#hansen-eq-17-2) 失败。pooled OLS 的当期正交不足以保证它估计同一 structural slope；必须明确政策是否 strict exogenous、predetermined 还是 endogenous。
+
+原书贯穿的 investment equation 是
+
+::: {#hansen-eq-17-3}
+$$
+I_{it}=\beta_1Q_{i,t-1}+\beta_2D_{i,t-1}
++\beta_3CF_{i,t-1}+\beta_4T_i+e_{it}.
+\tag{17.3}
+$$
+:::
+
+$Q$ 是 market value/assets，$D$ 是 debt/assets，$CF$ 是 cash flow/assets，$T_i$ 是 time-invariant trading indicator。后文不同 estimators 的 estimand 与 assumptions 不同，不能把 point-estimate 变化只解释为“控制更多变量”。
+
+## 单向误差成分模型（One-Way Error Component Model）
+
+最常见 cluster structure 是
+
+::: {#hansen-eq-17-4}
+$$
+e_{it}=u_i+\varepsilon_{it}.
+\tag{17.4}
+$$
+:::
+
+$u_i$ 是所有 periods 共享的 individual effect，$\varepsilon_{it}$ 是 idiosyncratic error。于是 $Y_i=X_i\beta+\mathbf1_iu_i+\varepsilon_i$。同一个体任意两期的共同 $u_i$ 产生相关；关键分歧不是 $u_i$ “真的是常数还是随机”，而是能否假设 $E(u_i\mid X_i)=0$。
+
+## 随机效应（Random Effects）
+
+RE assumption 将条件均值、方差和不相关条件写为
+
+::: {#hansen-eq-17-5}
+$$E(\varepsilon_{it}\mid X_i)=0;\tag{17.5}$$
+:::
+
+::: {#hansen-eq-17-6}
+$$E(\varepsilon_{it}^2\mid X_i)=\sigma_\varepsilon^2;\tag{17.6}$$
+:::
+
+::: {#hansen-eq-17-7}
+$$E(\varepsilon_{it}\varepsilon_{is}\mid X_i)=0\quad(s\ne t);\tag{17.7}$$
+:::
+
+::: {#hansen-eq-17-8}
+$$E(u_i\mid X_i)=0;\tag{17.8}$$
+:::
+
+::: {#hansen-eq-17-9}
+$$E(u_i^2\mid X_i)=\sigma_u^2;\tag{17.9}$$
+:::
+
+::: {#hansen-eq-17-10}
+$$E(u_i\varepsilon_{it}\mid X_i)=0.\tag{17.10}$$
+:::
+
+令 $\Omega_i=I_i+(\sigma_u^2/\sigma_\varepsilon^2)\mathbf1_i\mathbf1_i'$，则 GLS 使用 $\Omega_i^{-1}$。其 model-based covariance 是
+
+::: {#hansen-eq-17-11}
+$$
+V_{\mathrm{gls}}=
+\left(\sum_iX_i'\Omega_i^{-1}X_i\right)^{-1}.
+\tag{17.11}
+$$
+:::
+
+同一假设下 pooled covariance 为
+
+::: {#hansen-eq-17-12}
+$$
+V_{\mathrm{pool}}=(X'X)^{-1}
+\left(\sum_iX_i'\Omega_iX_i\right)(X'X)^{-1},
+\tag{17.12}
+$$
+:::
+
+且 Gauss–Markov 给出
+
+::: {#hansen-eq-17-13}
+$$V_{\mathrm{gls}}\le V_{\mathrm{pool}}.\tag{17.13}$$
+:::
+
+若只把 equicorrelation 当 working covariance，可对 RE estimator 使用 cluster-robust sandwich：
+
+::: {#hansen-eq-17-14}
+$$
+\widehat V_{\mathrm{gls}}=
+\widehat Q^{-1}
+\left(\sum_iX_i'\widehat\Omega_i^{-1}hat e_i\hat e_i'
+\widehat\Omega_i^{-1}X_i\right)\widehat Q^{-1},
+\quad \widehat Q=\sum_iX_i'\widehat\Omega_i^{-1}X_i.
+\tag{17.14}
+$$
+:::
+
+robust SE 不能修复 [式 (17.8)](#hansen-eq-17-8) 失败造成的 inconsistency；它只修复 variance specification。
+
+## 固定效应模型（Fixed Effect Model）
+
+FE model 保留相同 decomposition：
+
+::: {#hansen-eq-17-15}
+$$Y_{it}=X_{it}'\beta+u_i+\varepsilon_{it},\tag{17.15}$$
+:::
+
+::: {#hansen-eq-17-16}
+$$Y_i=X_i\beta+\mathbf1_iu_i+\varepsilon_i.\tag{17.16}$$
+:::
+
+但不限制 $u_i$ 与 $X_i$ 的相关性。需要的是 $X_{is}$ 对 idiosyncratic error 的 strict exogeneity：
+
+::: {#hansen-eq-17-17}
+$$E(X_{is}\varepsilon_{it})=0\quad\text{对所有 }s,t.\tag{17.17}$$
+:::
+
+更强的 conditional version 是
+
+::: {#hansen-eq-17-18}
+$$E(\varepsilon_{it}\mid X_i)=0.\tag{17.18}$$
+:::
+
+[式 (17.18)](#hansen-eq-17-18) 可给 conditional unbiasedness；[式 (17.17)](#hansen-eq-17-17) 足以做 identification/asymptotics。二者都不限制 $E(u_i\mid X_i)$。本科“FE 控制不随时间变化的遗漏变量”应精确理解为：它允许该遗漏成分任意相关，但仍不能容忍随时间变化且与 $X_{it}$ 相关的 $\varepsilon_{it}$。
+
+## 组内变换（Within Transformation）
+
+令 $P_i=\mathbf1_i(\mathbf1_i'\mathbf1_i)^{-1}\mathbf1_i'$，$M_i=I_i-P_i$。$M_i$ symmetric、idempotent，且 $M_i\mathbf1_i=0$。全样本 block-diagonal operator $M_D$ 给出
+
+::: {#hansen-eq-17-19}
+$$
+M_DY=\dot Y=(\dot Y_1',\ldots,\dot Y_N')',
+\qquad M_DX=\dot X.
+\tag{17.19}
+$$
+:::
+
+对 levels equation 取 individual means：
+
+::: {#hansen-eq-17-20}
+$$\bar Y_i=\bar X_i'\beta+u_i+\bar\varepsilon_i,\tag{17.20}$$
+:::
+
+再相减：
+
+::: {#hansen-eq-17-21}
+$$\dot Y_{it}=\dot X_{it}'\beta+\dot\varepsilon_{it},\tag{17.21}$$
+:::
+
+或矩阵形式
+
+::: {#hansen-eq-17-22}
+$$\dot Y_i=\dot X_i\beta+\dot\varepsilon_i.\tag{17.22}$$
+:::
+
+$u_i$ 被消去，但所有 $X_{it}=X_i$ 的 time-invariant columns 也变为零。不是软件“无法估计”，而是 unrestricted $u_i$ 与 time-invariant regressor observationally equivalent。非线性变换还要先变换再 demean：一般 $\dot{(X^2)}_{it}\ne(\dot X_{it})^2$。
+
+逐项展开最能避免符号混乱：$\dot Y_{it}=Y_{it}-T_i^{-1}\sum_{s\in S_i}Y_{is}$，$\dot X_{it}=X_{it}-T_i^{-1}\sum_sX_{is}$，$\dot\varepsilon_{it}=\varepsilon_{it}-\bar\varepsilon_i$。因此 transformed error 在同一个体内即使原 $\varepsilon_{it}$ i.i.d. 也彼此相关；这正说明做完去均值后仍不能把 $NT$ 行当独立观测。
+
+within estimand 也有经济含义。若 $X$ 是教育程度且成年后不变，FE 无法估回报；若 $X$ 是工时，FE 比较同一人的工时偏离自身平均值时工资如何变化。它自动剔除了人与人之间永久差异，却没有说明这种个人内部变化是外生的；reverse causality 或 time-varying shocks 仍需 IV/design。
+
+## 固定效应估计量（Fixed Effects Estimator）
+
+$\hat\beta_{fe}=(\sum_i\dot X_i'\dot X_i)^{-1}\sum_i\dot X_i'\dot Y_i$，residuals 是
+
+::: {#hansen-eq-17-23}
+$$
+\hat\varepsilon_{it}=\dot Y_{it}-\dot X_{it}'\hat\beta_{fe},
+\qquad \hat\varepsilon_i=\dot Y_i-\dot X_i\hat\beta_{fe}.
+\tag{17.23}
+$$
+:::
+
+一般 conditional covariance 为
+
+::: {#hansen-eq-17-24}
+$$
+V_{fe}=(\dot X'\dot X)^{-1}
+\left(\sum_i\dot X_i'\Sigma_i\dot X_i\right)
+(\dot X'\dot X)^{-1}.
+\tag{17.24}
+$$
+:::
+
+在 homoskedastic、serially uncorrelated errors 下，
+
+::: {#hansen-eq-17-25}
+$$E(\varepsilon_{it}^2\mid X_i)=\sigma_\varepsilon^2,\tag{17.25}$$
+:::
+
+::: {#hansen-eq-17-26}
+$$E(\varepsilon_{ij}\varepsilon_{it}\mid X_i)=0\quad(j\ne t),\tag{17.26}$$
+:::
+
+故
+
+::: {#hansen-eq-17-27}
+$$V_{fe}^0=\sigma_\varepsilon^2(\dot X'\dot X)^{-1}.\tag{17.27}$$
+:::
+
+若实际上 $u_i=0$，within 减少 regressor variation，因而
+
+::: {#hansen-eq-17-28}
+$$
+V_{fe}^0\ge \sigma_\varepsilon^2(X'X)^{-1}=V_{pool}.
+\tag{17.28}
+$$
+:::
+
+这是 robustness 的代价：FE 只使用 within variation。若 treatment 几乎不随个体时间变化，standard errors 会很大，且估计的是“改变 $X$ 的个体”的局部线性关系。
+
+从 estimator decomposition 可逐步验证 unbiasedness：先把 $\dot Y_i=\dot X_i\beta+M_i\varepsilon_i$ 代入；再用 $\dot X_i'M_i=\dot X_i'$；最后由 $E(\varepsilon_i\mid X_i)=0$ 得 $E(\dot X_i'\varepsilon_i\mid X_i)=0$。这里不能把 $E(X_{it}\varepsilon_{it})=0$ 直接搬过来，因为 $\dot X_{it}$ 含其他时期 $X_{is}$，所以必须用跨期 strict condition。
+
+## 差分估计量（Differenced Estimator）
+
+一阶差分也消掉 $u_i$：
+
+::: {#hansen-eq-17-29}
+$$\Delta Y_i=\Delta X_i\beta+\Delta\varepsilon_i.\tag{17.29}$$
+:::
+
+OLS difference estimator 为
+
+::: {#hansen-eq-17-30}
+$$
+\hat\beta_\Delta=
+\left(\sum_iX_i'D_i'D_iX_i\right)^{-1}
+\sum_iX_i'D_i'D_iY_i.
+\tag{17.30}
+$$
+:::
+
+若 $\varepsilon_{it}$ i.i.d.，difference-error covariance 为
+
+::: {#hansen-eq-17-31}
+$$
+H=D_iD_i'=
+\begin{pmatrix}2&-1&0\\-1&2&\ddots\\0&\ddots&\ddots\end{pmatrix}.
+\tag{17.31}
+$$
+:::
+
+对 differenced equation 做 GLS 得 $D_i'(D_iD_i')^{-1}D_i=M_i$，恰等于 FE。$T=2$ 时 OLS difference 也等于 FE；$T>2$ 时普通 difference 与 within 不同。若 level idiosyncratic errors 近似 random walk，difference 可能更合适；若其 i.i.d.，FE/GLS 更有效率。
+
+## 虚拟变量回归（Dummy Variables Regression）
+
+无 covariates 时
+
+::: {#hansen-eq-17-32}
+$$Y_{it}=u_i+\varepsilon_{it}.\tag{17.32}$$
+:::
+
+每个 dummy coefficient 是 $\bar Y_i$，residual 就是 $\dot Y_{it}$。加入 regressors 后
+
+::: {#hansen-eq-17-33}
+$$Y_{it}=X_{it}'\beta+d_i'u+\varepsilon_{it},\tag{17.33}$$
+:::
+
+::: {#hansen-eq-17-34}
+$$Y=X\beta+Du+\varepsilon.\tag{17.34}$$
+:::
+
+FWL 表明 dummy-variable slope 与 within estimator 完全相等。代数上
+
+::: {#hansen-eq-17-35}
+$$
+\hat\beta_{fe}=\beta+(X'M_DX)^{-1}X'M_D\varepsilon,
+\qquad M_DD=0.
+\tag{17.35}
+$$
+:::
+
+这既证明 estimator 对 $u$ invariant，也说明 large $N$ 时无需真的建立 $n\times N$ dummy matrix；absorbing/high-dimensional FE algorithms 只是更有效地做 partialling out。
+
+## 固定效应协方差估计（Fixed Effects Covariance Matrix Estimation）
+
+classical estimator 是
+
+::: {#hansen-eq-17-36}
+$$\widehat V_{fe}^0=\hat\sigma_\varepsilon^2(\dot X'\dot X)^{-1},\tag{17.36}$$
+:::
+
+其中
+
+::: {#hansen-eq-17-37}
+$$
+\hat\sigma_\varepsilon^2=
+\frac{\sum_i\hat\varepsilon_i'\hat\varepsilon_i}{n-N-k}.
+\tag{17.37}
+$$
+:::
+
+允许任意 within-person heteroskedasticity/autocorrelation 的 Arellano cluster estimator 是
+
+::: {#hansen-eq-17-38}
+$$
+\widehat V_{fe}^{cluster}=(\dot X'\dot X)^{-1}
+\left(\sum_i\dot X_i'\hat\varepsilon_i\hat\varepsilon_i'\dot X_i\right)
+(\dot X'\dot X)^{-1}.
+\tag{17.38}
+$$
+:::
+
+Hansen small-cluster correction 为
+
+::: {#hansen-eq-17-39}
+$$\widehat V_{fe}^{cluster,1}=\frac{N}{N-1}\widehat V_{fe}^{cluster},\tag{17.39}$$
+:::
+
+常见的更强 adjustment 是
+
+::: {#hansen-eq-17-40}
+$$
+\widehat V_{fe}^{cluster,2}=
+\frac{n-1}{n-N-k}\frac{N}{N-1}\widehat V_{fe}^{cluster}.
+\tag{17.40}
+$$
+:::
+
+固定 $T$ 时后者约乘 $T/(T-1)$，可能很大。原书倾向 [式 (17.39)](#hansen-eq-17-39)；软件命令可能用不同 correction，复现时必须记录。更根本的是 cluster 数 $N$，不是 rows $n$，决定 asymptotic reliability。
+
+cluster sandwich 的计算顺序值得手算一次。先对每个个体形成 $k\times1$ score $g_i=\dot X_i'\hat\varepsilon_i=\sum_t\dot X_{it}\hat\varepsilon_{it}$；再把 outer products $g_ig_i'$ 对 $i$ 求和；最后左右乘 bread $(\dot X'\dot X)^{-1}$。中间保留了 $t,s$ 的全部 cross products，所以允许任意 within-cluster serial covariance。若先逐行平方 residual，就已经把这些 cross terms 删除了。
+
+若 $N$ 很少，asymptotic cluster normal approximation 也可能很差。此时应报告 cluster count、最大 cluster leverage，考虑 appropriate small-cluster $t/F$ reference 或 wild cluster bootstrap。仅将 covariance option 写成 `cluster(id)` 并不会凭空增加独立信息。
+
+## Stata 中的固定效应估计（Fixed Effects Estimation in Stata）
+
+dummy regression、手工 within、`xtreg, fe`、`areg, absorb()` 在 slope 上应一致，但 default SE adjustment 与 $R^2$ 定义可能不同。within $R^2$ 比较 demeaned outcome；包含 dummies 的 overall fit 可能因 $u_i$ 解释大量 variation 而很高。报告 $R^2$ 时注明口径；更重要的是检验同一 sample、同一 absorbed effects 与同一 cluster rule 下 slopes/SE 是否一致。
+
+## 组间估计量（Between Estimator）
+
+individual-mean equation 是
+
+::: {#hansen-eq-17-41}
+$$\bar Y_i=\bar X_i'\beta+u_i+\bar\varepsilon_i.\tag{17.41}$$
+:::
+
+between estimator 利用跨个体均值 variation，只有 RE exogeneity 下才估计同一 $\beta$。它主要用来估 variance components。between residual variance 为
+
+::: {#hansen-eq-17-42}
+$$\hat\sigma_b^2=\frac1{N-k}\sum_i\hat e_{bi}^2,\tag{17.42}$$
+:::
+
+于是 harmonic mean $\bar T_h=N/(\sum_iT_i^{-1})$ 下
+
+::: {#hansen-eq-17-43}
+$$\hat\sigma_u^2=\hat\sigma_b^2-\hat\sigma_\varepsilon^2/\bar T_h,\tag{17.43}$$
+:::
+
+实际常约束为
+
+::: {#hansen-eq-17-44}
+$$\hat\sigma_u^2=\max\{0,\hat\sigma_b^2-\hat\sigma_\varepsilon^2/\bar T_h\}.\tag{17.44}$$
+:::
+
+负的 unconstrained estimate 是 sampling noise/model misspecification 的诊断，不应被解释成“负方差”。
+
+## 可行 GLS（Feasible GLS）
+
+RE estimator 可写为 transformed OLS：
+
+::: {#hansen-eq-17-45}
+$$
+\hat\beta_{re}=
+\left(\sum_i\widetilde X_i'\widetilde X_i\right)^{-1}
+\sum_i\widetilde X_i'\widetilde Y_i.
+\tag{17.45}
+$$
+:::
+
+定义 shrinkage
+
+::: {#hansen-eq-17-46}
+$$\rho_i=\frac{\sigma_\varepsilon}{(\sigma_\varepsilon^2+T_i\sigma_u^2)^{1/2}},\tag{17.46}$$
+:::
+
+则
+
+::: {#hansen-eq-17-47}
+$$\Omega_i^{-1/2}=M_i+\rho_iP_i=I_i-(1-\rho_i)P_i.\tag{17.47}$$
+:::
+
+用
+
+::: {#hansen-eq-17-48}
+$$\hat\rho_i=\frac{\hat\sigma_\varepsilon}{(\hat\sigma_\varepsilon^2+T_i\hat\sigma_u^2)^{1/2}}\tag{17.48}$$
+:::
+
+得到 partial demeaning：
+
+::: {#hansen-eq-17-49}
+$$\widetilde Y_i=Y_i-(1-\hat\rho_i)\mathbf1_i\bar Y_i,\tag{17.49}$$
+:::
+
+::: {#hansen-eq-17-50}
+$$\widetilde X_i=X_i-(1-\hat\rho_i)\mathbf1_i\bar X_i'.\tag{17.50}$$
+:::
+
+$\rho_i=1$ 时回到 pooled，$\rho_i=0$ 时回到 within。这是 efficiency interpolation，不会缓解 $E(u_i\mid X_i)\ne0$ 的 bias。
+
+## 固定效应回归中的截距（Intercept in Fixed Effects Regression）
+
+intercept 与 $u_i$ 不可分别识别，除非加 normalization。软件报告的 $\hat\alpha=\bar Y-\bar X'\hat\beta_{fe}$ 隐含平均 fixed effect 为零。它取决于 normalization，通常不具独立结构含义；slope 不受该选择影响。
+
+## 固定效应的估计（Estimation of Fixed Effects）
+
+给定 slope，个体效应估计为
+
+::: {#hansen-eq-17-51}
+$$\hat u_i=\bar Y_i-\bar X_i'\hat\beta_{fe},\tag{17.51}$$
+:::
+
+若另报 intercept，则
+
+::: {#hansen-eq-17-52}
+$$\hat u_i=\bar Y_i-\bar X_i'\hat\beta_{fe}-\hat\alpha_{fe}.\tag{17.52}$$
+:::
+
+固定 $T_i$ 时 $\hat u_i-u_i$ 的 variance 不消失，这是 incidental-parameter issue。用 $\hat u_i$ 排名、研究分布或做 out-of-sample prediction 时应承认 measurement error，并考虑 shrinkage；slope consistency 不意味着每个 effect consistency。
+
+## 固定效应的 GMM 解释（GMM Interpretation of Fixed Effects）
+
+把每个 period 当一条 equation，可构造 block regressor
+
+::: {#hansen-eq-17-53}
+$$
+\mathcal X_i=
+\operatorname{diag}(\dot X_{i1}',\ldots,\dot X_{iT}').
+\tag{17.53}
+$$
+:::
+
+$kT$ moments 中只有 $k(T-1)$ 有效，coefficient stability across time 构成 overidentification。用 2SLS weight 后 GMM algebraically 等于 FE；允许 heteroskedasticity/serial correlation 的 efficient weight 可改变 estimator。这个视角为后文 dynamic-panel stacked moments 铺路。
+
+## 固定效应模型中的识别（Identification in the Fixed Effects Model）
+
+population rank condition 是
+
+::: {#hansen-eq-17-54}
+$$E(\dot X_i'\dot X_i)>0.\tag{17.54}$$
+:::
+
+它要求 after-within variation 满秩。FE slope 描述 $X_{it}$ 相对自身平均值的变化与 $Y_{it}$ 相对自身平均值的变化，不识别 between-person level effect。若 within 与 between slopes 异质，RE 的 weighted blend 与 FE 不是单纯 efficiency 差别，而是不同 restriction 下的对象。
+
+## 固定效应估计量的渐近分布（Asymptotic Distribution of Fixed Effects Estimator）
+
+在 $N\to\infty,T$ fixed、clusters i.i.d.、strict exogeneity、[式 (17.54)](#hansen-eq-17-54) 与有限四阶矩下，
+
+$$
+\sqrt N(\hat\beta_{fe}-\beta)\Rightarrow
+N(0,Q_T^{-1}\Omega_TQ_T^{-1}),
+$$
+
+$Q_T=E(\dot X_i'\dot X_i)$，$\Omega_T=E(\dot X_i'\varepsilon_i\varepsilon_i'\dot X_i)$。推导先写 cluster score decomposition，再对独立的 $i$ 用 LLN/CLT。$N$ 个 nuisance effects 随样本一起增加，却因 $M_i\mathbf1_i=0$ 不进入 slope score；这正是 linear FE 的特殊性，不能外推到所有 nonlinear FE models。
+
+完整的三步极限推导是
+$$
+\sqrt N(\hat\beta_{fe}-\beta)=
+\left(N^{-1}\sum_i\dot X_i'\dot X_i\right)^{-1}
+\left(N^{-1/2}\sum_i\dot X_i'\varepsilon_i\right).
+$$
+第一括号由 cluster LLN 收敛到 $Q_T$；第二括号的每一项以“一个人”为一个随机向量，由 cluster CLT 收敛到 $N(0,\Omega_T)$；最后用 Slutsky。这里不需要 $T$ 大，反而把 $T$ 固定在每个 cluster vector 内。
+
+## 非平衡面板的渐近分布（Asymptotic Distribution for Unbalanced Panels）
+
+令 selection vector $s_i$ 指示 observed periods，$S_i=\operatorname{diag}(s_i)$，$M_i=S_i-s_i(s_i's_i)^{-1}s_i'$。未观测 rows 置零后，FE algebra 不变。关键条件升级为 $E(\varepsilon_{it}\mid X_i,s_i)=0$：selection 可依赖 $X_i$，但给定 $(X_i,s_i)$ 后不能改变 error mean。
+
+由 iterated expectations，$E(\dot X_i'\varepsilon_i)=E[\dot X_i'E(\varepsilon_i\mid X_i,s_i)]=0$，再按 cluster 使用 LLN/CLT。因此“软件能处理 unbalanced panel”不等于 selection automatically ignorable；一致性仍依赖 missingness 的条件均值限制。
+
+## 异方差稳健协方差估计（Heteroskedasticity-Robust Covariance Matrix Estimation）
+
+若 serially uncorrelated 但异方差，定义
+
+::: {#hansen-eq-17-55}
+$$E(\varepsilon_{it}^2\mid X_i)=\sigma_{it}^2,\tag{17.55}$$
+:::
+
+则 target covariance 是
+
+::: {#hansen-eq-17-56}
+$$
+V_{fe}=(\dot X'\dot X)^{-1}
+\left(\sum_{i,t}\dot X_{it}\dot X_{it}'\sigma_{it}^2\right)
+(\dot X'\dot X)^{-1}.
+\tag{17.56}
+$$
+:::
+
+naive White estimator 用 $\hat\varepsilon_{it}^2$，但 fixed $T$ 下
+
+::: {#hansen-eq-17-57}
+$$
+E(\hat\varepsilon_{it}^2\mid X_i)=
+\frac{T-2}{T}\sigma_{it}^2+\frac1T\bar\sigma_i^2.
+\tag{17.57}
+$$
+:::
+
+估计 individual means 造成 $O(T^{-1})$ bias，不会随 $N$ 消失。Stock–Watson correction 是
+
+::: {#hansen-eq-17-58}
+$$
+\widetilde V_{fe}=\frac{T-1}{T-2}\widehat V_{fe}-\frac1{T-1}\widehat B_{fe},
+\tag{17.58}
+$$
+:::
+
+其中
+
+::: {#hansen-eq-17-59}
+$$
+\widehat B_{fe}=(\dot X'\dot X)^{-1}
+\left(\sum_i\dot X_i'\dot X_i\hat\sigma_i^2\right)(\dot X'\dot X)^{-1},
+\quad \hat\sigma_i^2=\frac1{T-1}\sum_t\hat\varepsilon_{it}^2.
+\tag{17.59}
+$$
+:::
+
+实践中直接 individual-cluster 通常更安全，因为它还允许 serial correlation；“robust”选项的实际含义需查软件文档。
+
+## 异方差稳健估计：非平衡情形（Heteroskedasticity-Robust Estimation – Unbalanced Case）
+
+unbalanced correction 为
+
+::: {#hansen-eq-17-60}
+$$
+\widetilde V_{fe}=(\dot X'\dot X)^{-1}\widetilde\Omega_{fe}(\dot X'\dot X)^{-1},
+\quad
+\widetilde\Omega_{fe}=\sum_{i,t}\dot X_{it}\dot X_{it}'
+\left[\frac{T_i\hat\varepsilon_{it}^2-\hat\sigma_i^2}{T_i-2}1\{T_i>2\}
++\frac{T_i\hat\varepsilon_{it}^2}{T_i-1}1\{T_i=2\}\right].
+\tag{17.60}
+$$
+:::
+
+其 unbiasedness 使用
+
+::: {#hansen-eq-17-61}
+$$E(\hat\varepsilon_{it}^2\mid X_i)=\frac{T_i-2}{T_i}\sigma_{it}^2+\frac1{T_i}\bar\sigma_i^2,\tag{17.61}$$
+:::
+
+::: {#hansen-eq-17-62}
+$$E(\hat\sigma_i^2\mid X_i)=\bar\sigma_i^2.\tag{17.62}$$
+:::
+
+$T_i=2$ 必须单列，因为 $T_i-2=0$；这也展示为何手工机械替换 $T$ 为 $T_i$ 会出错。
+
+## 随机效应与固定效应的 Hausman 检验（Hausman Test for Random vs Fixed Effects）
+
+$H=(\hat\beta_{fe}-\hat\beta_{re})'[\widehat V_{fe}-\widehat V_{re}]^{-1}(\hat\beta_{fe}-\hat\beta_{re})$，经典条件下用 $\chi_k^2$。time-invariant coefficients 不在 FE 中，检验只能比较共同 slopes。它是 RE specification diagnostic，不应作为 pretest selector：先检验再随机选择 estimator 会产生 pretest bias，且 robust covariance 下简单 variance-difference identity 未必正定。
+
+## 随机效应还是固定效应？（Random Effects or Fixed Effects?）
+
+差别在是否可信 [式 (17.8)](#hansen-eq-17-8)，不是 $u_i$ 被称作 fixed 还是 random。observational choice variables 往往与 ability/productivity 等 $u_i$ 相关，所以现代线性应用通常优先 FE robustness；RE 可在明确的 random assignment/design 或需要 time-invariant slopes 且有充分外生性论证时使用。Hausman 不拒绝不是 RE assumption 的证明。
+
+## 时间趋势（Time Trends）
+
+common linear trend 可把 $t$ 放入 $X_{it}$ 后做 FE；individual-specific trends 则加入 $i\times t$ interactions，再用 FWL partial out 每个个体的 intercept/trend。后者只用相对个体 trend 的 deviations 识别，可能大幅削弱 treatment variation。趋势 specification 应来自 counterfactual dynamics，而不是只为提高 fit。
+
+## 双向误差成分（Two-Way Error Components）
+
+two-way model 是
+
+::: {#hansen-eq-17-63}
+$$Y_{it}=X_{it}'\beta+v_t+u_i+\varepsilon_{it}.\tag{17.63}$$
+:::
+
+balanced RE error covariance 为
+
+::: {#hansen-eq-17-64}
+$$
+\Omega=(I_T\otimes\mathbf1_N\mathbf1_N')\sigma_v^2
++(\mathbf1_T\mathbf1_T'\otimes I_N)\sigma_u^2+I_n\sigma_\varepsilon^2.
+\tag{17.64}
+$$
+:::
+
+balanced two-way demeaning 是
+
+::: {#hansen-eq-17-65}
+$$\ddot Y_{it}=Y_{it}-\bar Y_i-\widetilde Y_t+\bar Y,\tag{17.65}$$
+:::
+
+得到
+
+::: {#hansen-eq-17-66}
+$$\ddot Y_{it}=\ddot X_{it}'\beta+\ddot\varepsilon_{it}.\tag{17.66}$$
+:::
+
+unbalanced 时简单 double demeaning 不再精确，通常吸收 individual FE 并加入 time dummies：
+
+::: {#hansen-eq-17-67}
+$$Y_{it}=X_{it}'\beta+\tau_t'v+u_i+\varepsilon_{it}.\tag{17.67}$$
+:::
+
+two-way FE 消掉 time-invariant variables 与所有 common time-series variables；后者与 $v_t$ 共线。若 treatment 只按 time 变化、对所有 units 相同，则无法与 time FE 分开。
+
+balanced panel 中 [式 (17.65)](#hansen-eq-17-65) 可直接验证：减 $\bar Y_i$ 去掉 $u_i$，减 $\widetilde Y_t$ 去掉 $v_t$，两次都减了 grand mean，所以再加回 $\bar Y$。unbalanced panel 下 individual/time means 的权重不再正交，不能直接套这条四项公式；absorbing algorithm 实际上迭代 partial out 两组 dummies 直到收敛。
+
+time fixed effects 控制同一期所有 units 共同的 shock，却不自动解决同一地点的 differential trends，也不允许估计纯 aggregate regressor 的 coefficient。研究设计中要先画出 treatment variation 在双向 residualization 后还剩什么，而不是看到“unit + year FE”就默认识别充分。
+
+## 工具变量（Instrumental Variables）
+
+若 $X_{it}$ 与 $\varepsilon_{it}$ 相关，FE 仍不一致。结构式为
+
+::: {#hansen-eq-17-68}
+$$Y_{it}=X_{it}'\beta+u_i+\varepsilon_{it},\tag{17.68}$$
+:::
+
+dummy form 为
+
+::: {#hansen-eq-17-69}
+$$Y=X\beta+Du+\varepsilon.\tag{17.69}$$
+:::
+
+把 $D$ 同时作为 included regressors/instruments，由 IV-FWL 得 FE-2SLS 等于对 $(\dot Y,\dot X,\dot Z)$ 做 2SLS。所有 variables，包括 instruments，必须用同一 within operator。two-way model 还要把 time dummies 同时列入 equation 与 instrument set。
+
+可复核的实现分四步：先按 estimation sample 计算 $\dot Y,\dot X,\dot Z$；再在 transformed data 上估 first stage 并检查 excluded $\dot Z$ 的 cluster-robust relevance；第三步做 2SLS；最后用个体 score 构造 cluster covariance。若先在不同缺失样本分别 demean $X$ 和 $Z$，各变量的个体均值不对应同一 rows，FWL 等价会被破坏。
+
+工具变量只需对 idiosyncratic error 外生，因为 within 已消去 $u_i$；但若 instrument 也含 time-invariant component，它同样被消去。所谓“面板带来更多 instruments”只有在工具随时间且其 within changes relevant 时才成立。
+
+## 工具变量下的识别（Identification with Instrumental Variables）
+
+reduced form after within 是 $\dot X_{it}=\Gamma\dot Z_{it}+\dot\zeta_{it}$。识别要求
+
+::: {#hansen-eq-17-70}
+$$E(\dot Z_i'\dot Z_i)>0,\tag{17.70}$$
+:::
+
+以及
+
+::: {#hansen-eq-17-71}
+$$\operatorname{rank}\{E(\dot Z_i'\dot X_i)\}=k.\tag{17.71}$$
+:::
+
+因此 instrument 的 between correlation 不算 relevance；必须能预测 within changes。first-stage F statistic 应来自同一 FE reduced form 并按 individual cluster。time-invariant excluded instrument 的 within variation 为零，不能识别 ordinary FE slope。
+
+## 固定效应 2SLS 的渐近分布（Asymptotic Distribution of Fixed Effects 2SLS Estimator）
+
+在 clusters i.i.d.、$Z$ 对 $\varepsilon$ strict exogenous、rank 与 moments 条件下，$\sqrt N(\hat\beta_{2sls}-\beta)$ asymptotically normal，sandwich 使用 $\Omega_{Z\varepsilon}=E(\dot Z_i'\varepsilon_i\varepsilon_i'\dot Z_i)$。cluster-robust sample analog 必须保留整个 $\hat\varepsilon_i\hat\varepsilon_i'$，不能只放 diagonal。unbalanced 时还需 $E(\varepsilon_{it}\mid Z_i,s_i)=0$。
+
+## 线性 GMM（Linear GMM）
+
+FE-IV moments 为 $E[\dot Z_i'(\dot Y_i-\dot X_i\beta)]=0$。cluster weight estimator 是
+
+::: {#hansen-eq-17-72}
+$$\widehat W=\frac1N\sum_i\dot Z_i'\hat\varepsilon_i\hat\varepsilon_i'\dot Z_i,\tag{17.72}$$
+:::
+
+two-step estimator 为
+
+::: {#hansen-eq-17-73}
+$$
+\hat\beta_{gmm}=(\dot X'\dot Z\widehat W^{-1}\dot Z'\dot X)^{-1}
+\dot X'\dot Z\widehat W^{-1}\dot Z'\dot Y.
+\tag{17.73}
+$$
+:::
+
+weight efficiency 以 moment validity 为前提；many/weak instruments 不能靠最优 weight 修复。
+
+## 含时间不变回归量的估计（Estimation with Time-Invariant Regressors）
+
+考虑
+
+::: {#hansen-eq-17-74}
+$$Y=X\beta+Z\gamma+u+\varepsilon,\tag{17.74}$$
+:::
+
+$X_{it}$ time-varying、$Z_i$ time-invariant。维护
+
+::: {#hansen-eq-17-75}
+$$E(X_{is}\varepsilon_{it})=0,\tag{17.75}$$
+:::
+
+::: {#hansen-eq-17-76}
+$$E(Z_i\varepsilon_{it})=0,\tag{17.76}$$
+:::
+
+并额外假设
+
+::: {#hansen-eq-17-77}
+$$E(Z_iu_i)=0.\tag{17.77}$$
+:::
+
+用 $(\dot X,Z)$ 作 instruments，sample moments 为
+
+::: {#hansen-eq-17-78}
+$$\dot X'(Y-X\beta-Z\gamma)=0,\tag{17.78}$$
+:::
+
+::: {#hansen-eq-17-79}
+$$Z'(Y-X\beta-Z\gamma)=0.\tag{17.79}$$
+:::
+
+第一式给 $\hat\beta_{fe}$，第二式等于用 $Z_i$ 回归 estimated $\hat u_i$。识别 time-invariant coefficient 付出的正是强假设 [式 (17.77)](#hansen-eq-17-77)；它不能由 within data 检验出来。
+
+## Hausman–Taylor 模型（Hausman-Taylor Model）
+
+HT 将 regressors 分成 time-varying/time-invariant 且对 $u_i$ exogenous/endogenous 四组：
+
+::: {#hansen-eq-17-80}
+$$Y=X_1\beta_1+X_2\beta_2+Z_1\gamma_1+Z_2\gamma_2+u+\varepsilon.\tag{17.80}$$
+:::
+
+instruments 为 $(\dot X_1,\dot X_2,\bar X_1,Z_1)$；用 exogenous time-varying $X_1$ 的 between means 工具化 endogenous time-invariant $Z_2$。order condition 是 $k_1\ge\ell_2$，仍须 rank/relevance。所有 regressors 还必须对 $\varepsilon_{it}$ strict exogenous。HT 使 time-invariant effects 可估，却把结论转移到难验证的组别分类；应明确逐变量为何属于四组，并报告 weak-instrument diagnostics 与 cluster SE。
+
+## Jackknife 协方差估计（Jackknife Covariance Matrix Estimation）
+
+delete-cluster jackknife 每次删除一整个 individual history，计算 $\hat\beta_{(-i)}$，再用其 dispersion 估 variance。删除单行会破坏依赖结构，是错误 resampling unit。jackknife 适合 nonlinear function $r(\hat\beta)$ 且免手推 delta gradient，但需 $N$ 次重估，large micro panels 计算昂贵；high-leverage clusters 还应单独诊断。
+
+## 面板 Bootstrap（Panel Bootstrap）
+
+pairs cluster bootstrap 从 $N$ 个 histories $(Y_i,X_i)$ 有放回抽 $N$ 个，保留每条 history 内的 time dependence/unbalanced pattern。每次重新做全部 transformation、lag construction、estimation 和 selection。percentile-$t$/BCa 可用于 intervals；若有 few clusters、cross-sectional dependence 或 common aggregate shocks，简单 individual bootstrap 的理论基础不足。
+
+## 动态面板模型（Dynamic Panel Models）
+
+workhorse 是
+
+::: {#hansen-eq-17-81}
+$$
+Y_{it}=\alpha_1Y_{i,t-1}+\cdots+\alpha_pY_{i,t-p}
++X_{it}'\beta+u_i+\varepsilon_{it}.
+\tag{17.81}
+$$
+:::
+
+AR(1) 为
+
+::: {#hansen-eq-17-82}
+$$Y_{it}=\alpha Y_{i,t-1}+u_i+\varepsilon_{it}.\tag{17.82}$$
+:::
+
+$|\alpha|<1$ 且 stationary initial condition 下
+
+::: {#hansen-eq-17-83}
+$$
+Y_{it}=\frac{u_i}{1-\alpha}+\sum_{j=0}^{\infty}\alpha^j\varepsilon_{i,t-j}.
+\tag{17.83}
+$$
+:::
+
+$u_i/(1-\alpha)$ 只移动 individual mean，conditional variance 是 $\sigma_\varepsilon^2/(1-\alpha^2)$。time effects 可防 common trend 被误认为 persistence。
+
+## 固定效应估计的偏误（The Bias of Fixed Effects Estimation）
+
+within 会使 $\dot Y_{i,t-1}$ 与 $\dot\varepsilon_{it}$ 相关。$T=3$ 时 FE 等于单一 difference equation
+
+::: {#hansen-eq-17-84}
+$$\Delta Y_{i3}=\alpha\Delta Y_{i2}+\Delta\varepsilon_{i3}.\tag{17.84}$$
+:::
+
+因为 $\Delta Y_{i2}$ 含 $+\varepsilon_{i2}$，$\Delta\varepsilon_{i3}$ 含 $-\varepsilon_{i2}$，covariance 为 $-\sigma_\varepsilon^2$。故
+
+::: {#hansen-eq-17-85}
+$$\operatorname*{plim}_{N\to\infty}(\hat\alpha_{fe}-\alpha)=-\frac{1+\alpha}{2}.\tag{17.85}$$
+:::
+
+一般 $T$ 的 Nickell bias 是
+
+::: {#hansen-eq-17-86}
+$$
+\operatorname*{plim}_{N\to\infty}(\hat\alpha_{fe}-\alpha)=
+\frac{1+\alpha}
+{\dfrac{2\alpha}{1-\alpha}-\dfrac{T-1}{1-\alpha^{T-1}}}.
+\tag{17.86}
+$$
+:::
+
+它是 $O(T^{-1})$，固定 $T$ 时不会随 $N$ 消失；high persistence 下即使 $T=30$ 也可实质很大。cluster SE 只描述围绕错误 probability limit 的波动，不能修复 Nickell bias。
+
+式 (17.85) 的四项 covariance 展开体现了偏误来源：$E(Y_{i2}\varepsilon_{i3})=E(Y_{i1}\varepsilon_{i3})=E(Y_{i1}\varepsilon_{i2})=0$，唯有 $Y_{i2}$ 本身含 $\varepsilon_{i2}$，所以 $-E(Y_{i2}\varepsilon_{i2})=-\sigma_\varepsilon^2$ 留下。随着 $N$ 增加，这个非零 population covariance 被估得更精确，偏误不会被“更多企业”平均掉。
+
+这也说明不能用“加入 lag 后 residual serial correlation 变小”来为 FE 辩护：内生性由 transformation 的代数结构产生。可选方案是 valid internal instruments、analytical/split-panel bias correction，或在 $T$ 真正足够大时报告 bias sensitivity；本章重点采用前者。
+
+## Anderson–Hsiao 估计量（Anderson-Hsiao Estimator）
+
+先差分：
+
+::: {#hansen-eq-17-87}
+$$
+\Delta Y_{it}=\sum_{j=1}^p\alpha_j\Delta Y_{i,t-j}
++\Delta X_{it}'\beta+\Delta\varepsilon_{it}.
+\tag{17.87}
+$$
+:::
+
+$Y_{i,t-2}$ 与 endogenous $\Delta Y_{i,t-1}$ relevant，但在 serially uncorrelated $\varepsilon$ 下
+
+::: {#hansen-eq-17-88}
+$$E(Y_{i,t-2}\Delta\varepsilon_{it})=0.\tag{17.88}$$
+:::
+
+于是用 deeper levels 作 IV。若真实 dynamics 漏阶，instrument 会与 equation error 相关；若 $\alpha$ 接近 1，level lag 对 change 的预测弱。validity 与 relevance 都要诊断。
+
+## Arellano–Bond 估计量（Arellano-Bond Estimator）
+
+AB 把不同 periods 的可用 lag instruments 排成 block-diagonal $Z_i$：
+
+::: {#hansen-eq-17-89}
+$$
+Z_i=\operatorname{diag}
+\bigl([Y_{i1},\ldots,Y_{ip},\Delta X_{i,p+2}'],\ldots,
+[Y_{i1},\ldots,Y_{i,T-2},\Delta X_{iT}']\bigr).
+\tag{17.89}
+$$
+:::
+
+moments 是
+
+::: {#hansen-eq-17-90}
+$$E[Z_i'(\Delta Y_i-\Delta X_i\theta)]=0.\tag{17.90}$$
+:::
+
+homoskedastic one-step weight 用 $H=D_iD_i'$：
+
+::: {#hansen-eq-17-91}
+$$
+\hat\theta_1=(\Delta X'Z\widehat\Omega_1^{-1}Z'\Delta X)^{-1}
+\Delta X'Z\widehat\Omega_1^{-1}Z'\Delta Y.
+\tag{17.91}
+$$
+:::
+
+classical variance 是
+
+::: {#hansen-eq-17-92}
+$$\widehat V_1^0=(\Delta X'Z\widehat\Omega_1^{-1}Z'\Delta X)^{-1}\hat\sigma_\varepsilon^2,\tag{17.92}$$
+:::
+
+robust sandwich 为
+
+::: {#hansen-eq-17-93}
+$$
+\widehat V_1=A_1^{-1}
+(\Delta X'Z\widehat\Omega_1^{-1}Z'\widehat\Omega_2Z\widehat\Omega_1^{-1}Z'\Delta X)
+A_1^{-1},
+\quad A_1=\Delta X'Z\widehat\Omega_1^{-1}Z'\Delta X.
+\tag{17.93}
+$$
+:::
+
+two-step estimator 为
+
+::: {#hansen-eq-17-94}
+$$
+\hat\theta_2=(\Delta X'Z\widehat\Omega_2^{-1}Z'\Delta X)^{-1}
+\Delta X'Z\widehat\Omega_2^{-1}Z'\Delta Y,
+\tag{17.94}
+$$
+:::
+
+其 robust variance 是
+
+::: {#hansen-eq-17-95}
+$$
+\widehat V_2=A_2^{-1}
+(\Delta X'Z\widehat\Omega_2^{-1}Z'\widehat\Omega_3Z\widehat\Omega_2^{-1}Z'\Delta X)
+A_2^{-1},
+\tag{17.95}
+$$
+:::
+
+asymptotically 简化为
+
+::: {#hansen-eq-17-96}
+$$\widetilde V_2=(\Delta X'Z\widehat\Omega_2^{-1}Z'\Delta X)^{-1}.\tag{17.96}$$
+:::
+
+two-step finite-sample SE 通常需 Windmeijer correction。不要让 instruments 随 $T$ 二次膨胀；限制 lag window/collapse，并报告 instrument count、AR(1)/AR(2) residual tests 与 Hansen/Sargan diagnostics。
+
+AB moment validity 可按时间逐条核对。差分方程 $t$ 的 error 是 $\varepsilon_{it}-\varepsilon_{i,t-1}$；因此 $Y_{i,t-1}$ 通常含 $\varepsilon_{i,t-1}$ 而无效，$Y_{i,t-2}$ 及更深 lags 在 serially uncorrelated idiosyncratic errors 下才有效。差分 residual 出现一阶相关是构造所致，真正否定 levels errors 无二阶相关假设的是差分 residual 的 AR(2) test。
+
+one-step 与 two-step 的 point estimates 不同源于 weight matrix，不是 moment conditions 不同。two-step 的 asymptotic efficiency 可能被有限样本 weight estimation noise 抵消；Windmeijer correction 修正标准误而非 coefficient bias。若两者、不同 lag windows 或 collapsed/un-collapsed instruments 差异巨大，应把 weak/many-instrument instability 作为核心结果。
+
+## 弱工具变量（Weak Instruments）
+
+AH first stage $\Delta Y_{i,t-1}=\gamma Y_{i,t-2}+v_{it}$ 的 coefficient 为
+
+::: {#hansen-eq-17-97}
+$$
+\gamma=(\alpha-1)
+\frac{k}{k+\sigma_u^2/\sigma_\varepsilon^2},
+\qquad k=\frac{1-\alpha}{1+\alpha}.
+\tag{17.97}
+$$
+:::
+
+$\alpha\to1$ 或 $\sigma_u^2/\sigma_\varepsilon^2$ 大时 $\gamma\to0$。这正是本科 weak IV：moment 数再多也不等于 information 多，反而可能产生 many weak instruments、biased two-step estimates 和过于“完美”的 Hansen p-value。
+
+## 含前定回归量的动态面板（Dynamic Panels with Predetermined Regressors）
+
+predetermined 定义为
+
+::: {#hansen-eq-17-98}
+$$E(X_{i,t-s}\varepsilon_{it})=0\quad(s\ge0).\tag{17.98}$$
+:::
+
+future $X$ 可响应当前 error，故 $\Delta X_{it}$ 与 $\Delta\varepsilon_{it}$ 相关；用 $X_{i,t-1},X_{i,t-2},\ldots$ 作 instruments。instrument matrix 改为
+
+::: {#hansen-eq-17-99}
+$$
+Z_i=\operatorname{diag}
+\bigl([Y_{i1{:}p},X_{i1{:}p+1}'],\ldots,
+[Y_{i1{:}T-2},X_{i1{:}T-1}']\bigr).
+\tag{17.99}
+$$
+:::
+
+若当期 $X_{it}$ endogenous，则还要从 $t-2$ 更深 lags 开始。更弱的 exogeneity 带来更弱 relevance，persistent $X$ 尤其危险。每个 regressor 的 strict-exogenous/predetermined/endogenous 分类必须逐项说明。
+
+## Blundell–Bond 估计量（Blundell-Bond Estimator）
+
+BB 为 levels equation 加入 difference instruments。关键条件是
+
+::: {#hansen-eq-17-100}
+$$E(\Delta Y_{i,t-1}u_i)=0,\tag{17.100}$$
+:::
+
+其充分 initial-condition restriction 为
+
+::: {#hansen-eq-17-101}
+$$E\!\left[\left(Y_{i1}-\frac{u_i}{1-\alpha}\right)u_i\right]=0.\tag{17.101}$$
+:::
+
+对 regressors 相应要求
+
+::: {#hansen-eq-17-102}
+$$E(\Delta X_{it}u_i)=0.\tag{17.102}$$
+:::
+
+levels moments 为
+
+::: {#hansen-eq-17-103}
+$$E[\Delta Y_{i,t-1}(Y_{it}-\text{linear predictor})]=0,\tag{17.103}$$
+:::
+
+::: {#hansen-eq-17-104}
+$$E[\Delta X_{it}(Y_{it}-\text{linear predictor})]=0,\tag{17.104}$$
+:::
+
+矩阵写成
+
+::: {#hansen-eq-17-105}
+$$E[Z_{2i}'(Y_i-X_i\theta)]=0.\tag{17.105}$$
+:::
+
+将 difference 与 levels systems 堆叠，one-step 为
+
+::: {#hansen-eq-17-106}
+$$\hat\theta_1=(\mathcal X'\mathcal Z\widehat\Omega_1^{-1}\mathcal Z'\mathcal X)^{-1}
+\mathcal X'\mathcal Z\widehat\Omega_1^{-1}\mathcal Z'\mathcal Y,\tag{17.106}$$
+:::
+
+robust covariance：
+
+::: {#hansen-eq-17-107}
+$$\widehat V_1=A_1^{-1}(\mathcal X'\mathcal Z\widehat\Omega_1^{-1}\mathcal Z'\widehat\Omega_2
+\mathcal Z\widehat\Omega_1^{-1}\mathcal Z'\mathcal X)A_1^{-1},\tag{17.107}$$
+:::
+
+two-step：
+
+::: {#hansen-eq-17-108}
+$$\hat\theta_2=(\mathcal X'\mathcal Z\widehat\Omega_2^{-1}\mathcal Z'\mathcal X)^{-1}
+\mathcal X'\mathcal Z\widehat\Omega_2^{-1}\mathcal Z'\mathcal Y,\tag{17.108}$$
+:::
+
+及
+
+::: {#hansen-eq-17-109}
+$$\widehat V_2=A_2^{-1}(\mathcal X'\mathcal Z\widehat\Omega_2^{-1}\mathcal Z'\widehat\Omega_3
+\mathcal Z\widehat\Omega_2^{-1}\mathcal Z'\mathcal X)A_2^{-1},\tag{17.109}$$
+:::
+
+asymptotic form 为
+
+::: {#hansen-eq-17-110}
+$$\widetilde V_2=(\mathcal X'\mathcal Z\widehat\Omega_2^{-1}\mathcal Z'\mathcal X)^{-1}.\tag{17.110}$$
+:::
+
+BB 缓解 persistent-series 下 difference-GMM weak IV，却依赖额外 stationarity/initial-condition moments。system GMM 不是无条件优于 AB；应检验 difference-in-Hansen subsets、控制 instrument proliferation，并比较 AB/BB 与不同 lag windows。
+
+理解新增 levels moment 的方法是比较两个相关性。$\Delta Y_{i,t-1}$ 与 level regressor $Y_{i,t-1}$ 通常强相关，改善 relevance；但要成为 instrument，它还必须与 composite level error $u_i+\varepsilon_{it}$ 正交。[式 (17.100)](#hansen-eq-17-100) 正是控制前一部分，而 $\varepsilon$ 的 serial restriction 控制后一部分。BB 的效率改善来自一条更强、不是免费的识别假设。
+
+实证审计可按嵌套顺序：先报告 AB difference GMM；再加 BB levels moments；用 difference-in-Hansen 检查新增 subset；分别限制 level/difference instrument lags；确认 instrument count 显著小于 $N$；最后比较估计的 persistence 是否落在 pooled OLS 与 downward-biased FE 的合理 bracket 内。这个 bracket 只是诊断，不是形式检验。
+
+## 前向正交变换（Forward Orthogonal Transformation）
+
+forward orthogonal deviation（FOD）用未来均值去除 effect：
+
+::: {#hansen-eq-17-111}
+$$
+Y_{it}^*=c_{it}\left(Y_{it}-\frac1{T_i-t}\sum_{s=t+1}^{T_i}Y_{is}\right),
+\qquad c_{it}^2=\frac{T_i-t}{T_i-t+1}.
+\tag{17.111}
+$$
+:::
+
+$A_i\mathbf1_i=0$、$A_i'A_i=M_i$、$A_iA_i'=I$，所以 transformed model 是
+
+::: {#hansen-eq-17-112}
+$$
+Y_{it}^*=\sum_{j=1}^p\alpha_jY_{i,t-j}^*+X_{it}^{*'}\beta+\varepsilon_{it}^*.
+\tag{17.112}
+$$
+:::
+
+i.i.d. level errors 经 FOD 仍 spherical，不像 first differences 产生 MA(1)。valid moments 为
+
+::: {#hansen-eq-17-113}
+$$E[Z_i'(Y_i^*-X_i^*\theta)]=0.\tag{17.113}$$
+:::
+
+FOD 在 gaps/unbalanced data 中有保存 observations 的潜力，但 instruments 的 timing 必须与“使用未来值变换 error”一致，不能沿用未经核对的差分代码。
+
+## 实证例证（Empirical Illustration）
+
+原书 investment model 用 BB two-step GMM、lags 2–6、cluster-robust/Windmeijer SE 与 time effects。结果显示 investment 有 moderate persistence，$Q_{t-1}$ 正、debt lag 负，cash-flow first lag 正而 second lag 负，更像 change effect。解读必须同时报告 instrument range/count、regressor timing classification、AR residual diagnostics、overidentification test 与 one-/two-step sensitivity；只报系数表不足以判断 GMM 是否可信。
+
+## 习题阅读指南（Exercises）
+
+17.1–17.14 是代数与识别练习。解题时应先写 operator dimensions，再用 $M_i\mathbf1_i=0$、idempotence 与 FWL；证明 robust-covariance bias 时必须展开 $\hat\varepsilon_{it}=\varepsilon_{it}-\bar\varepsilon_i$ 的 cross terms。尤其 17.13 应先生成 $X_{it}^2$ 再 within，而非平方 $\dot X_{it}$。
+
+17.15–17.18 是 AB/BB replication。原书劳动需求式为
+
+::: {#hansen-eq-17-114}
+$$
+N_{it}=0.7075N_{i,t-1}-0.7088W_{it}+0.5000W_{i,t-1}
++0.4660K_{it}-0.2151K_{i,t-1}+u_i+v_t+\varepsilon_{it}.
+\tag{17.114}
+$$
+:::
+
+复现应固定 sample、year effects 和 instrument window，依次比较 strict exogenous 与 predetermined、AB 与 BB、one-step 与 two-step、classical 与 clustered/Windmeijer SE。每次只改一个维度并解释 moment set 如何变化，不能把多组设置混成一次“稳健性检验”。
+
+::: {.callout-important title="章末自检"}
+1. 能否用 $M_i\mathbf1_i=0$ 同时解释 within、dummy regression 与 GLS-difference 的关系？
+2. 能否区分 $X_{it}$ 与 $u_i$ 相关、与 $\varepsilon_{it}$ 相关，以及 predetermined 三类内生性？
+3. 为什么 FE 只能识别 within effect，且不能识别 time-invariant regressor？
+4. 为什么 FE score 的独立单位是 $i$，normalization 与 cluster 数是 $\sqrt N$ 而非把 $NT$ 当 i.i.d.？
+5. 能否从共享的 $\varepsilon_{i,t-1}$ 推出 Nickell bias 的方向？
+6. AB difference moments 与 BB levels moments 各依赖哪些 orthogonality/initial-condition restrictions？
+7. 实证表是否报告了 lag window、instrument count、AR(2)、Hansen/Sargan、one-/two-step 和 Windmeijer correction？
+:::

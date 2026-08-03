@@ -33,6 +33,7 @@ book:
         - ch14.qmd
         - ch15.qmd
         - ch16.qmd
+        - ch17.qmd
   appendices:
     - appendix-a.qmd
     - appendix-b.qmd
