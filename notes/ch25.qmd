@@ -1,0 +1,241 @@
+---
+title: "二元选择模型"
+subtitle: "响应概率、Probit/Logit、边际效应与非线性面板"
+hansen-chapter: "Chapter 25"
+book-pages: "801–818"
+pdf-pages: "821–838"
+status: "完整初稿"
+---
+
+::: {.book-map}
+**原书位置与本章路线**　对应 Hansen Chapter 25（书内 pp. 801–818；PDF pp. 821–838）。25.1–25.4从二元条件分布、LPM 与单指标模型进入潜变量解释；25.5–25.8推导 likelihood、伪真值、渐近分布和稳健方差；25.9–25.13讨论边际效应、实证、半参数、IV probit 与面板；25.14–25.15补证明和习题。
+:::
+
+::: {.bridge}
+**本科桥接**　二元因变量并未脱离回归框架，因为 $E(Y\mid X=x)=P(Y=1\mid X=x)$。LPM 直接线性逼近这个概率，probit/logit 则先建立线性指数，再用 CDF 映到 $[0,1]$。非线性模型的原始系数不是概率变化，经济解释应落到预测概率、离散变化和平均边际效应。
+:::
+
+## 引言（Introduction）
+
+$Y\in\{0,1\}$ 时，研究对象是响应概率 $P(x)=P(Y=1\mid X=x)$ 及其对连续或离散变量的变化。购买、进入市场、申请获批和劳动参与都属此类。二元支持使条件均值完全描述条件分布，但也使误差必然异方差，且概率预测必须位于 $[0,1]$。
+
+## 二元选择模型（Binary Choice Models）
+
+写 $Y=P(X)+e$、$E(e\mid X)=0$。给定 $X$，误差仅取两值：
+
+::: {#hansen-eq-25-1}
+$$
+e=\begin{cases}
+1-P(X),&\text{概率 }P(X),\\
+-P(X),&\text{概率 }1-P(X).
+\end{cases}
+\tag{25.1}
+$$
+:::
+
+因此
+
+::: {#hansen-eq-25-2}
+$$\operatorname{Var}(e\mid X)=P(X)\{1-P(X)\}.
+\tag{25.2}$$
+:::
+
+这一步可直接核对：$Y=1$ 时 $e=1-P$，$Y=0$ 时 $e=-P$；加权平方和化简为 $P(1-P)$。方差在 $P=1/2$ 最大、接近 0 或 1 时趋零，所以 LPM 永远不能使用同方差标准误。二元散点只落在 0、1 两条线上，应配分箱频率或平滑概率，而非靠普通散点判断形状。
+
+## 响应概率模型（Models for the Response Probability）
+
+LPM 设 $P(x)=x'\beta$，易估、边际效应直接，也便于 FE/IV；缺点是可能给负概率或超过 1，且强制边际效应处处相同。它可作局部或最佳线性近似，但不宜用于远离样本支撑的概率预测。
+
+单指标模型设 $P(x)=G(x'\beta)$，$G$ 为 CDF。Probit 用 $\Phi$，logit 用 $\Lambda(u)=\{1+e^{-u}\}^{-1}$；连续变量边际效应为 $\beta g(x'\beta)$，随 $x$ 变化且在概率尾部趋小。两种 link 经尺度调整形状接近，因此概率和 AME 常相近，原始系数却不宜直接比较。
+
+若简单指数过强，可用 $P(x)=G\{X_K(x)'\beta_K\}$ 的 index series。多项式/样条提供灵活性，CDF 保证边界；相比线性 series，它不会在稀疏尾部制造负概率。选阶仍需偏差—方差权衡和支撑诊断。
+
+## 潜变量解释（Latent Variable Interpretation）
+
+设 $Y^*=X'\beta+e$，观察规则 $Y=1\{Y^*>0\}$。事件 $Y=1$ 等价于
+
+::: {#hansen-eq-25-3}
+$$X'\beta+e>0.
+\tag{25.3}$$
+:::
+
+若 $e$ 的对称 CDF 为 $G$，则 $P(Y=1\mid X=x)=G(x'\beta)$。$Y^*$ 可解释为选择 1 相对选择 0 的效用或利润，但其单位不可观察：若 $e=\sigma\varepsilon$，概率只依赖 $\beta/\sigma$。故误差尺度必须归一化，probit 与 logit 系数分别在各自尺度下识别；系数比和边际效应不受共同尺度影响。
+
+更一般地，$Y^*=m(X)+e$ 给
+
+::: {#hansen-eq-25-4}
+$$P(x)=1-G\{-m(x)\}.
+\tag{25.4}$$
+:::
+
+数据只识别复合函数，若 $G$ 与 $m$ 都未知，二者不能分开。固定 normal link 并让 $m$ 非参数化并不损失概率函数的逼近能力；反之，同时声称识别未知 link 与未知指数形状需要额外限制。
+
+## 似然（Likelihood）
+
+令 $Z=X$ 当 $Y=1$、$Z=-X$ 当 $Y=0$，对称 link 下单观测条件质量函数为
+
+::: {#hansen-eq-25-5}
+$$
+\pi(Y\mid X)=G(X'\beta)^Y\{1-G(X'\beta)\}^{1-Y}=G(Z'\beta).
+\tag{25.5}
+$$
+:::
+
+样本 log likelihood 是 $\ell_n(\beta)=\sum_i\log G(Z_i'\beta)$。定义 $h(u)=d\log G(u)/du$、$H(u)=-d^2\log G(u)/du^2$，score 和负 Hessian 为
+
+::: {#hansen-eq-25-6}
+$$S_n(\beta)=\sum_iZ_ih(Z_i'\beta),
+\tag{25.6}$$
+:::
+
+::: {#hansen-eq-25-7}
+$$H_n(\beta)=\sum_iX_iX_i'H(Z_i'\beta).
+\tag{25.7}$$
+:::
+
+logit 有 $h=1-\Lambda$、$H=\Lambda(1-\Lambda)>0$；probit 有 inverse Mills ratio $h=\lambda=\phi/\Phi$、$H=\lambda(u)\{u+\lambda(u)\}>0$。因此 log likelihood 全局凹；满秩且不存在完全分离时数值最大化较稳定。完全分离可使系数沿某方向发散，软件“未收敛”此时是数据几何问题，不只是初值问题。
+
+从 [式 (25.5)](#hansen-eq-25-5) 到 score 可逐步核对：先对 $\log G(Z_i'\beta)$ 的标量指数求导得到 $h(Z_i'\beta)$，再乘链式法则中的 $Z_i$；二次求导产生 $Z_iZ_i'$，而 $Z_iZ_i'=X_iX_i'$，所以 Hessian 可统一写成 [式 (25.7)](#hansen-eq-25-7)。这一写法避免分别为 $Y=0,1$ 推两套公式，也清楚说明曲率由回归量方向与单观测权重共同决定。
+
+## 伪真值（Pseudo-True Values）
+
+正确规格时存在 $\beta_0$ 使真实 $P(X)=G(X'\beta_0)$；错设时仍定义 KL 意义下最佳近似：
+
+::: {#hansen-eq-25-8}
+$$\beta_0=\arg\max_\beta E\{\log G(Z'\beta)\}.
+\tag{25.8}$$
+:::
+
+唯一性需要总体曲率
+
+::: {#hansen-eq-25-9}
+$$E\{XX'H(Z'\beta_0)\}>0.
+\tag{25.9}$$
+:::
+
+logit 的具体条件为
+
+::: {#hansen-eq-25-10}
+$$Q_{logit}=E[XX'\Lambda(X'\beta_{logit})\{1-\Lambda(X'\beta_{logit})\}]>0,
+\tag{25.10}$$
+:::
+
+probit 为
+
+::: {#hansen-eq-25-11}
+$$Q_{probit}=E\{XX'H_{probit}(Z'\beta_{probit})\}>0.
+\tag{25.11}$$
+:::
+
+伪真 logit/probit 系数依赖所选 link 和函数形式，不能把错设下的 $\beta_0$ 称为同一个结构参数。概率、AME 等功能参数仍可作为近似对象，但推断必须使用错设稳健三明治。
+
+## 渐近分布（Asymptotic Distribution）
+
+MLE 是 M 估计量。一致性由 i.i.d.、可积包络、紧参数空间和 [式 (25.10)](#hansen-eq-25-10)/[式 (25.11)](#hansen-eq-25-11) 给出；正态性再需四阶矩与内点。score 方差对 logit 为
+
+::: {#hansen-eq-25-12}
+$$\Omega_{logit}=E[XX'\{Y-\Lambda(X'\beta_{logit})\}^2],
+\tag{25.12}$$
+:::
+
+对 probit 为
+
+::: {#hansen-eq-25-13}
+$$\Omega_{probit}=E\{XX'\lambda(Z'\beta_{probit})^2\}.
+\tag{25.13}$$
+:::
+
+一般 link 的恒等式是
+
+::: {#hansen-eq-25-14}
+$$
+h(Z'\beta)^2=
+\frac{g(X'\beta)^2\{Y-G(X'\beta)\}^2}
+{G(X'\beta)^2\{1-G(X'\beta)\}^2}.
+\tag{25.14}
+$$
+:::
+
+于是 $\sqrt n(\hat\beta-\beta_0)\Rightarrow N(0,Q^{-1}\Omega Q^{-1})$。只有正确规格时信息矩阵等式成立；probit 进一步有
+
+::: {#hansen-eq-25-15}
+$$\Omega_{probit}=Q_{probit}
+=E\{XX'\lambda(X'\beta_{probit})\lambda(-X'\beta_{probit})\}.
+\tag{25.15}$$
+:::
+
+为什么错设时 $Q$ 与 $\Omega$ 不同？$Q$ 是所选 likelihood 在伪真值附近的平均曲率，$\Omega$ 是真实数据分布下 score 的波动。只有模型给出的 Bernoulli 概率恰等于真实 $P(X)$，条件 score 方差才与负 Hessian 匹配。概率模型哪怕只是轻微函数形式错设，也可能让 inverse-Hessian 标准误失真，而 MLE 对伪真值本身仍可一致。
+
+## 协方差矩阵估计（Covariance Matrix Estimation）
+
+把 $Q,\Omega$ 中的期望换成样本平均和 $\hat\beta$ 即得稳健三明治，参数标准误为 $\sqrt{\widehat V_{jj}/n}$。软件默认 inverse Hessian 通常依赖正确规格；应主动请求 robust/sandwich，聚类资料则把 score 先按组求和。
+
+若模型仅被视作概率近似，使用 inverse Hessian 会把 link 与指数都正确当作事实。稳健方差只能修正标准误，不能修正函数形式偏差；还需画经验频率/灵活基准与拟合概率，检查支撑尾部。
+
+## 边际效应（Marginal Effects）
+
+连续变量且指数线性时 $\delta_j(x)=\beta_jg(x'\beta)$。平均边际效应 AME 为样本各点效应的平均，而“在均值处的边际效应”是把 $X=\bar X$ 代入；二者在非线性模型中不同，虚拟变量均值处甚至不是现实个体。
+
+若含 $x^2$，链式法则给 $\partial P/\partial x=(\beta_1+2\beta_2x)g(\eta)$。离散变量应报告把该变量从 0 改为 1 的概率差，并保持其余变量在每个观测的实际值，再取平均。AME 标准误需 delta method 或 bootstrap，不能把 $\hat\beta_j$ 标准误机械乘一个平均密度。
+
+## 应用（Application）
+
+原书用 19–35 岁男性婚姻概率，控制年龄、教育、族裔和地区。Logit/probit 原始系数尺度不同，但 AME 几乎一致：年龄每增一年约 +4.5 个百分点，黑人约 $-15$ 个百分点，中西部/南部/西部相对东北约 +6 至 +8 个百分点。
+
+样本限制是规格的一部分。若把全年龄样本仍强制年龄线性，年龄 AME 会降至约 1%，因为真实概率在中年趋平、晚年又变化。应以样条或 series 处理年龄，再比较 link，而不是把 link 选择当成主要模型选择。
+
+## 半参数二元选择（Semiparametric Binary Choice）
+
+Manski maximum score 在条件中位数为零下识别 $\beta$ 的方向/尺度，但不识别 $G$，故不能估概率或边际效应；Klein–Spady 以 $e\perp X$ 联合估单指标 $\beta$ 和未知 link。两者都保留 $X'\beta$ 的参数化单指标限制。
+
+若进一步把指数改成未知 $m(X)$，数据仍只识别 $1-G\{-m(X)\}$。因此现代实证若目标是响应概率本身，可直接用灵活的 LPM/index series；半参数 link 并未在完全非参数层面单独识别结构指数。
+
+## IV Probit
+
+潜变量方程含连续内生变量 $Y_2$，第一阶段为 $Y_2=X'\gamma_1+Z'\gamma_2+e_2$。联合正态使 $e_1=\rho e_2+\varepsilon$，从而
+
+::: {#hansen-eq-25-16}
+$$
+Y_1^*=\mu(\theta)+\varepsilon,
+\quad
+\mu(\theta)=X'\beta_1+Y_2\beta_2
++\rho(Y_2-X'\gamma_1-Z'\gamma_2).
+\tag{25.16}
+$$
+:::
+
+似然把 $Y_1\mid Y_2,X,Z$ 的 probit 与 $Y_2\mid X,Z$ 的正态密度相乘。控制函数残差进入潜变量方程，$\rho=0$ 对应内生性检验。识别依赖排除工具与完整联合正态/同方差结构；若这些分布限制可疑，应考虑控制函数稳健扩展或其他结构方法，不能把 `ivprobit` 当作普通 2SLS 的无条件替代。
+
+## 二元面板数据（Binary Panel Data）
+
+模型 $Y_{it}=1\{X_{it}'\beta+u_i+e_{it}>0\}$ 中，差分 $Y$ 无法消掉 $u_i$。随机效应 probit/logit 要求 $u_i$ 与回归量独立（或用 correlated random effects 明确建模相关）；直接加入大量个体虚拟变量在固定 $T$ 下产生 incidental parameter bias。
+
+Logit 的指数 odds 结构允许条件于 $N_i=\sum_tY_{it}$ 消去 $u_i$，形成 conditional FE logit。只有在时间内切换过 $Y$ 的个体贡献 likelihood，时间不变变量也无法识别。Probit 没有对应的充分统计量，故不存在同样的条件 FE probit；软件名称也要核对，不能把 FE logit 误称 FE probit。
+
+以 $T=2$ 为例，$N_i=0$ 或 2 的个体在两个时期结果恒定，条件于总和后其序列概率为 1，不含 $\beta$；只有 $N_i=1$ 时需比较 $(1,0)$ 与 $(0,1)$。两条序列概率之 odds ratio 中共同的 $u_i$ 抵消，只剩 $(X_{i2}-X_{i1})'\beta$。因此丢掉从不或始终选择 1 的个体不是软件随意删样本，而是条件 likelihood 中这些个体对斜率没有信息。
+
+## 技术证明（Technical Proofs*）
+
+Logit 一致性用 $|\log\Lambda(t)|\le\log2+|t|$ 构造一阶矩包络；probit 尾部更薄，需要二阶矩。关键 Mills ratio 界为
+
+::: {#hansen-eq-25-17}
+$$\frac{d}{dt}\log\Phi(t)=\lambda(t)\le1+|t|.
+\tag{25.17}$$
+:::
+
+它进一步给 $|\log\Phi(t)|$ 的二次包络。正态性证明把 score 视为第 22 章 M 估计 score；$H_{logit},H_{probit}$ 有界控制局部 Lipschitz，四阶 $X$ 矩控制导数包络，正定 $Q$ 提供局部识别。
+
+## 习题阅读指南（Exercises）
+
+25.1–25.7 训练重新编码 $Y$、Bernoulli 方差、likelihood/score/Hessian。把 0/1 互换会令斜率与截距变号而拟合的事件概率互补；每步都应从事件定义而不是背公式。
+
+25.8–25.15 处理伪真一阶条件、信息矩阵、AME、IV probit 与面板条件 likelihood。实证题应并列灵活经验概率、LPM、probit/logit 与 series，报告概率范围、AME/离散变化、稳健或聚类标准误，而不是只列带星号的原始系数。
+
+::: {.callout-important title="章末自检"}
+1. 为什么二元回归误差必然满足 [式 (25.2)](#hansen-eq-25-2) 的异方差？
+2. Probit/logit 原始系数为何受潜变量尺度归一化影响，AME 为何更可比？
+3. 正确规格和最佳伪真概率近似分别支持哪一种方差公式？
+4. 连续、平方项和虚拟变量的边际效应应分别如何定义？
+5. IV probit 的识别为何比“有一个排除工具”要求更多？
+6. Conditional FE logit 为何只使用 switchers，为什么没有平行的 FE probit？
+:::
