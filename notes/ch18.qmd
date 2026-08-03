@@ -1,0 +1,187 @@
+---
+title: "双重差分"
+subtitle: "从双重均值差到识别、趋势设定与聚类推断"
+hansen-chapter: "Chapter 18"
+book-pages: "650–664"
+pdf-pages: "670–684"
+status: "完整初稿"
+---
+
+::: {.book-map}
+**原书位置与本章路线**　对应 Hansen Chapter 18（书内 pp. 650–664；PDF pp. 670–684）。18.1–18.3用 Card–Krueger 最低工资例建立 2×2 DiD 回归和 causal identification；18.4–18.5讨论多 units、treatment/control heterogeneity 与警力配置例；18.6–18.8用 unit-specific trends、blue laws 和 abortion–crime replication 展示 specification/code 风险；18.9–18.10处理 clustering、few treated clusters 与习题。
+:::
+
+::: {.bridge}
+**本科桥接**　本科 DiD 常记成“处理组前后差减控制组前后差”。Hansen 把它写成 two-way fixed-effects regression，从而能加入多个 units/periods、controls 与 trends。但回归形式本身不产生因果性：控制组变化必须代表处理组未受政策时的 counterfactual；政策 timing 不能由潜在 outcome shocks 决定；同一时点不能还有只影响处理组的遗漏事件；standard errors 还要在政策变化的聚合层级反映依赖。
+:::
+
+## 引言（Introduction）
+
+difference in differences（DiD）比较 treatment group 与 control group 的 outcome changes。第一重差分去掉 time-invariant group difference，第二重差分去掉 common time shock。这个代数只有在 untreated potential outcome 的变化可由 control group 代表时，才是 policy effect。
+
+Hansen 强调三类条件：conditional mean/trend/interactions 正确；policy conditional exogenous；没有与政策同时发生而遗漏、且 differential affect outcome 的因素。后两类不能靠高 $R^2$ 或显著 $t$ 值证明，必须靠制度叙事、pre-period evidence、placebo 与 alternative controls 共同论证。
+
+## 新泽西最低工资（Minimum Wage in New Jersey）
+
+Card–Krueger 比较 1992 年 New Jersey 最低工资上调前后 fast-food employment，并以最低工资未变的 eastern Pennsylvania 作 control。NJ 平均 employment 从 20.43 到 20.90，变化 $0.47$；PA 从 23.38 到 21.10，变化 $-2.28$；DiD 是 $0.47-(-2.28)=2.75$ employees。
+
+令 $State_i=1$ 表示 NJ，$Time_t=1$ 表示 policy 后，$D_{it}=State_iTime_t$。饱和 2×2 回归为
+
+::: {#hansen-eq-18-1}
+$$
+Y_{it}=\beta_0+\beta_1State_i+\beta_2Time_t+\theta D_{it}+\varepsilon_{it}.
+\tag{18.1}
+$$
+:::
+
+四格条件均值逐一代入：PA-before 为 $\beta_0$，NJ-before 为 $\beta_0+\beta_1$，PA-after 为 $\beta_0+\beta_2$，NJ-after 为 $\beta_0+\beta_1+\beta_2+\theta$。因此 $\theta$ 恰等于双重差分，不是近似。原书估计为
+
+::: {#hansen-eq-18-2}
+$$
+\widehat Y_{it}=23.4-2.9State_i-2.3Time_t+2.75D_{it},
+\tag{18.2}
+$$
+:::
+
+cluster-by-restaurant SE 分别约 $(1.4,1.5,1.2,1.34)$。$\hat\theta>0$ 与简单竞争模型的负 employment effect 不同，但更谨慎的解释是小幅最低工资上调没有显示明显 employment loss；一个样本中的正点估计不自动建立普遍正效应。
+
+[式 (18.1)](#hansen-eq-18-1) 等价于 two-way FE：
+
+::: {#hansen-eq-18-3}
+$$
+Y_{it}=\theta D_{it}+u_i+v_t+\varepsilon_{it}.
+\tag{18.3}
+$$
+:::
+
+在这个 balanced 2-period 样本中 restaurant FE 或 state FE 给同一 $\theta$；原书写成
+
+::: {#hansen-eq-18-4}
+$$
+\widehat Y_{it}=2.75D_{it}-2.3Time_t+\hat u_i.
+\tag{18.4}
+$$
+:::
+
+一般化可加入 covariates：
+
+::: {#hansen-eq-18-5}
+$$
+Y_{it}=\theta D_{it}+X_{it}'\beta+u_i+v_t+\varepsilon_{it}.
+\tag{18.5}
+$$
+:::
+
+controls 应是 pre-treatment/confounder adjustments。若 $X_{it}$ 本身受 treatment 影响，把它加入会控制掉 mediation path 并改变 estimand；“加入控制后 coefficient 稳定”只能作有限诊断。
+
+## 识别（Identification）
+
+对 [式 (18.5)](#hansen-eq-18-5) 做 two-way within，令 $\ddot Z_{it}=(\ddot D_{it},\ddot X_{it}')'$。Hansen 定理 18.1 的 sufficient conditions 是：additive linear outcome model 正确；$E(\ddot Z_{it}\ddot Z_{it}')>0$；$X$ 对所有 periods 的 $\varepsilon$ strict exogenous；给定完整 $X_i$ history 后，$D_{it}$ 与 $\varepsilon_{is}$ 对所有 $t,s$ independent。
+
+证明路线分三步。第一，two-way transformation 消去 $u_i,v_t$，得到 $\ddot Y_{it}=\theta\ddot D_{it}+\ddot X_{it}'\beta+\ddot\varepsilon_{it}$。第二，rank condition 使 projection coefficients unique。第三，exogeneity/conditional independence 使 regression derivative 等于 average causal effect。若只证明 $E(D_{it}\varepsilon_{it})=0$，不足以排除 policy anticipation 或 policy 对过去/未来 shocks 的反馈。
+
+用 potential outcomes 表达 2×2 parallel trends 更直观。设 $G_i=1$ 为 treated，$Post_t=1$ 为后期，则在未处理状态下要求
+
+$$
+E[Y_i(0,after)-Y_i(0,before)\mid G_i=1]
+=E[Y_i(0,after)-Y_i(0,before)\mid G_i=0].
+$$
+
+右侧可观察，左侧 counterfactual 不可观察。DiD 用 control change 替代它。pre-levels 可以不同，关键是 untreated changes；但只有两个 periods 时 parallel trend 不可直接检验。多 pre-period event-study 的“不显著 pre coefficients”也只是诊断，不能证明所有未处理趋势相同。
+
+$D$ 必须定义为真实 treatment，不只是 interaction dummy。若 NJ 同时出台另一项只影响 employment 的政策，它进入 $\varepsilon$ 且与 $D$ 完全共变，$\theta$ 混合两个 effects。政策早已立法可减弱 contemporaneous outcome 决定 adoption 的担忧，但仍需排除 anticipation 与 coincident shocks。
+
+## 多个单位（Multiple Units）
+
+多个 treated/control units 提供检验 homogeneity 的空间。basic model 同时限制：所有 units 共享 $v_t$；所有 treated units 共享 $\theta$。对 $N_2$ 个 treated regions，加入 $N_2-1$ 个 treated-region×post interactions 可检验 treatment-effect equality；少一个是为避免与 common treatment dummy 共线。对 $N_1$ 个 controls 同理加入 $N_1-1$ 个 control-region×post interactions 检查 control changes 是否相同。
+
+heterogeneous treatment effects 不否定 causal framework，但 common-$\theta$ regression 可能只是特定加权平均；应报告 group-specific effects/weights。heterogeneous control changes 更直接威胁 counterfactual，因为不存在唯一 common untreated change。检验不拒绝只是样本证据弱，不能将“接受齐性”写成事实，尤其 subgroup 数少时 power 很低。
+
+在 Card–Krueger regions 中，NJ 三地区 changes 为 $0.7,-0.6,0.7$，PA 两地区为 $-3.8,-1.0$。treatment homogeneity test p≈0.60，control equality p≈0.23。数值差异仍提示应展示 region table，而不是只报告 pooled coefficient。
+
+## 警察能减少犯罪吗？（Do Police Reduce Crime?）
+
+Di Tella–Schargrodsky 利用 1994 Buenos Aires terrorist attack 后 Jewish/Muslim buildings 获 police protection 的外生部署。treated units 是含 Jewish institution 的 37 个 blocks，controls 是其他 839 blocks；比较 attack 前 April–June 与后 August–December（July treatment timing 不完整而剔除）。
+
+protected blocks theft 从 0.112 降至 0.035，变化 $-0.077$；controls 从 0.095 到 0.105，变化 $0.010$；DiD 为 $-0.087$，约是 pre mean 的 78%。逐月表显示五个 post months 的 treated-control gap 都朝 deterrence 方向，month-specific treatment homogeneity test p≈0.81。
+
+识别论证的中间台阶是：terror attack 不因 local auto theft 发生；police deployment 由 building protection 而非 theft need 决定；pre rates 相近；control blocks post 没有共同下降；很难找到只在 protected blocks 同期发生的另一事件。external validity 则另当别论：证据识别 nearby visible police 对 car theft 的 local deterrence，不能直接推出所有警务对所有 crime 的平均效果。
+
+## 趋势设定（Trend Specification）
+
+多年 panel 中 common $v_t$ 只允许所有 units 共享任意 national path，不允许各 unit 有不同 slopes。若 treatment adoption 与 unit-specific trend 相关，遗漏趋势使 $D_{it}$ 与 error 相关。一个扩展是 $Z_i'\delta t$；最灵活的线性版本为
+
+::: {#hansen-eq-18-6}
+$$
+Y_{it}=\theta D_{it}+X_{it}'\beta+u_i+v_t+t,w_i+\varepsilon_{it}.
+\tag{18.6}
+$$
+:::
+
+$w_i$ 是 unit-specific trend effect。估计可显式加入 unit×linear-time interactions，或先对每个 unit 的每个 variable residualize on $(1,t)$，再回归 residualized variables。FWL 要求 outcome、treatment、controls 与 time dummies 接受同一 projection；只 detrend outcome 会改变方程。
+
+加入 trends 不只是“多放 controls”，而是改变用于识别 $\theta$ 的 variation：只剩相对 unit-specific linear path 的 treatment deviations。若 policy 是平滑、永久且 adoption 后几乎线性变化，剩余 variation 可能少；但是否“识别差”应看 residual variation 与 SE，不可因 coefficient 变小就责怪 over-control。
+
+unit-specific trends 的 joint significance 在 unit-level clustering 下可能因 cluster score rank 而无法可靠检验。更应依靠预先规定的 trend model、图形、pre-period fits 与 sensitivity，而非在多个趋势规格间按 p-value 选择。
+
+## 蓝法会影响酒类销售吗？（Do Blue Laws Affect Liquor Sales?）
+
+Bernheim–Meer–Novarro 使用 47 states、1970–2007 unbalanced panel，treatment 是 Sunday on-/off-premise allowable sale hours；outcome 是 log per-capita liquor sales。含 state/year FE、unemployment 和 cross-border outflow controls 的基准估计是
+
+::: {#hansen-eq-18-7}
+$$
+\begin{aligned}
+Y_{it}={}&0.011,OnHours_{it}+0.003,OffHours_{it}-0.013,UR_{it}\\
+&+0.029,OnOutFlows_{it}-0.000,OffOutFlows_{it}+u_i+v_t+\varepsilon_{it}.
+\end{aligned}
+\tag{18.7}
+$$
+:::
+
+cluster-by-state SE 依次约 $(0.003,0.003,0.004,0.008,0.010)$。基准看似说明 on-premise hours 增加 sales。levels plots 却显示 states 有不同 long-run trends；加入 state-specific trends 后
+
+::: {#hansen-eq-18-8}
+$$
+\begin{aligned}
+Y_{it}={}&0.000,OnHours_{it}+0.002,OffHours_{it}-0.015,UR_{it}\\
+&+0.005,OnOutFlows_{it}-0.005,OffOutFlows_{it}
++t,w_i+u_i+v_t+\varepsilon_{it}.
+\end{aligned}
+\tag{18.8}
+$$
+:::
+
+OnHours effect 降到 0，SE 反而从 0.003 降至 0.002。故变化不是“trends 让估计太不精确”，而是 omitted unit trends 与 trended policy variables 相关造成 baseline OVB。这个例子说明 robustness table 要同时比较 point estimate 和 SE，并解释 residual identifying variation。
+
+## 检查代码：堕胎会影响犯罪吗？（Check Your Code: Does Abortion Impact Crime?）
+
+Donohue–Levitt 用 state×year×birth-cohort data 估计 $\log Arrests_{itb}$ 对 abortion exposure，设计含 state FE、cohort-year interactions 和 state-year interactions，本质是 triple difference：只用同州同年不同 cohorts 的 variation 识别。
+
+原结果 $\hat\beta=-0.028$，但 Foote–Goetz replication 发现代码误漏 state-year interactions。补回后约为 $-0.010$。遗漏项把 cross-state/time variation 错混入声称的 within-state cross-cohort estimand，属于 specification implementation error，不只是小数点或 SE 问题。
+
+可复现工作流应把公式转成设计矩阵清单，程序化检查 absorbed effects/interaction count；在小 synthetic data 上验证 residualization；保存 estimation sample 和 package/version；让独立脚本或合作者复核关键 table；比较手工 group means 与 regression coefficient 的恒等式。高维 FE 软件“运行成功”不表示所有预定 effects 都真的进入了模型。
+
+## 推断（Inference）
+
+DiD error 往往在 policy-assignment unit 内 serially/cross-sectionally correlated。若一个 group 有 $M$ observations、pairwise correlation $\rho$，Moulton variance inflation 是 $1+\rho(M-1)$；很小的 $\rho$ 配合大 $M$ 也会让 row-level SE 严重偏小。应在 treatment variation/assignment 的聚合层级 cluster，而不只是 outcome 的最细 observation level。
+
+cluster inference 的信息量接近 clusters 数 $G$。50 states 即使有百万 individual rows，也不是百万个独立 policy shocks。若 coefficients 多于 clusters，cluster meat rank 不足；few clusters 时 normal/$\chi^2$ approximation 不可靠，应考虑 small-sample reference、wild cluster bootstrap 或 design-specific randomization/synthetic-control inference。
+
+Card–Krueger 只有两个 states，无法可靠 state-cluster；restaurant clustering 不允许任意 state-level common shock。因此其 conventional p=0.04 不能消除 aggregate inference 疑虑。更极端地，只有一个 treated cluster 时，treated-side variance 无法从一个 realization 估计，standard cluster estimator 会奇异或向零偏。此时“有很多 control observations”不能补出 treated-shock variance；需要 Conley–Taber 类少处理组方法或更明确的 assignment model。
+
+推断检查表包括：policy assignment level、treated/control cluster counts、serial correlation horizon、cluster leverage、是否有 spatial spillovers、few-cluster correction，以及 coefficient 是否由少数 switchers 主导。standard errors 是 identification 后的 sampling uncertainty，不能修复 parallel-trend failure 或 coincident policy bias。
+
+## 习题阅读指南（Exercises）
+
+18.1–18.4 是代数与设计题。18.1 用 balanced sample 中 restaurant dummies 与 state-demeaned regressor 的 inner product 为零证明 state FE/restaurant FE 的 $\theta$ 相同，并说明 unbalanced 时为何可能失效。18.2 若漏掉 time dummy，$\hat\theta$ 只用 treated before/after change，control group 不再进入，所以不是 DiD。18.3 对 endogenous treatment 做 FE-IV：同时 within-transform $Y,D,Z$，以 $\dot Z$ 工具化 $\dot D$ 并 cluster。18.4 用 collinearity 解释为何 interactions 少放一个 baseline。
+
+18.5 的 Wisconsin–Minnesota 表先手算 $(16.72-15.23)-(18.10-16.42)=-0.19$，再核对 county-weighted regression 是否与 state unweighted means 对应；aggregation weights 不同可导致结果不同。18.6–18.8 的数据题必须先固定 common balanced sample/缺失处理，再制作四格或 event-time tables，最后估计 FE regression、region homogeneity、trend sensitivity 和 cluster SE。
+
+::: {.callout-important title="章末自检"}
+1. 能否从四个 cell means 推出 [式 (18.1)](#hansen-eq-18-1) 中每个 coefficient，特别是 $\theta$？
+2. 能否用 potential outcomes 精确写出 parallel-trends counterfactual，而不是只说“两组走势相似”？
+3. 能否区分 policy exogeneity、无 anticipation、无 coincident differential shock 与 conditional-mean specification？
+4. 加 unit-specific trends 后，$\theta$ 使用哪部分 residual variation，为什么 coefficient 变化不等于 precision 必然下降？
+5. cluster level 应由 outcome observation 还是 policy assignment 决定？只有一个 treated cluster 时为什么普通 clustered SE 不可信？
+6. 高维 FE/interaction 代码如何通过设计矩阵、手算恒等式和独立 replication 检查？
+:::
