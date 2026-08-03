@@ -43,6 +43,7 @@ book:
     - part: "第六部分　非线性方法"
       chapters:
         - ch22.qmd
+        - ch23.qmd
   appendices:
     - appendix-a.qmd
     - appendix-b.qmd

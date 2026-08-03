@@ -1,0 +1,244 @@
+---
+title: "非线性最小二乘"
+subtitle: "曲线参数、集中最小化、非线性面板与阈值检验"
+hansen-chapter: "Chapter 23"
+book-pages: "763–779"
+pdf-pages: "783–799"
+status: "完整初稿"
+---
+
+::: {.book-map}
+**原书位置与本章路线**　对应 Hansen Chapter 23（书内 pp. 763–779；PDF pp. 783–799）。23.1以 Box–Cox、CES 和回归折点引入 NLLS；23.2–23.5讨论识别、数值估计、渐近分布与方差；23.6–23.8扩展到非线性面板、阈值模型及原假设下未识别参数检验；23.9–23.11补计算、证明与习题。
+:::
+
+::: {.bridge}
+**本科桥接**　“非线性回归”指条件均值对参数非线性，不只是 $X$ 出现平方或对数。$Y=\beta_0+\beta_1X^2+e$ 对 $\beta$ 仍线性，可用 OLS；$Y=\beta_1e^{\beta_2X}+e$ 对 $\beta_2$ 非线性，需数值最小化。NLLS 的大样本行为近似一场以函数导数 $m_\theta$ 为回归量的线性 OLS。
+:::
+
+## 引言（Introduction）
+
+模型为 $Y=m(X,\theta)+e$、$E(e\mid X)=0$。Box–Cox 变换对 $x>0$ 定义为
+
+::: {#hansen-eq-23-1}
+$$
+x^{(\lambda)}=
+\begin{cases}
+(x^\lambda-1)/\lambda,&\lambda\ne0,\\
+\log x,&\lambda=0.
+\end{cases}
+\tag{23.1}
+$$
+:::
+
+它连续嵌套线性 $\lambda=1$ 与对数 $\lambda=0$。Acemoglu–Johnson–Robinson 的风险—殖民者死亡率关系可写成
+
+::: {#hansen-eq-23-2}
+$$
+\mathrm{risk}=\beta_0+\beta_1\mathrm{mortality}^{(\lambda)}+e.
+\tag{23.2}
+$$
+:::
+
+给定 $\lambda$，$\beta$ 可 OLS；联合参数却是非线性的。变量必须严格为正，且 $\lambda\approx0$ 时应使用数值稳定的极限实现，而非直接除以极小数。
+
+“连续嵌套”使函数形式检验可在同一模型内进行，但不能忽略尺度。$x$ 的计量单位改变会影响 Box–Cox 变换中的常数部分，并与截距重新组合；比较模型时应保持相同样本和单位。若把因变量也作 Box–Cox 变换，误差条件均值和 Jacobian 会改变，不能把它简单当作本章的 NLLS 条件均值模型。
+
+CES 生产函数取对数后为
+
+::: {#hansen-eq-23-3}
+$$
+\log Y=\beta+\frac\nu\rho
+\log\{\alpha X_1^\rho+(1-\alpha)X_2^\rho\}+e.
+\tag{23.3}
+$$
+:::
+
+$\nu$ 是规模弹性，$\alpha\in(0,1)$ 是份额，替代弹性 $\sigma=1/(1-\rho)$；$\rho=0$ 的极限为 Cobb–Douglas。用 $\rho$ 而非直接用 $\sigma$ 可减弱优化非线性，但仍需对 $\alpha,\nu,\rho$ 施加经济上合理的参数域。
+
+回归折点模型为
+
+::: {#hansen-eq-23-4}
+$$
+Y_t=\beta_1(X_{t-1}-c)^-
++\beta_2(X_{t-1}-c)^+
++\beta_3Y_{t-1}+\beta_4+e_t.
+\tag{23.4}
+$$
+:::
+
+给定折点 $c$，其余参数线性；$c$ 未知时目标函数不再全局二次。正负部分让左右斜率分别为 $\beta_1,\beta_2$，函数在 $c$ 连续但斜率可跳变。
+
+三个例子代表三种非线性来源：Box–Cox 的曲率参数改变变量变换；CES 的参数在幂和对数内部相互作用；折点参数改变哪些观测落在左右区间。最后一种目标函数甚至不光滑，因此“非线性”并不自动意味着可用同一套梯度算法。
+
+## 识别（Identification）
+
+正确设定要求存在唯一 $\theta_0$ 使 $m(x,\theta_0)=E(Y\mid X=x)$。条件均值的最小均方预测性质给
+
+::: {#hansen-eq-23-5}
+$$
+\theta_0=\arg\min_{\theta\in\Theta}S(\theta),
+\qquad
+S(\theta)=E\{Y-m(X,\theta)\}^2.
+\tag{23.5}
+$$
+:::
+
+若函数形式错设，[式 (23.5)](#hansen-eq-23-5) 定义最接近真实 CEF 的伪真参数，但唯一性需另行假设。识别常因参数只以比值或乘积出现而失败。例如 $\beta_1/(\beta_2+\beta_3X)$ 若同时按同一比例缩放三个参数，函数不变；此时参数三元组不识别，只能重新参数化。
+
+局部满秩 $E(m_\theta m_\theta')>0$ 只排除真值邻域的平坦方向；全局仍可能有多个不同参数产生同一函数。应同时检查模型映射、参数归一化、支撑变异和目标函数轮廓。
+
+## 估计（Estimation）
+
+NLLS 最小化
+
+$$
+S_n(\theta)=n^{-1}\sum_i\{Y_i-m(X_i,\theta)\}^2.
+$$
+
+若参数分为非线性部分 $\gamma$ 与给定 $\gamma$ 后可线性 OLS 的 $\beta$，可集中化：对每个 $\gamma$ 求 $\hat\beta(\gamma)$，把残差平方和 $S_n^*(\gamma)$ 对较低维 $\gamma$ 最小化。Box–Cox 只需一维搜 $\lambda$，折点模型只需网格搜 $c$；这通常比黑箱联合优化更稳定且容易画出全局目标。
+
+可复现步骤是：先确定 $\gamma$ 的经济可行域与搜索网格；逐点重建非线性回归量并 OLS；保存 $S_n^*(\gamma)$ 与可行性标记；取全局最小网格点后在光滑情形局部细化；最后用 $\hat\gamma$ 重估 $\beta$。图上若有多个近似最低谷，应报告这些候选区而非只给小数点后三位的唯一答案。
+
+原书估得 Box–Cox $\hat\lambda=-0.77$；CES 的 $(\hat\rho,\hat\alpha)=(0.36,0.39)$，隐含 $\hat\sigma=1.57$；债务—增长折点 $\hat c=43.9$。系数显著性必须围绕有意义的原假设：检验 $\nu=0$、$\alpha=0$ 或 $c=0$ 常没有经济含义。应检验规模报酬 $\nu=1$、Cobb–Douglas $\rho=0$、左右斜率相等等实质问题。
+
+## 渐近分布（Asymptotic Distribution）
+
+一致性沿用第 22 章：i.i.d.、$m$ 对参数连续、可积平方包络、紧参数空间和唯一总体最小值。渐近正态还需正确条件均值、四阶矩、局部二阶可微、真值内点和
+
+$$
+Q=E(m_{\theta i}m_{\theta i}')>0,
+\qquad
+\Omega=E(m_{\theta i}m_{\theta i}'e_i^2),
+$$
+
+其中 $m_{\theta i}=\partial m(X_i,\theta_0)/\partial\theta$。于是
+
+$$
+\sqrt n(\hat\theta-\theta_0)
+\Rightarrow N(0,Q^{-1}\Omega Q^{-1}).
+$$
+
+把 $m$ 在真值附近线性化，$m(X,\hat\theta)-m(X,\theta_0)\approx m_\theta'(\hat\theta-\theta_0)$，便看出 NLLS 一阶上等价于用“导数回归量”$m_\theta$ 的 OLS。同方差时 $\Omega=\sigma^2Q$，方差化为 $\sigma^2Q^{-1}$。若参数在边界、目标有折点或阈值效应消失，常规正态理论可能失败。
+
+核验定理时应逐项对应：平方包络给 ULLN；唯一最小值给一致性；四阶矩给 score 二阶矩；$Q>0$ 给局部识别；真值内点给等式型一阶条件。模型错设时 $E(e\mid X)=0$ 不再成立，Hessian 还含曲率—残差项，不能直接沿用这里简化的 $Q$。
+
+## 协方差矩阵估计（Covariance Matrix Estimation）
+
+令 $\hat m_{\theta i}=m_\theta(X_i,\hat\theta)$、$\hat e_i=Y_i-m(X_i,\hat\theta)$，估计量为
+
+::: {#hansen-eq-23-6}
+$$
+\widehat Q=\frac1n\sum_i\hat m_{\theta i}\hat m_{\theta i}',
+\quad
+\widehat\Omega=\frac1n\sum_i\hat m_{\theta i}\hat m_{\theta i}'\hat e_i^2,
+\quad
+\widehat V=\widehat Q^{-1}\widehat\Omega\widehat Q^{-1}.
+\tag{23.6}
+$$
+:::
+
+标准误为 $\sqrt{\widehat V_{jj}/n}$。解析导数优先；数值导数需检查步长、参数尺度和正反差分一致性。派生参数如 $\sigma=1/(1-\rho)$ 用 delta method，其梯度为 $(1-\rho)^{-2}$，不能直接沿用 $\rho$ 的标准误。
+
+聚类时把 $\hat m_{\theta i}\hat e_i$ 视为 score 并按组求和构造“肉”；小样本可按独立单位重抽 bootstrap。每次 bootstrap 都要重新完成全局优化，而非固定原样本选出的阈值或变换参数。
+
+## 面板数据（Panel Data）
+
+模型 $Y_{it}=m(X_{it},\theta)+u_i+\varepsilon_{it}$ 经 within 变换成为
+
+::: {#hansen-eq-23-7}
+$$
+\dot Y_{it}=\dot m(X_{it},\theta)+\dot\varepsilon_{it},
+\tag{23.7}
+$$
+:::
+
+其中 $\dot m(X_{it},\theta)=m(X_{it},\theta)-T_i^{-1}\sum_sm(X_{is},\theta)$。一般不等于 $m(\dot X_{it},\theta)$，必须先计算非线性函数再去均值。它依赖个体所有时期 $X_{is}$，故 NLLS 一致性通常需要严格外生。
+
+一阶差分形式为
+
+::: {#hansen-eq-23-8}
+$$
+\Delta Y_{it}=\Delta m(X_{it},\theta)+\Delta\varepsilon_{it}.
+\tag{23.8}
+$$
+:::
+
+若 $X$ 含滞后因变量，within/FD 后误差与回归量相关，NLLS 不再适用，应仿照动态面板用滞后工具的 GMM。标准误按个体聚类。
+
+## 阈值模型（Threshold Models）
+
+一般阈值回归在 $Q\ge\gamma$ 时允许截距或斜率改变。阈值 $\gamma$ 的目标函数是阶梯状，梯度优化不可靠，应在去除支撑尾部后的候选观测值网格上集中搜索。阈值信息主要来自附近观测，远处巨大样本不能替代局部密度。
+
+Card–Mas–Rothstein 的族群 tipping 模型为
+
+::: {#hansen-eq-23-9}
+$$
+\begin{aligned}
+\Delta W_{cit}={}&\delta_0 1\{M_{ci,t-1}\ge\gamma\}
++\delta_1(M_{ci,t-1}-\gamma)1\{M_{ci,t-1}\ge\gamma\}\\
+&+\beta_1M_{ci,t-1}+\beta_2M_{ci,t-1}^2
++\theta'X_{ci,t-1}+\alpha+u_c+e_{cit}.
+\end{aligned}
+\tag{23.9}
+$$
+:::
+
+35,656 个社区、104 个城市得到 $\hat\gamma=0.198$，断点约 $-11.6$ 个百分点。按城市聚类后标准误仍宽，说明有效独立信息更接近 104 组而非 35,656 行。阈值估计有 $n$ 速率和非标准极限；常规正态区间不适用，需倒置 profile F 统计量等专门方法，聚类版本还要相应调整。
+
+独立同方差理论下，对每个候选 $\gamma_0$ 比较 $S_n^*(\gamma_0)$ 与最小值 $S_n^*(\hat\gamma)$，保留未被拒绝的 $\gamma_0$，其集合就是置信区间。原书 99% 区间为 $[0.198,0.209]$，但它未计入城市聚类；不能一边给其他系数用聚类标准误，一边把未调整阈值区间称为同等可靠。
+
+## 非线性成分检验（Testing for Nonlinear Components）
+
+设 $m(X,\theta)=X'\beta+X(\gamma)'\delta$。检验无非线性 $H_0:\delta=0$ 时，$\gamma$ 从模型中消失，因而在原假设下不识别。固定 $\gamma$ 的 F 检验有常规分布，但研究者实际取所有 $\gamma$ 中最大的统计量，产生严重的多重搜索；用普通 F 临界值会过度拒绝。
+
+正确方法对整个 $F_n(\gamma)$ 过程做 multiplier bootstrap。独立样本生成观测层乘子 $\xi_i^*$，令 $Y_i^*=\hat e_i\xi_i^*$（或加上原假设拟合值），每次重新搜索 $\gamma$ 并记录最大 F；聚类样本则每组共享一个乘子。bootstrap 数据必须满足 $H_0$，且要重现“先搜阈值再取最大值”的全过程。
+
+操作上先用原样本计算 $F=\sup_\gamma F_n(\gamma)$；再重复生成乘子、构造原假设样本、对同一修剪网格求 $F_b^*$；最后以 $B^{-1}\sum_b1\{F_b^*>F\}$ 估 $p$ 值。若 bootstrap 中固定原样本 $\hat\gamma$，模拟的只是“阈值已知”检验，恰好漏掉导致非标准分布的搜索步骤。
+
+原书独立 bootstrap 给几乎 0 的 $p$ 值，但城市聚类 bootstrap 给 2.6%；在大行数资料中忽略聚类会夸大 tipping 证据。阈值由看图或试回归选定再当作已知进行 t 检验，同样遗漏选择不确定性。
+
+## 计算（Computation）
+
+可靠工作流是：对参数作经济约束与尺度变换；尽可能集中掉线性参数；低维非线性参数画完整 profile；使用多组分散初值；比较目标值而非只看“converged”；检查解析/数值梯度和 Hessian 特征值；保存网格、容差与随机种子。
+
+非凸目标下标准误只描述所选局部最小点附近曲率。如果不同初值得到实质不同的目标值和参数，先解决全局优化或识别问题，再谈显著性。
+
+## 技术证明（Technical Proofs*）
+
+将单观测损失缩放为 $\rho_i(\theta)=\{Y_i-m(X_i,\theta)\}^2/2$，score 为 $-m_\theta e$。正确条件均值使总体 Hessian为
+
+::: {#hansen-eq-23-10}
+$$
+Q(\theta)=E\{m_\theta(X,\theta)m_\theta(X,\theta)'\}
+-E\{m_{\theta\theta}(X,\theta)[m(X,\theta_0)-m(X,\theta)]\}.
+\tag{23.10}
+$$
+:::
+
+在 $\theta=\theta_0$，第二项为零，留下 $E(m_\theta m_\theta')$。四阶矩通过 Cauchy–Schwarz 保证 score 二阶矩与 Lipschitz 包络可积；一致性先把估计量带入真值邻域，随后直接应用第 22 章 M 估计定理。
+
+## 习题阅读指南（Exercises）
+
+23.1–23.7 重点辨认“对变量非线性”与“对参数非线性”、比例归一化、MLE/NLLS 关系、GMM 与 delta method。对 $m(x,\theta)$ 的点预测区间，梯度是 $m_\theta(x,\hat\theta)$，方差为 $m_\theta'\widehat{\operatorname{Var}}(\hat\theta)m_\theta$。
+
+23.8–23.10 复现 CES、债务折点与平滑阈值。平滑阈值成本函数为
+
+::: {#hansen-eq-23-11}
+$$
+\log TC=\beta_1+\beta_2\log Q
++\beta_3(\log P_L+\log P_K+\log P_F)
++\beta_4\frac{\log Q}{1+\exp\{-(\log Q-\gamma)\}}+e.
+\tag{23.11}
+$$
+:::
+
+先限制 $\gamma$ 使两侧各有足够观测，再比较联合全局搜索与对 $\gamma$ 集中搜索；两法应达到同一最低目标值。报告参数域、初值、profile 图、稳健/聚类标准误和派生边际效应。
+
+::: {.callout-important title="章末自检"}
+1. 何谓“条件均值对参数非线性”，它与对 $X$ 非线性有何不同？
+2. 集中最小化为何既改善计算，又便于检查全局识别？
+3. $m_\theta$ 为什么可视为 NLLS 的线性化回归量？
+4. 非线性面板为何必须先算 $m(X_{it},\theta)$ 再去均值？
+5. 阈值效应为零时，阈值参数为什么不识别，普通 F 检验为何失效？
+6. multiplier bootstrap 为什么每次都必须重新搜索阈值？
+:::
