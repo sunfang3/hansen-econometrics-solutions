@@ -28,6 +28,9 @@ book:
         - ch11.qmd
         - ch12.qmd
         - ch13.qmd
+    - part: "第四部分　依赖数据与面板数据"
+      chapters:
+        - ch14.qmd
   appendices:
     - appendix-a.qmd
     - appendix-b.qmd

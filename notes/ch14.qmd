@@ -1,0 +1,948 @@
+---
+title: "时间序列"
+subtitle: "从平稳、遍历与 MDS 到 ARMA、HAC 和动态回归"
+hansen-chapter: "Chapter 14"
+book-pages: "442–508"
+pdf-pages: "462–528"
+status: "完整初稿"
+---
+
+::: {.book-map}
+**原书位置与本章路线**　对应 Hansen Chapter 14（书内 pp. 442–508；PDF pp. 462–528）。14.1–14.13建立时间序列的平稳、遍历、信息集、MDS、mixing、LLN 与 CLT；14.14–14.29建立投影、白噪声、Wold、ARMA 及识别；14.30–14.39讨论 AR 估计、一般依赖、HAC、检验与选阶；14.40–14.46转向动态回归、趋势、Granger 因果和 bootstrap；14.47–14.48整理技术证明与习题。
+:::
+
+::: {.bridge}
+**本科桥接**　本科时间序列常从“AR(1) 若 $|\alpha|<1$ 就平稳”开始，本章要补齐这句话背后的概率结构。横截面用 i.i.d. LLN/CLT；单条时间序列要分别说明分布是否随时间稳定、时间平均能否逼近期望、远隔观测依赖是否衰减，以及 score 是否为 MDS。只有把这些条件分开，才知道何时普通稳健标准误够用、何时必须用 Newey–West。
+:::
+
+## 引言（Introduction）
+
+时间序列 $Y_t\in\mathbb R^m$ 按整数时间 $t$ 排列；$m=1$ 为单变量，$m>1$ 为多变量。每年观测次数 $s$ 称 frequency，例如季度 $s=4$、月度 $s=12$。样本虽写为 $t=1,\ldots,n$，理论上常把它看作双向无限过程 $\{\ldots,Y_{-1},Y_0,Y_1,\ldots\}$ 的一段。
+
+时间相邻意味着 $Y_t$ 与 $Y_{t-1}$ 通常相关，无法把 $n$ 期划成 $n$ 个独立抽样单位。计量任务因此有两部分：用动态模型描述这种依赖；为样本均值、回归 score 和检验建立适合依赖数据的极限理论。
+
+## 例子（Examples）
+
+原书用 FRED-MD/FRED-QD 展示 GDP、汇率、利率、油价、失业、消费增长、通胀与股票收益。第一步永远是按日历时间画图，并记录频率、样本起止、缺失值与变换。图形可提示趋势、波动聚集、季节性、断点和异常值，却不能单独证明平稳或单位根。
+
+GDP 水平明显上升，增长率围绕相对稳定均值波动；利率和失业率高度持久；股票收益粗糙但方差会成簇变化。这说明“均值稳定”“线性相关很弱”“条件方差稳定”是三个不同问题。
+
+## 差分与增长率（Differences and Growth Rates）
+
+一阶差分为 $\Delta Y_t=Y_t-Y_{t-1}$，年同比差分为 $\Delta_sY_t=Y_t-Y_{t-s}$。一期百分比增长率是
+
+::: {#hansen-eq-14-1}
+$$
+Q_t=100\frac{\Delta Y_t}{Y_{t-1}}
+=100\left(\frac{Y_t}{Y_{t-1}}-1\right).
+\tag{14.1}
+$$
+:::
+
+频率为 $s$ 时，按一期增长复利年化得到
+
+::: {#hansen-eq-14-2}
+$$
+A_t=100\left\{\left(\frac{Y_t}{Y_{t-1}}\right)^s-1\right\}.
+\tag{14.2}
+$$
+:::
+
+小变动下 $\Delta\log Y_t\approx\Delta Y_t/Y_{t-1}$，故季度增长约为 $100\Delta\log Y_t$，年化近似为 $100s\Delta\log Y_t$。年化精确式是高度非线性变换，适合报告但不一定适合线性建模；同时出现 log level 与 growth 时，差分对数通常让模型保持线性。任何变换都应由研究对象决定，不能只因“看起来更平稳”就删去长期信息。
+
+## 平稳性（Stationarity）
+
+弱平稳要求 $E(Y_t)=\mu$、$\operatorname{var}(Y_t)=\Sigma$ 不随 $t$ 变化，且
+
+$$
+\Gamma(k)=\operatorname{cov}(Y_t,Y_{t-k})
+$$
+
+只依赖间隔 $k$。标量时 $\rho(k)=\gamma(k)/\gamma(0)$，且 $\gamma(-k)=\gamma(k)$；向量时 $\Gamma(-k)=\Gamma(k)'$。
+
+严格平稳要求任意有限向量 $(Y_t,\ldots,Y_{t+\ell})$ 的联合分布对时间平移不变。若二阶矩有限，严格平稳蕴含弱平稳；无有限方差时两类条件并不嵌套。严格平稳控制整个分布，弱平稳只控制一二阶矩。
+
+i.i.d. 一定严格平稳，但平稳不等于“无趋势的平滑图”，也不等于短记忆。例如 $Y_t=Z$ 对所有 $t$ 相同，严格平稳却永不产生新的时间信息；随机游走 $Y_t=Y_{t-1}+e_t$ 的方差随 $t$ 增长，因而不平稳。
+
+## 平稳过程的变换（Transformations of Stationary Processes）
+
+若 $Y_t$ 严格平稳，固定且不随日历时间改变的可测变换
+
+$$
+X_t=\phi(Y_t,Y_{t-1},Y_{t-2},\ldots)
+$$
+
+仍严格平稳。原因是把任意 $(X_t,\ldots,X_{t+\ell})$ 写成同一函数作用于 $Y$ 的若干平移历史，原过程联合分布不变，变换后联合分布也不变。
+
+“固定变换”是关键。$X_t=tY_t$ 显式依赖 $t$，一般破坏平稳；对全历史的无限和还必须先证明收敛，不能只援引变换定理。
+
+## 收敛级数（Convergent Series）
+
+线性过程常写为
+
+::: {#hansen-eq-14-3}
+$$
+X_t=\sum_{j=0}^{\infty}a_jY_{t-j}.
+\tag{14.3}
+$$
+:::
+
+若 $Y_t$ 严格平稳、$E|Y_t|<\infty$ 且 $\sum_j|a_j|<\infty$，则绝对可和给出几乎处处收敛，所得 $X_t$ 仍严格平稳。中间理由是
+
+$$
+E\sum_j|a_jY_{t-j}|
+=\sum_j|a_j|E|Y_t|<\infty,
+$$
+
+非负随机变量的期望有限意味着其本身几乎处处有限。平方可和与绝对可和用途不同：Wold 只保证 $\sum b_j^2<\infty$，而许多遍历与 mixing 结果要求更强的 $\sum|b_j|<\infty$。
+
+## 遍历性（Ergodicity）
+
+平稳只说各期分布相同，不保证一条实现路径能代表总体。$Y_t=Z$ 的样本均值永远等于随机的 $Z$，不会收敛到 $E(Z)$。遍历性排除这种“路径被困在随机子总体”的情形：所有时间平移不变事件的概率只能为 0 或 1。
+
+对实证读者更有用的直觉是，一条足够长的遍历路径会访问总体的各部分，使时间平均具有总体含义。i.i.d. 序列遍历；平稳遍历过程的固定历史变换仍遍历。若线性过程的输入平稳遍历且系数绝对可和，输出也平稳遍历。
+
+遍历性只蕴含自协方差的 Cesàro 平均趋零：
+
+::: {#hansen-eq-14-4}
+$$
+\lim_{n\to\infty}\frac1n\sum_{\ell=1}^n
+\operatorname{cov}(Y_t,Y_{t+\ell})=0.
+\tag{14.4}
+$$
+:::
+
+它不要求每个 $\gamma(\ell)\to0$；交替序列可在平均意义抵消。把遍历误写成“远期必然不相关”会把它与 mixing 混淆。
+
+## 遍历定理（Ergodic Theorem）
+
+若 $Y_t$ 严格平稳、遍历且 $E\|Y_t\|<\infty$，则
+
+::: {#hansen-eq-14-6}
+$$
+E\|\bar Y-\mu\|\longrightarrow0,
+\tag{14.6}
+$$
+:::
+
+从而
+
+::: {#hansen-eq-14-7}
+$$
+\bar Y\overset p\longrightarrow\mu.
+\tag{14.7}
+$$
+:::
+
+有限二阶矩的标量证明先展开
+
+::: {#hansen-eq-14-8}
+$$
+\operatorname{var}(\bar Y)
+=\frac{\sigma^2}{n}
++\frac2n\sum_{\ell=1}^{n}
+\left(1-\frac{\ell}{n}\right)\gamma(\ell).
+\tag{14.8}
+$$
+:::
+
+第一项趋零；第二项是自协方差 Cesàro 均值的加权平均，由 [式 (14.4)](#hansen-eq-14-4) 与 Toeplitz 引理趋零。再用 Chebyshev/Markov 得到概率收敛。这个推导也预告：依赖数据样本均值的方差不是 $\sigma^2/n$，遗漏自协方差会低估或高估不确定性。
+
+## 信息集条件化（Conditioning on Information Sets）
+
+记 $\mathcal F_t=\sigma(Y_t,Y_{t-1},\ldots)$ 为截至 $t$ 的信息集。历史条件均值写成
+
+::: {#hansen-eq-14-10}
+$$
+E_{t-1}(Y_t)
+=E(Y_t\mid Y_{t-1},Y_{t-2},\ldots)
+=E(Y_t\mid\mathcal F_{t-1}).
+\tag{14.10}
+$$
+:::
+
+信息集嵌套 $\mathcal F_{t-1}\subset\mathcal F_t$，但必须说明它包含哪些变量；只写“时点 $t$ 的信息”可能在单变量与多变量系统中代表不同条件。塔式法则给出
+
+$$
+E\{E(Y_t\mid\mathcal F_{t-1})\mid\mathcal F_{t-2}\}
+=E(Y_t\mid\mathcal F_{t-2}),
+$$
+
+而 $\mathcal F_{t-1}$ 可测的 $Y_{t-1}$ 可提出条件期望。后面判断回归误差是否 MDS，就依赖 regressor 是否已包含在指定信息集中。
+
+## 鞅差序列（Martingale Difference Sequences）
+
+过程 $(e_t,\mathcal F_t)$ 为 MDS，若 $e_t$ 对 $\mathcal F_t$ 可测、$E|e_t|<\infty$，且
+
+$$
+E(e_t\mid\mathcal F_{t-1})=0.
+$$
+
+它表示均值不可预测，而非完全独立。例子
+
+::: {#hansen-eq-14-11}
+$$
+e_t=u_tu_{t-1},\qquad u_t\overset{\mathrm{i.i.d.}}{\sim}N(0,1)
+\tag{14.11}
+$$
+:::
+
+满足条件均值为 0，却因相邻 $e_t^2$ 共享 $u_{t-1}^2$ 而不独立、条件异方差。
+
+有限二阶矩的 MDS 必然零均值且序列不相关：对 $k>0$，$e_{t-k}$ 可由 $\mathcal F_{t-1}$ 知道，故
+$E(e_te_{t-k})=E[e_{t-k}E(e_t\mid\mathcal F_{t-1})]=0$。反向不成立；白噪声可能存在非线性均值可预测性。若进一步 $E(e_t^2\mid\mathcal F_{t-1})=\sigma^2$，称条件同方差 MDS。包含关系是 i.i.d. 均值零 $\Rightarrow$ 同方差 MDS $\Rightarrow$ MDS $\Rightarrow$ 白噪声。
+
+## 鞅差的 CLT（CLT for Martingale Differences）
+
+研究
+
+::: {#hansen-eq-14-12}
+$$
+S_n=\frac1{\sqrt n}\sum_{t=1}^n u_t.
+\tag{14.12}
+$$
+:::
+
+若 $u_t$ 严格平稳、遍历、为 MDS 且 $E(u_tu_t')=\Sigma<\infty$，则 $S_n\to_dN(0,\Sigma)$。MDS 令所有非零滞后协方差为 0，所以极限方差只有当期 $\Sigma$，形式与 i.i.d. CLT 相同。
+
+相同方差形式不等于观测独立。定理仍需条件均值结构；只有“白噪声”不足以控制证明中的非线性函数。回归中若 $X_t$ 对 $\mathcal F_{t-1}$ 可测且 $e_t$ 为 MDS，则 $X_te_t$ 也是 MDS，这是普通 heteroskedastic-robust sandwich 可用的关键。
+
+## Mixing（Mixing）
+
+对事件 $A,B$ 定义依赖距离
+
+::: {#hansen-eq-14-13}
+$$
+\alpha(A,B)=|P(A\cap B)-P(A)P(B)|.
+\tag{14.13}
+$$
+:::
+
+用过去信息 $\mathcal F_{-\infty}^{t-\ell}$ 与未来信息 $\mathcal F_t^\infty$ 中事件的最大距离定义 $\alpha(\ell)$。若 $\alpha(\ell)\to0$，称 strong mixing：时间间隔越大，两组信息渐近独立。mixing 蕴含遍历，反向不成立。
+
+CLT 往往要求速率/可和条件，如 $\sum_\ell\alpha(\ell)^{1-2/r}<\infty$，而非仅趋零。矩阶数与依赖衰减存在替代：允许更高矩时可容忍较慢 mixing。有限滞后变换保留相应速率；含无限历史的 AR 表示则需额外平滑密度和系数衰减条件。
+
+## 相关观测的 CLT（CLT for Correlated Observations）
+
+标量 $u_t$ 的归一化和方差是
+
+::: {#hansen-eq-14-14}
+$$
+\operatorname{var}(S_n)
+=\sum_{\ell=-n}^{n}
+\left(1-\frac{|\ell|}{n}\right)\gamma(\ell).
+\tag{14.14}
+$$
+:::
+
+向量情形相应为
+
+::: {#hansen-eq-14-15}
+$$
+\operatorname{var}(S_n)
+=\sum_{\ell=-n}^{n}
+\left(1-\frac{|\ell|}{n}\right)\Gamma(\ell).
+\tag{14.15}
+$$
+:::
+
+若自协方差绝对可和，极限为 long-run variance
+
+::: {#hansen-eq-14-17}
+$$
+\Omega=\sum_{\ell=-\infty}^{\infty}\Gamma(\ell).
+\tag{14.17}
+$$
+:::
+
+在严格平稳、$r>2$ 阶矩有限且 $\sum_\ell\alpha(\ell)^{1-2/r}<\infty$ 下，$S_n\to_dN(0,\Omega)$。$\Omega$ 把所有滞后协方差加入当期方差：正序列相关通常放大长期均值波动，负相关可能缩小。MDS 是特殊情形，此时 $\Gamma(\ell)=0$（$\ell\ne0$），$\Omega=\Sigma$。
+
+## 线性投影（Linear Projection）
+
+将 $Y_t$ 投影到无限过去 $\widetilde Y_{t-1}=(\ldots,Y_{t-2},Y_{t-1})$，定义 innovation
+
+::: {#hansen-eq-14-18}
+$$
+e_t=Y_t-P_{t-1}[Y_t].
+\tag{14.18}
+$$
+:::
+
+Hilbert 空间投影定理保证投影与误差唯一。误差与投影空间中每个过去变量正交，因此
+
+::: {#hansen-eq-14-19}
+$$
+E(e_t)=0,\qquad
+E(e_{t-j}e_t)=0\ (j\ge1),\qquad
+\sigma^2=E(e_t^2)\le E(Y_t^2).
+\tag{14.19}
+$$
+:::
+
+注意这是线性不可预测性。$P_{t-1}[Y_t]$ 未必等于条件均值 $E(Y_t\mid\mathcal F_{t-1})$；projection innovation 因而必为白噪声，却不必为 MDS。
+
+## 白噪声（White Noise）
+
+白噪声满足 $E(e_t)=0$、$\operatorname{var}(e_t)=\sigma^2<\infty$、所有非零滞后协方差为 0。它只排除线性序列相关，不排除条件异方差、尾部依赖或非线性可预测性。
+
+实证中“残差 ACF 无显著尖峰”最多支持没有明显线性相关；不能据此宣布 residuals i.i.d.。若估计理论需要 MDS，应论证条件均值；若需要同方差，还要另查条件方差。
+
+## Wold 分解（The Wold Decomposition）
+
+任一协方差平稳、innovation variance 正的过程可写成
+
+::: {#hansen-eq-14-20}
+$$
+Y_t=\mu_t+\sum_{j=0}^{\infty}b_je_{t-j},
+\qquad b_0=1,
+\tag{14.20}
+$$
+:::
+
+且
+
+::: {#hansen-eq-14-21}
+$$
+\sum_{j=1}^{\infty}b_j^2<\infty,
+\tag{14.21}
+$$
+:::
+
+其中可完全预测部分为
+
+::: {#hansen-eq-14-22}
+$$
+\mu_t=\lim_{m\to\infty}P_{t-m}[Y_t].
+\tag{14.22}
+$$
+:::
+
+若过程 purely non-deterministic（原书允许常数均值），$\mu_t=\mu$。Wold 说明线性过程对所有协方差平稳序列具有基础性，但不是说真实 DGP 必然线性或 innovation 独立；它只是在二阶投影空间中的表示。
+
+## 滞后算子（Lag Operator）
+
+定义 $LY_t=Y_{t-1}$，故 $L^kY_t=Y_{t-k}$。Wold 可写成
+
+$$
+Y_t=\mu+b(L)e_t,\qquad
+b(z)=b_0+b_1z+b_2z^2+\cdots.
+$$
+
+滞后多项式是代数记号，是否可以求逆是概率问题：必须检查逆多项式系数是否收敛。不能把 $L$ 当普通实数无条件约分，尤其单位根或 ARMA 公因子时会隐藏非平稳和识别失败。
+
+## Wold 的自回归表示（Autoregressive Wold Representation）
+
+若 Wold 多项式在单位圆内有界远离 0，且系数有足够可和性，则存在收敛的无限阶 AR：
+
+::: {#hansen-eq-14-23}
+$$
+Y_t=\mu+\sum_{j=1}^{\infty}a_jY_{t-j}+e_t.
+\tag{14.23}
+$$
+:::
+
+$b(z)$ 在 $|z|\le1$ 无根称 invertible，它保证过去 innovation 可由 $Y$ 的历史恢复。有限 MA(1) 的直觉是 $b(z)=1+\theta z$：若 $|\theta|<1$，旧冲击影响小于当期冲击，逆展开收敛。
+
+## 线性模型（Linear Models）
+
+前面从任意平稳过程推出线性投影表示；接下来反向假定某个 MA/AR/ARMA 方程，寻找使其平稳、遍历和可估计的条件。默认 $e_t$ 是严格平稳遍历白噪声，允许条件异方差。
+
+务必区分“正确的有限阶 AR，误差为 MDS”和“有限阶 AR 只是最佳线性近似，误差仅与所含滞后正交”。两者点估计都可一致估计 projection coefficient，但协方差公式不同。
+
+## 移动平均过程（Moving Average Processes）
+
+MA(1) 为 $Y_t=\mu+e_t+\theta e_{t-1}$。其方差 $(1+\theta^2)\sigma^2$、$\gamma(1)=\theta\sigma^2$，故 $\rho(1)=\theta/(1+\theta^2)$，而 $k\ge2$ 的自协方差为 0。
+
+MA($q$) 的
+
+$$
+\gamma(k)=\sigma^2\sum_{j=0}^{q-k}\theta_{j+k}\theta_j
+\quad(k\le q),
+$$
+
+超过 $q$ 阶后截尾为 0。这种 ACF 截尾是模型诊断线索，不是有限样本中应精确出现的图形。MA($q$) 是有限 i.i.d./遍历输入的固定变换，因而平稳遍历。
+
+## 无限阶移动平均过程（Infinite-Order Moving Average Process）
+
+线性过程为
+
+::: {#hansen-eq-14-24}
+$$
+Y_t=\mu+\sum_{j=0}^{\infty}\theta_je_{t-j},
+\qquad \sum_j|\theta_j|<\infty.
+\tag{14.24}
+$$
+:::
+
+其
+
+$$
+\operatorname{var}(Y_t)=\sigma^2\sum_j\theta_j^2,\qquad
+\gamma(k)=\sigma^2\sum_j\theta_{j+k}\theta_j.
+$$
+
+绝对可和确保级数收敛并继承平稳遍历。自协方差通常不截尾，而随系数尾部衰减。Wold 只给平方可和，因此从 Wold 直接调用所有强 mixing/绝对可和结论仍需附加条件。
+
+## 一阶自回归过程（First-Order Autoregressive Process）
+
+AR(1) 为
+
+::: {#hansen-eq-14-25}
+$$
+Y_t=\alpha_0+\alpha_1Y_{t-1}+e_t.
+\tag{14.25}
+$$
+:::
+
+向后递推 $t$ 次得到
+
+::: {#hansen-eq-14-26}
+$$
+Y_t=\alpha_0\sum_{j=0}^{t-1}\alpha_1^j
++\alpha_1^tY_0
++\sum_{j=0}^{t-1}\alpha_1^je_{t-j}.
+\tag{14.26}
+$$
+:::
+
+若 $|\alpha_1|<1$，初值项消失、几何级数收敛，故
+
+::: {#hansen-eq-14-27}
+$$
+Y_t=\mu+\sum_{j=0}^{\infty}\alpha_1^je_{t-j},
+\qquad
+\mu=\frac{\alpha_0}{1-\alpha_1}.
+\tag{14.27}
+$$
+:::
+
+于是 $\operatorname{var}(Y_t)=\sigma^2/(1-\alpha_1^2)$，$\rho(k)=\alpha_1^k$。$|\alpha_1|$ 越接近 1，冲击衰减越慢；负 $\alpha_1$ 产生交替符号。
+
+滞后算子形式
+
+::: {#hansen-eq-14-28}
+$$
+(1-\alpha_1L)Y_t=\alpha_0+e_t
+\tag{14.28}
+$$
+:::
+
+只有在 $|\alpha_1|<1$ 时可用
+
+::: {#hansen-eq-14-30}
+$$
+(1-\alpha_1z)^{-1}
+=\sum_{j=0}^{\infty}\alpha_1^jz^j.
+\tag{14.30}
+$$
+:::
+
+## 单位根与爆炸 AR(1)（Unit Root and Explosive AR(1) Processes）
+
+$\alpha_1=1,\alpha_0=0$ 时 $Y_t=Y_0+\sum_{j=1}^te_j$，初值永不消失，方差随 $t$ 增长，是随机游走/单位根过程。它可能长时间呈现平滑上升或下降，却没有固定长期均值。$|\alpha_1|>1$ 时初值和冲击指数放大，过程爆炸；$\alpha_1<-1$ 还交替振荡。
+
+“估计值 0.98”不能仅凭小于 1 就按平稳理论处理，因为估计误差可能覆盖 1，且近单位根有限样本行为接近非平稳。第 16 章会建立 DF/ADF 的非标准检验。
+
+## 二阶自回归过程（Second-Order Autoregressive Process）
+
+AR(2) 为
+
+::: {#hansen-eq-14-31}
+$$
+Y_t=\alpha_0+\alpha_1Y_{t-1}+\alpha_2Y_{t-2}+e_t.
+\tag{14.31}
+$$
+:::
+
+写成 companion VAR(1)：
+
+::: {#hansen-eq-14-33}
+$$
+\begin{pmatrix}Y_t\\Y_{t-1}\end{pmatrix}
+=
+\begin{pmatrix}\alpha_1&\alpha_2\\1&0\end{pmatrix}
+\begin{pmatrix}Y_{t-1}\\Y_{t-2}\end{pmatrix}
++\begin{pmatrix}\alpha_0+e_t\\0\end{pmatrix}.
+\tag{14.33}
+$$
+:::
+
+矩阵特征值为
+
+::: {#hansen-eq-14-34}
+$$
+\lambda_j=\frac{\alpha_1\pm\sqrt{\alpha_1^2+4\alpha_2}}2.
+\tag{14.34}
+$$
+:::
+
+两特征值模均小于 1 等价于
+
+::: {#hansen-eq-14-35}
+$$
+\alpha_1+\alpha_2<1,
+\tag{14.35}
+$$
+:::
+
+::: {#hansen-eq-14-36}
+$$
+\alpha_2-\alpha_1<1,
+\tag{14.36}
+$$
+:::
+
+::: {#hansen-eq-14-37}
+$$
+\alpha_2>-1.
+\tag{14.37}
+$$
+:::
+
+三式围成平稳三角形。$\alpha_1^2+4\alpha_2<0$ 时出现复共轭根，自相关呈衰减振荡；这不是“系数为复数”，而是实系数动态系统具有旋转型衰减。
+
+## AR($p$) 过程（AR($p$) Processes）
+
+一般模型为
+
+::: {#hansen-eq-14-38}
+$$
+Y_t=\alpha_0+\alpha_1Y_{t-1}+\cdots+\alpha_pY_{t-p}+e_t,
+\tag{14.38}
+$$
+:::
+
+自回归多项式
+
+::: {#hansen-eq-14-39}
+$$
+\alpha(L)=1-\alpha_1L-\cdots-\alpha_pL^p.
+\tag{14.39}
+$$
+:::
+
+将 $(Y_t,\ldots,Y_{t-p+1})'$ 写为 companion VAR(1)，其矩阵为
+
+::: {#hansen-eq-14-40}
+$$
+A=
+\begin{pmatrix}
+\alpha_1&\alpha_2&\cdots&\alpha_p\\
+1&0&\cdots&0\\
+0&1&\cdots&0\\
+\vdots&&\ddots&\vdots
+\end{pmatrix}.
+\tag{14.40}
+$$
+:::
+
+$A$ 的特征值是 $\alpha(z)=0$ 各根的倒数，所以 AR 平稳要求 $\alpha(z)$ 所有根在单位圆外。此时
+
+::: {#hansen-eq-14-41}
+$$
+b(z)=\alpha(z)^{-1}
+=\sum_{j=0}^{\infty}b_jz^j
+\tag{14.41}
+$$
+:::
+
+绝对收敛。软件报告 inverse roots 时，图上“都在单位圆内”与原多项式根“都在单位圆外”是同一条件，必须先看软件采用哪种口径。
+
+## 脉冲响应函数（Impulse Response Function）
+
+MA 表示 $Y_t=\sum_{j\ge0}b_je_{t-j}$ 中，$b_j=\partial Y_{t+j}/\partial e_t$ 是 impulse response。AR($p$) 可递推
+
+$$
+b_0=1,\qquad
+b_j=\alpha_1b_{j-1}+\cdots+\alpha_pb_{j-p},
+$$
+
+或用 companion matrix：
+
+::: {#hansen-eq-14-42}
+$$
+b_j=S'A^jS,\qquad S=(1,0,\ldots,0)'.
+\tag{14.42}
+$$
+:::
+
+若报告 one-standard-deviation shock，响应为 $\sigma b_j$，必须说明 shock normalization。IRF 是估计系数的非线性函数，置信区间需 Delta、simulation 或 bootstrap，不能只画点估计曲线。
+
+## ARMA 与 ARIMA 过程（ARMA and ARIMA Processes）
+
+ARMA($p,q$) 写成 $\alpha(L)Y_t=\alpha_0+\theta(L)e_t$。平稳由 AR 根在单位圆外决定；MA 根是否在单位圆外决定 invertibility/innovation 表示。ARIMA($p,d,q$) 则令 $\Delta^dY_t$ 服从 ARMA，即
+
+$$
+\alpha(L)(1-L)^dY_t=\alpha_0+\theta(L)e_t.
+$$
+
+$d$ 是差分次数，不是可随意增加的拟合参数。过度差分会人为制造负 MA 根并丢失长期信息；是否需要差分应结合单位根/趋势与经济含义判断。
+
+## 线性过程的 Mixing 性质（Mixing Properties of Linear Processes）
+
+稳定 AR 并非在任意离散创新下都 strong mixing；Andrews 的反例说明，离散冲击可能让当前值几乎揭示整个过去。原书给出的充分条件要求创新有平滑密度，并对 MA 系数尾和矩施加可和限制。
+
+核心信息是：系数几何衰减加上连续、规则的创新通常带来足够快的 mixing；“AR 根稳定”本身只保证线性表示，不自动给出所有依赖 CLT 条件。应用中常把 mixing 当高层假设，但理论推导应明确它为何对所用模型合理。
+
+## 识别（Identification）
+
+MA(1) 的 $\rho(1)=\theta/(1+\theta^2)$ 对 $\theta$ 与 $1/\theta$ 相同，所以仅凭二阶分布不能区分二者。限制 MA 多项式可逆（根在单位圆外）从等价表示中选出唯一 Wold innovation 表示。
+
+ARMA 还可能有 cancelling roots：若 AR 与 MA 多项式含共同因子，约去后是更低阶模型，原参数不唯一。假设无公因子是识别规范，也提醒高阶 ARMA 可能出现近约消和病态估计。
+
+AR($p$) 写成
+
+::: {#hansen-eq-14-44}
+$$
+Y_t=X_t'\alpha+e_t,\qquad
+X_t=(1,Y_{t-1},\ldots,Y_{t-p})',
+\tag{14.44}
+$$
+:::
+
+投影系数为
+
+::: {#hansen-eq-14-45}
+$$
+\alpha=\{E(X_tX_t')\}^{-1}E(X_tY_t).
+\tag{14.45}
+$$
+:::
+
+只要过程非纯确定，$Q=E(X_tX_t')>0$，有限阶 AR projection 唯一，即使真实 DGP 不是该阶 AR。
+
+## 自回归模型估计（Estimation of Autoregressive Models）
+
+OLS 用可用样本回归 $Y_t$ 对 $(1,Y_{t-1},\ldots,Y_{t-p})$。固定最大阶数比较模型时，应让所有候选模型使用同一估计区间，避免较小 $p$ 因多用初始观测而获得不可比准则。
+
+严格平稳遍历和有限二阶矩使
+
+::: {#hansen-eq-14-46}
+$$
+\frac1n\sum_{t=1}^nX_tY_t
+\overset p\longrightarrow E(X_tY_t),
+\tag{14.46}
+$$
+:::
+
+并同样有 $n^{-1}\sum X_tX_t'\to_pQ>0$，连续映射即得 $\hat\alpha\to_p\alpha$。一致性估计的是给定 $p$ 的 projection coefficient，不等于证明 AR($p$) 正确。
+
+## 最小二乘估计量的渐近分布（Asymptotic Distribution of Least Squares Estimator）
+
+若 AR($p$) 正确且 $E(e_t\mid\mathcal F_{t-1})=0$，由于 $X_t$ 属于过去信息，$X_te_t$ 是 MDS。于是
+
+$$
+\sqrt n(\hat\alpha-\alpha)
+\to_dN(0,Q^{-1}\Sigma Q^{-1}),
+\qquad
+\Sigma=E(X_tX_t'e_t^2).
+$$
+
+有限四阶矩保证 score 二阶矩有限。推导与横截面 OLS 一样：先写
+$\hat\alpha-\alpha=(\sum X_tX_t')^{-1}\sum X_te_t$，分母用遍历定理，分子用 MDS CLT。
+
+## 同方差下的分布（Distribution Under Homoskedasticity）
+
+若进一步 $E(e_t^2\mid\mathcal F_{t-1})=\sigma^2$，则 $\Sigma=\sigma^2Q$，协方差化为 $\sigma^2Q^{-1}$。无截距 AR(1) 有
+
+$$
+\sqrt n(\hat\alpha_1-\alpha_1)
+\to_dN(0,1-\alpha_1^2).
+$$
+
+方差依赖 $\alpha_1$，当参数接近单位根时普通正态近似尤其脆弱。条件同方差主要用于理论直觉；宏观和金融序列经常波动聚集，默认仍应报告异方差稳健结果。
+
+## 一般依赖下的渐近分布（Asymptotic Distribution Under General Dependence）
+
+若有限阶 AR 是近似而非正确条件均值，projection residual 只与所含 regressor 正交，$X_te_t$ 可序列相关。此时
+
+$$
+\Omega=\sum_{\ell=-\infty}^{\infty}
+E(X_{t-\ell}X_t'e_te_{t-\ell}),
+\qquad
+V=Q^{-1}\Omega Q^{-1}.
+$$
+
+因此普通 Eicker–White meat 只在 score 为 MDS 时足够；模型动态错设后，即便 error 本身某些自相关看似小，也应使用 score 的 HAC。这个区别是时间序列回归最常见的推断陷阱之一。
+
+## 协方差矩阵估计（Covariance Matrix Estimation）
+
+正确 MDS 设定下，异方差稳健估计为
+
+::: {#hansen-eq-14-47}
+$$
+\widehat V
+=\widehat Q^{-1}\widehat\Sigma\widehat Q^{-1},
+\qquad
+\widehat\Sigma=\frac1n\sum_tX_tX_t'\hat e_t^2.
+\tag{14.47}
+$$
+:::
+
+实际 $\hat\alpha$ 协方差为 $n^{-1}\widehat V$。若用同方差版本则 $\hat\sigma^2\widehat Q^{-1}$。这两个估计都不修正 score 的序列相关；只有已经可信地建模掉条件均值动态时才可如此。
+
+## 一般依赖下的协方差估计（Covariance Matrix Estimation Under General Dependence）
+
+令 $\hat u_t=X_t\hat e_t$，$\widehat\Gamma(\ell)$ 为其样本滞后协方差。直接截断为
+
+::: {#hansen-eq-14-48}
+$$
+\widehat\Omega_M
+=\sum_{\ell=-M}^{M}\widehat\Gamma(\ell).
+\tag{14.48}
+$$
+:::
+
+可能随 $M$ 跳变且非半正定。Newey–West 使用 Bartlett 权重：
+
+::: {#hansen-eq-14-49}
+$$
+\widehat\Omega_{\mathrm{NW}}
+=\sum_{\ell=-M}^{M}
+\left(1-\frac{|\ell|}{M+1}\right)\widehat\Gamma(\ell).
+\tag{14.49}
+$$
+:::
+
+它保证半正定并平滑降低远期样本协方差权重。$M$ 太小遗漏长期相关产生偏差，太大加入噪声提高方差；一致性需要 $M\to\infty$ 但相对 $n$ 足够慢。Andrews 规则为
+
+::: {#hansen-eq-14-50}
+$$
+M=
+\left\{\frac{6\rho^2}{(1-\rho^2)^2}\right\}^{1/3}n^{1/3}.
+\tag{14.50}
+$$
+:::
+
+报告 HAC 必须写明 kernel 与 bandwidth，而不能只说“稳健标准误”。
+
+## 无序列相关假设的检验（Testing the Hypothesis of No Serial Correlation）
+
+以 AR($p$) 中 $H_0:\alpha_1=\cdots=\alpha_p=0$ 检验 $Y_t$ 是否无线性序列相关。估计 AR 后用 joint Wald/$F$；原书建议在该 null 下使用 [式 (14.47)](#hansen-eq-14-47)，因为 null 正是没有 score 序列相关，不应为 alternative 下的相关性预先换成 HAC。
+
+$p$ 决定检验能捕捉的模式与功效。季度可从 4、月度从 12 作为有季节意义的候选，但研究者应事前说明。未拒绝只是这些滞后下未发现线性相关，不等于 i.i.d.。
+
+## 遗漏序列相关的检验（Testing for Omitted Serial Correlation）
+
+原 AR($p$)
+
+::: {#hansen-eq-14-51}
+$$
+Y_t=\alpha_0+\alpha_1Y_{t-1}+\cdots+\alpha_pY_{t-p}+u_t
+\tag{14.51}
+$$
+:::
+
+若误差服从
+
+::: {#hansen-eq-14-52}
+$$
+u_t=\theta_1u_{t-1}+\cdots+\theta_qu_{t-q}+e_t,
+\tag{14.52}
+$$
+:::
+
+两多项式相乘说明 $Y_t$ 是 AR($p+q$)。因此直接估计扩展 AR($p+q$)，检验新增 $q$ 个滞后系数为 0；不要先生成 $\hat u_t$ 再把它当观测真误差做普通第二步 $F$，后者忽略 generated residual 误差。
+
+科学假设检验与选阶不同。若问题只是“哪个 $p$ 预测更好”，应使用信息准则/交叉验证，而不是不断检验直到不拒绝。
+
+## 模型选择（Model Selection）
+
+AR 阶数可按
+
+$$
+\mathrm{AIC}(p)=n\log\hat\sigma^2(p)+2p
+$$
+
+最小化。拟合改善降低第一项，复杂度惩罚提高第二项。所有 $p$ 必须在相同样本期比较：先确定 $p_{\max}$，统一丢弃所需初值，再估计 $0,\ldots,p_{\max}$。
+
+AIC 面向预测/近似风险，不保证选到“真实有限阶”且通常比 BIC 偏向更长模型。选择后标准误没有自动计入选模不确定性，应用中宜报告相邻阶数敏感性与残差诊断。
+
+## 例证（Illustrations）
+
+原书 GDP 增长例在共同 1980–2017 样本比较 AR(0)–AR(4)，AIC 选择 AR(2)，前两阶正但不大；消费增长 AR(4) joint test 对 Hall 的不可预测消费假说给出 $p=0.012$；通胀差分例 AIC 选择 AR(4)。
+
+这些表同时报告 heteroskedasticity-robust 与 Newey–West：动态充分的 AR(2)/AR(4) 中二者接近，低阶错设时差别更明显。比较本身是诊断：不是选择较小标准误，而是理解模型是否已吸收 score 序列相关。
+
+## 时间序列回归模型（Time Series Regression Models）
+
+一般 projection model 为
+
+::: {#hansen-eq-14-53}
+$$
+Y_t=X_t'\beta+e_t,
+\tag{14.53}
+$$
+:::
+
+参数定义
+
+::: {#hansen-eq-14-54}
+$$
+\beta=\{E(X_tX_t')\}^{-1}E(X_tY_t).
+\tag{14.54}
+$$
+:::
+
+平稳遍历与二阶矩给 OLS 一致性。若 $X_t$ 属于 $\mathcal F_{t-1}$ 且 $E(e_t\mid\mathcal F_{t-1})=0$，score 为 MDS，普通异方差稳健 sandwich 适用；否则在 mixing 条件下使用 long-run variance：
+
+::: {#hansen-eq-14-55}
+$$
+\sqrt n(\hat\beta-\beta)
+\to_dN(0,Q^{-1}\Omega Q^{-1}).
+\tag{14.55}
+$$
+:::
+
+含 contemporaneous $X_t$ 时，必须特别解释它为何在误差实现前已知；否则 MDS 条件可能根本无意义。
+
+## 静态、分布滞后与自回归分布滞后模型（Static, Distributed Lag, and Autoregressive Distributed Lag Models）
+
+static model 用当期 $Z_t$；DL($q$) 用 $Z_{t-1},\ldots,Z_{t-q}$，累计效应为 $\sum_j\beta_j$；AR-DL 再加入 $Y$ 的 $p$ 阶滞后。AR-DL 的长期乘数为
+
+$$
+\frac{\beta_1+\cdots+\beta_q}
+{1-\alpha_1-\cdots-\alpha_p},
+$$
+
+它是系数的非线性函数，标准误用 Delta 或 bootstrap。
+
+static/DL 往往留下序列相关，通常需 HAC；足够充分且正确的 AR-DL 可能产生 MDS residual，但仍须诊断。动态系数表示预测传播，不自动具有结构因果解释。
+
+## 时间趋势（Time Trends）
+
+确定性趋势模型为
+
+::: {#hansen-eq-14-56}
+$$
+Y_t=\beta_0+\beta_1t+u_t.
+\tag{14.56}
+$$
+:::
+
+由于 $\sum t=O(n^2)$、$\sum t^2=O(n^3)$，截距仍以 $\sqrt n$ 收敛，趋势斜率以 $n^{3/2}$ 收敛。不同速率不妨碍一致性和常用推断，但说明不能把 $t$ 当平稳 regressor 直接套逐元素 LLN。
+
+先对所有变量线性 detrend 再回归，与原回归中直接加入相同 trend controls 由 FWL 等价。时间索引原点会改变截距，不改变拟合趋势；趋势次数和断点应由问题与样本跨度说明，不能用高阶多项式追逐每次波动。
+
+## 例证（Illustration）
+
+原书 Phillips curve 的 static 形式
+
+::: {#hansen-eq-14-57}
+$$
+\Delta\pi_t=\alpha+\beta U_t+e_t,
+\tag{14.57}
+$$
+:::
+
+DL 形式
+
+::: {#hansen-eq-14-58}
+$$
+\Delta\pi_t=\alpha+\beta_1U_{t-1}+\cdots+\beta_qU_{t-q}+e_t,
+\tag{14.58}
+$$
+:::
+
+及 AR-DL
+
+::: {#hansen-eq-14-59}
+$$
+\Delta\pi_t
+=\alpha_0+\sum_{j=1}^p\alpha_j\Delta\pi_{t-j}
++\sum_{j=1}^q\beta_jU_{t-j}+e_t
+\tag{14.59}
+$$
+:::
+
+给出相近的小长期乘数，但 DL 的单期系数交替且 AR-DL 长期乘数更精确。解读应同时报告短期路径、累计效应与其标准误，而非挑一个显著 lag 当作全部经济效果。
+
+## Granger 因果（Granger Causality）
+
+$Z$ 不 Granger-cause $Y$，指在控制 $Y$ 自身全部过去后，$Z$ 的过去不再改善 $Y_t$ 的线性预测；有限 AR-DL 中检验 $H_0:\beta_1=\cdots=\beta_q=0$。条件期望版本比较含/不含 $Z$ 历史的 forecast。
+
+它是 predictive causality，不是结构因果。股票收益预测 GDP，可能因为股票价格提前反映共同的未来盈利信息，并非股票波动本身造成产出。还要注意信息集：遗漏第三变量的历史会造成表面 Granger 关系。
+
+## 回归模型中的序列相关检验（Testing for Serial Correlation in Regression Models）
+
+对 AR-DL
+
+::: {#hansen-eq-14-60}
+$$
+Y_t=\alpha_0+\sum_{j=1}^p\alpha_jY_{t-j}
++\sum_{j=1}^q\beta_jZ_{t-j}+u_t,
+\tag{14.60}
+$$
+:::
+
+若 $u_t$ 有 AR($r$) 动态，两边作用误差多项式后，替代模型包含 $Y$ 的 $p+r$ 阶和 $Z$ 的 $q+r$ 阶。估计扩展 AR-DL，joint test 最后 $r$ 阶相关新增项。它把 generated-residual 两步问题改写为单方程受限检验。
+
+检验未拒绝只是该候选动态扩展没有证据，不保证所有非线性或更长依赖消失。标准误和选取 $r$ 的理由仍应报告。
+
+## 时间序列的 Bootstrap（Bootstrap for Time Series）
+
+时间依赖下不能逐期 i.i.d. resample 原序列。原书比较：
+
+- recursive bootstrap：拟合 AR 后从 residual 抽 shock 并递推，依赖模型正确且 i.i.d. error；
+- pairwise bootstrap：对 $(Y_t,X_t)$ 配对抽样，在 MDS score 下复制一阶分布，但不复制完整路径；
+- fixed-design residual：固定 $X_t$、抽 residual，只适合 i.i.d. error；
+- wild bootstrap：固定 $X_t,\hat e_t$ 并乘均值零方差一权重，允许条件异方差；
+- block bootstrap：整块重抽以保留块内任意依赖，结果对 block length 敏感。
+
+选择方法取决于要保留的假设。AR-DL 中若 conditioning variables 不严格外生，recursive bootstrap 需联合模拟所有变量；不能只递推 $Y$ 并固定未来 $Z$。每个 bootstrap draw 都应重做选定的估计和推断步骤。
+
+## 技术证明（Technical Proofs*）
+
+本节证明路线可归纳为三类。第一，stationarity/ergodicity 的变换证明把平移后的有限联合分布或 invariant event 拉回原过程。第二，MDS CLT 用乘积型近似控制 moment-generating function，关键是条件均值为零让乘积期望逐步化为 1。第三，相关序列 CLT 构造 martingale approximation
+
+::: {#hansen-eq-14-73}
+$$
+u_t=e_t+Z_t-Z_{t+1},
+\tag{14.73}
+$$
+:::
+
+使 telescoping 后
+
+::: {#hansen-eq-14-74}
+$$
+\frac1{\sqrt n}\sum_{t=1}^nu_t
+=\frac1{\sqrt n}\sum_{t=1}^ne_t
++\frac{Z_1-Z_{n+1}}{\sqrt n}.
+\tag{14.74}
+$$
+:::
+
+边界项由 $E|Z_t|<\infty$ 成为 $o_p(1)$，主体用 MDS CLT。构造的
+
+::: {#hansen-eq-14-75}
+$$
+e_t=\sum_{\ell=0}^{\infty}
+\{E(u_{t+\ell}\mid\mathcal F_t)
+-E(u_{t+\ell}\mid\mathcal F_{t-1})\}
+\tag{14.75}
+$$
+:::
+
+为 MDS；mixing inequalities 保证级数可积。Wold 证明则是把 $Y_t$ 投影到正交 innovations，Bessel 不等式给 $\sum b_j^2<\infty$；AR 根结论通过 companion determinant 连接 $\det(A-\lambda I)$ 与 $\alpha(1/\lambda)$。
+
+## 习题阅读指南（Exercises）
+
+14.1–14.5练习样本 ACF 的遍历一致性、MDS 变换和 stochastic volatility；14.6–14.17推导 MA/AR 的 ACF、IRF、ARMA 表示和识别反例；14.18–14.22使用 FRED-QD/MD 估计 AR、比较 heteroskedastic 与 Newey–West、选阶、估计 DL/AR-DL 并检验 Granger causality。
+
+实证题统一先画 level 与 transformation，再说明为何取增长率/差分；各 AR 候选用共同样本；报告 point estimate、选阶准则、standard error 口径与 residual diagnostics；IRF 写明 shock scaling。若使用本地数据，路径指向 hansen/econometrics/data/...，并固定变量定义与样本日期，保证复现。
+
+::: {.book-map}
+**章末自检**
+
+1. 严格平稳、弱平稳、遍历与 mixing 各控制什么？蕴含关系是什么？
+2. 为什么 $Y_t=Z$ 平稳却不能用时间平均估计 $E(Z)$？
+3. MDS、白噪声与 i.i.d. 的差别为何会改变 CLT 和协方差口径？
+4. [式 (14.17)](#hansen-eq-14-17) 为什么称 long-run variance？
+5. Wold innovation 为什么必为白噪声，却不必为 MDS？
+6. AR 根在单位圆外与 companion eigenvalues 在单位圆内如何对应？
+7. MA invertibility 是平稳条件、识别规范，还是两者？
+8. 正确 AR 与 approximating AR 的 OLS 点估计和标准误分别有何差异？
+9. [式 (14.47)](#hansen-eq-14-47) 与 [式 (14.49)](#hansen-eq-14-49) 应在什么条件下使用？
+10. Granger causality 为何不能直接翻译成政策因果？
+:::
