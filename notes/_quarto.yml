@@ -53,6 +53,7 @@ book:
   appendices:
     - appendix-a.qmd
     - appendix-b.qmd
+    - abbreviations.qmd
 
 lang: zh-CN
 bibliography: ../presentation/references.bib

@@ -11,6 +11,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 NOTES = ROOT / "notes"
+READING_AID = "abbreviations.qmd"
 EXPECTED = {
     "ch01.qmd": (10, "1", 1200),
     "ch02.qmd": (34, "2", 5000),
@@ -67,6 +68,7 @@ SCOPES = {
     "chapter-27": {"ch27.qmd"},
     "chapter-28": {"ch28.qmd"},
     "chapter-29": {"ch29.qmd"},
+    "reading-aids": {READING_AID},
     "chapters-14-18": {*(f"ch{i:02d}.qmd" for i in range(14, 19))},
     "chapters": {name for name in EXPECTED if name.startswith("ch")},
     "foundation": {
@@ -74,7 +76,7 @@ SCOPES = {
         "appendix-b.qmd",
         *(f"ch{i:02d}.qmd" for i in range(1, 7)),
     },
-    "all-current": set(EXPECTED),
+    "all-current": {*EXPECTED, READING_AID},
 }
 PLACEHOLDER = re.compile(r"\b(?:TODO|TBD)\b|待补|占位|Lorem", re.I)
 CHINESE = re.compile(r"[\u3400-\u9fff]")
@@ -84,6 +86,7 @@ FENCED_ANCHOR = re.compile(
     r"^::: \{#hansen-eq-([1-9]\d*|[ab])-(\d+)\}\s*$", re.M
 )
 REFERENCE = re.compile(r"\[式 \(([1-9]\d*|[AB])\.(\d+)\)\]\(([^)]+)\)")
+QMD_LINK = re.compile(r"\((ch\d{2}|appendix-[ab])\.qmd(?:#[^)]+)?\)")
 
 
 def error(path: Path, code: str, message: str) -> str:
@@ -148,6 +151,49 @@ def check_rendered_file(path: Path, prefix: str) -> list[str]:
     return issues
 
 
+def check_reading_aid(path: Path) -> list[str]:
+    """检查独立缩写材料的覆盖面、中文详细度与章节链接。"""
+    issues: list[str] = []
+    if not path.exists():
+        return [error(path, "MISSING_FILE", "缩写阅读材料不存在。")]
+    text = path.read_text(encoding="utf-8")
+    if PLACEHOLDER.search(text):
+        issues.append(error(path, "PLACEHOLDER", "含未完成占位符。"))
+    chinese_count = len(CHINESE.findall(text))
+    if chinese_count < 6000:
+        issues.append(error(path, "DETAIL_LEVEL", f"中文字符约 {chinese_count}，低于缩写材料门槛 6000。"))
+    sections = len(re.findall(r"^##\s+", text, re.M))
+    if sections < 12:
+        issues.append(error(path, "SECTION_COUNT", f"二级小节 {sections}，至少应为 12。"))
+    table_rows = [
+        line for line in text.splitlines()
+        if line.startswith("|")
+        and not re.match(r"^\|\s*(?:---|缩写|写法|记号)", line)
+    ]
+    if len(table_rows) < 150:
+        issues.append(error(path, "GLOSSARY_COVERAGE", f"有效表格行约 {len(table_rows)}，低于整书覆盖门槛 150。"))
+    for required in ("英文全称", "中文释义", "同形缩写速查", "按字母快速定位", "阅读自检"):
+        if required not in text:
+            issues.append(error(path, "MISSING_BLOCK", f"缺少“{required}”。"))
+    for stem in QMD_LINK.findall(text):
+        target = NOTES / f"{stem}.qmd"
+        if not target.exists():
+            issues.append(error(path, "BROKEN_SOURCE_LINK", f"章节链接目标不存在：{target.name}。"))
+    return issues
+
+
+def check_rendered_reading_aid(path: Path) -> list[str]:
+    output = NOTES / "_output" / f"{path.stem}.html"
+    if not output.exists():
+        return [error(path, "MISSING_RENDER", f"渲染产物不存在：{output.relative_to(ROOT)}。")]
+    html = output.read_text(encoding="utf-8")
+    issues: list[str] = []
+    for anchor in ("怎样使用这份材料", "同形缩写速查", "阅读自检"):
+        if anchor not in html:
+            issues.append(error(path, "MISSING_RENDERED_SECTION", f"HTML 中缺少“{anchor}”。"))
+    return issues
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -170,6 +216,11 @@ def main() -> int:
         issues.extend(check_file(path, *requirements))
         if args.rendered and path.exists():
             issues.extend(check_rendered_file(path, requirements[1]))
+    if READING_AID in SCOPES[args.scope]:
+        reading_aid = NOTES / READING_AID
+        issues.extend(check_reading_aid(reading_aid))
+        if args.rendered and reading_aid.exists():
+            issues.extend(check_rendered_reading_aid(reading_aid))
     for message in issues:
         print(message)
     if issues:

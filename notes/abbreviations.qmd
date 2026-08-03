@@ -1,0 +1,303 @@
+---
+title: "整书缩写与阅读记号"
+subtitle: "英文全称、中文释义、章节语境与易混辨析"
+numbered: false
+status: "完整初稿"
+---
+
+::: {.book-map}
+**覆盖范围**　本材料按 Hansen《Econometrics》正文与附录逐章核对，收录会影响概念理解的方法、估计量、检验、数据与常见阅读记号。单纯用于代表矩阵的字母（如 $X,Y,Z,Q$）、假设标签（如 $H_0,H_1$）及一次性作者—年份代码不当作缩写。英文全称优先采用原书用语，中文译名则兼顾国内计量教材的习惯。
+:::
+
+::: {.bridge}
+**本科桥接**　缩写不是孤立单词。例如 OLS 既是一个计算公式，也可能指在不同假设下具有不同解释的估计量；AR 在时间序列章通常是 autoregression，在弱工具检验语境却可能是 Anderson--Rubin。阅读时应先问“当前章节的对象是什么”，再把字母展开。
+:::
+
+## 怎样使用这份材料
+
+第一次遇到缩写时，建议依次做四件事：
+
+1. 在本页找到英文全称与中文释义；
+2. 顺着“主要位置”进入对应章节，确认它在当前模型中的定义；
+3. 阅读“辨析”列，排除同形异义；
+4. 回到原书公式，核对估计对象、假设和维数，而不是用中文简称替代定义。
+
+本页是阅读导航，不另造 Hansen 公式编号。凡需引用原书公式，链接均指向章节笔记中保留的原编号，例如 [式 (12.17)](ch12.qmd#hansen-eq-12-17)。“英文全称”中的连字符、大小写有时存在排版变体，如 AR-DL/ARDL、DiD/DID、Lasso/LASSO；本页把它们并列列出。
+
+## 概率、抽样与渐近理论
+
+| 缩写/记号 | 英文全称 | 中文释义 | 主要位置 | 阅读辨析 |
+|---|---|---|---|---|
+| a.s. | almost surely | 几乎必然地 | [附录 B](appendix-b.qmd) | 比“依概率”更强；不是说每个样本点都成立，而是例外集合概率为零。 |
+| CDF | cumulative distribution function | 累积分布函数 | [第 19 章](ch19.qmd) | 对连续、离散变量都存在；不要与只对连续型变量使用的 PDF 混同。 |
+| PDF | probability density function | 概率密度函数 | [附录 B](appendix-b.qmd) | 在统计语境指密度；书稿文件名中的 PDF 才是 Portable Document Format。 |
+| EDF | empirical distribution function | 经验分布函数 | [第 19 章](ch19.qmd) | 用样本比例估计 CDF，是阶梯函数，不是平滑密度。 |
+| DGP | data-generating process | 数据生成过程 | [第 5 章](ch05.qmd) | 指产生总体和样本的概率机制，不等于研究者写下的回归规格。 |
+| i.i.d. | independent and identically distributed | 独立同分布 | [第 5 章](ch05.qmd) | 同分布不推出独立；面板、时间序列和簇样本往往只在更高层单位间独立。 |
+| LLN | law of large numbers | 大数定律 | [附录 B](appendix-b.qmd) | 是一类收敛结果的总称；实际使用要说清随机变量、矩条件和依赖结构。 |
+| WLLN | weak law of large numbers | 弱大数定律 | [第 6 章](ch06.qmd) | 给依概率收敛；“weak”描述收敛方式，不表示结论不重要。 |
+| ULLN | uniform law of large numbers | 一致大数定律 | [第 23 章](ch23.qmd) | 控制参数集合上的上确界，是极值估计一致性的核心，逐点 LLN 通常不够。 |
+| CLT | central limit theorem | 中心极限定理 | [第 6 章](ch06.qmd) | 把规范化样本和导向正态极限；时间序列与簇数据需使用相应版本。 |
+| FCLT | functional central limit theorem | 函数型中心极限定理 | [第 16 章](ch16.qmd) | 收敛对象是部分和过程，极限常为 Brownian motion；单位根的非标准极限依赖它。 |
+| CMT | continuous mapping theorem | 连续映射定理 | [第 6 章](ch06.qmd) | 先有随机对象收敛，再通过连续函数传递；必须核对极限点处连续。 |
+| MDS | martingale difference sequence | 鞅差序列 | [第 14 章](ch14.qmd) | 要求给定过去信息的条件均值为零；不等于独立，也不排除条件异方差。 |
+| plim | probability limit | 概率极限 | [第 6 章](ch06.qmd) | 是“依概率收敛到”的紧凑写法，不是普通代数极限。 |
+| $O_p(1)$ | bounded in probability | 依概率有界 | [第 6 章](ch06.qmd) | 只控制随机量级，不表示趋于常数或期望有界。 |
+| $o_p(1)$ | converges to zero in probability | 依概率趋于零 | [第 6 章](ch06.qmd) | 小写 $o_p$ 表示可忽略余项；与确定性 $o(1)$ 不同。 |
+| FOC | first-order condition | 一阶条件 | [第 4 章](ch04.qmd) | 导数为零通常只是内点必要条件；全局最优还需凸性、边界或二阶性质。 |
+| KKT | Karush--Kuhn--Tucker conditions | 卡鲁什—库恩—塔克条件 | [第 29 章](ch29.qmd) | 处理含不等式约束或不可微惩罚的最优性；Lasso 中使用次梯度版本。 |
+
+## 回归对象、最小二乘与稳健方差
+
+| 缩写 | 英文全称 | 中文释义 | 主要位置 | 阅读辨析 |
+|---|---|---|---|---|
+| CEF | conditional expectation function | 条件期望函数 | [第 2 章](ch02.qmd) | $E(Y\mid X=x)$ 是总体对象；它只有在额外条件下才等于线性投影。 |
+| BLP | best linear predictor | 最佳线性预测 | [第 2 章](ch02.qmd) | 在回归章指线性投影；离散选择文献中 BLP 也可指 Berry--Levinsohn--Pakes，须看语境。 |
+| LS | least squares | 最小二乘 | [第 3 章](ch03.qmd) | 方法族的总称；OLS、WLS、NLLS 都可视为不同 LS 问题。 |
+| OLS | ordinary least squares | 普通最小二乘 | [第 3 章](ch03.qmd) | “ordinary”指未加权的平方残差最小化，不自动表示同方差或因果识别成立。 |
+| WLS | weighted least squares | 加权最小二乘 | [第 11 章](ch11.qmd) | 给不同观测不同权重；正确逆方差权重可提高效率，任意权重则未必。 |
+| GLS | generalized least squares | 广义最小二乘 | [第 11 章](ch11.qmd) | 使用误差协方差结构变换模型；协方差未知时需估计，成为 FGLS。 |
+| FGLS | feasible generalized least squares | 可行广义最小二乘 | [第 11 章](ch11.qmd) | 用估计协方差替代未知 GLS 权重；“feasible”不保证有限样本优于 OLS。 |
+| SUR | seemingly unrelated regressions | 似不相关回归 | [第 11 章](ch11.qmd) | 各方程误差同期相关使联合 GLS 可能增效；相同回归量时 SUR 与逐方程 OLS 重合。 |
+| CLS | constrained least squares | 约束最小二乘 | [第 8 章](ch08.qmd) | 只在约束确实成立时针对原参数一致；不是“删除不显著变量”的自动程序。 |
+| NLS/NLLS | nonlinear least squares | 非线性最小二乘 | [第 24 章](ch24.qmd) | 非线性指条件均值对参数非线性；不能只运行优化器而不检查识别与局部极值。 |
+| LAD | least absolute deviations | 最小绝对偏差 | [第 25 章](ch25.qmd) | 在线性位置模型下估计条件中位数；与估计其他分位数的 QR 相连。 |
+| QR | quantile regression | 分位数回归 | [第 25 章](ch25.qmd) | 估计条件分位数，不是把 OLS 样本换成某个分位数组。 |
+| CQR | censored quantile regression | 删失分位数回归 | [第 27 章](ch27.qmd) | 处理潜变量被阈值删失；与只对未删失样本做 QR 不等价。 |
+| CLAD | censored least absolute deviations | 删失最小绝对偏差 | [第 27 章](ch27.qmd) | 是中位数型删失回归方法，对分布的要求与 Tobit MLE 不同。 |
+| FWL | Frisch--Waugh--Lovell theorem | 弗里施—沃—洛维尔定理 | [第 3 章](ch03.qmd) | “先残差化再回归”必须对因变量与目标回归量使用同一控制空间。 |
+| BLUE | best linear unbiased estimator | 最佳线性无偏估计量 | [第 4 章](ch04.qmd) | Gauss--Markov 结论只在规定的线性无偏类和假设下比较方差，不是所有估计量中的最好。 |
+| SSE | sum of squared errors | 误差平方和 | [第 3 章](ch03.qmd) | 原书常用的残差平方和记法；不同软件也写 RSS 或 SSR。 |
+| RSS | residual sum of squares | 残差平方和 | [第 28 章](ch28.qmd) | 与 SSE 常同义；不要与 regression sum of squares 混淆。 |
+| SSR | sum of squared residuals | 残差平方和 | [第 14 章](ch14.qmd) | 缩写在不同教材也可能表示回归平方和，必须看作者定义。 |
+| ESS | explained sum of squares | 解释平方和 | [第 12 章](ch12.qmd) | 与 TSS、RSS 的分解依赖含截距等条件；不要误读为 error sum of squares。 |
+| TSS | total sum of squares | 总离差平方和 | [第 7 章](ch07.qmd) | 衡量因变量围绕样本均值的总变异，常用于 $R^2$。 |
+| MSE | mean squared error | 均方误差 | [第 7 章](ch07.qmd) | 可指估计风险或残差平方和的尺度化版本；语境决定分母和随机对象。 |
+| RMSE | root mean squared error | 均方根误差 | [第 28 章](ch28.qmd) | 与因变量同量纲，常用于预测；不能只在训练样本上比较。 |
+| SE | standard error | 标准误 | [第 7 章](ch07.qmd) | 是估计量抽样波动的估计，不是样本标准差，也不是系数本身的不确定区间。 |
+| HC0 | heteroskedasticity-consistent covariance, type 0 | 异方差稳健协方差 HC0 | [第 4 章](ch04.qmd) | 原始 sandwich 版本，未做有限样本 leverage 修正。 |
+| HC1 | heteroskedasticity-consistent covariance, type 1 | 异方差稳健协方差 HC1 | [第 4 章](ch04.qmd) | 通常给 HC0 乘自由度修正；软件默认可能不同。 |
+| HC2 | heteroskedasticity-consistent covariance, type 2 | 异方差稳健协方差 HC2 | [第 4 章](ch04.qmd) | 按 $1-h_{ii}$ 修正残差，针对 leverage 偏差。 |
+| HC3 | heteroskedasticity-consistent covariance, type 3 | 异方差稳健协方差 HC3 | [第 4 章](ch04.qmd) | 使用更强的 leverage 修正，有限样本中常较保守。 |
+| HAC | heteroskedasticity and autocorrelation consistent | 异方差与自相关稳健 | [第 14 章](ch14.qmd) | 同时允许异方差和序列相关；需选择 kernel 与带宽。 |
+| NW | Newey--West | 纽维—韦斯特 HAC 估计 | [第 14 章](ch14.qmd) | 在时间序列章通常指 HAC；在非参数章 NW 则可能指 Nadaraya--Watson，必须看对象。 |
+| CR1 | cluster-robust covariance, type 1 | 聚类稳健协方差 CR1 | [第 17 章](ch17.qmd) | 以簇为独立抽样单位并作自由度修正；有效样本量更接近簇数。 |
+| CR3 | cluster-robust covariance, type 3 | 聚类稳健协方差 CR3 | [第 17 章](ch17.qmd) | leverage 型小簇修正；不是 HC3 简单把观测改称簇。 |
+
+## 似然、矩估计、检验与模型评价
+
+| 缩写 | 英文全称 | 中文释义 | 主要位置 | 阅读辨析 |
+|---|---|---|---|---|
+| LL | log likelihood | 对数似然 | [第 22 章](ch22.qmd) | 在非参数回归章 LL 也常表示 local linear（局部线性），须由上下文判断。 |
+| MLE | maximum likelihood estimator/estimation | 极大似然估计量/估计 | [第 22 章](ch22.qmd) | 一致性依赖正确的概率模型与识别；优化收敛本身不是统计正确性的证明。 |
+| QMLE | quasi-maximum likelihood estimator | 准极大似然估计量 | [第 22 章](ch22.qmd) | 即使完整分布错设，某些条件均值/方差参数仍可能一致；推断通常需 sandwich 方差。 |
+| LR | likelihood-ratio test | 似然比检验 | [第 22 章](ch22.qmd) | 在时间序列文字里 LR 也可能表示 long run；检验语境下是受限与非受限似然差。 |
+| LM | Lagrange-multiplier test | 拉格朗日乘子检验 | [第 22 章](ch22.qmd) | 又称 score test，只需在原假设受限模型处估计。 |
+| MD | minimum distance | 最小距离 | [第 8 章](ch08.qmd) | 通过加权距离施加限制或组合估计；不要与 Markdown 文件扩展名 `.md` 混同。 |
+| EMD | efficient minimum distance | 有效最小距离 | [第 8 章](ch08.qmd) | 使用估计量渐近协方差的逆作为最优权重。 |
+| MME | method of moments estimator | 矩估计量 | [第 13 章](ch13.qmd) | 矩条件数与参数数相等时的基本方法；GMM 允许过度识别。 |
+| AIC | Akaike information criterion | 赤池信息准则 | [第 28 章](ch28.qmd) | 侧重预测 Kullback--Leibler 风险；不以选择真实有限模型为主要目标。 |
+| BIC | Bayesian information criterion | 贝叶斯信息准则 | [第 28 章](ch28.qmd) | 惩罚通常为 $K\log n$；“Bayesian”来源不意味着任意使用时都是后验概率。 |
+| IC | information criterion | 信息准则 | [第 28 章](ch28.qmd) | AIC、BIC 等的统称；比较值只在相同样本和可比 likelihood/loss 下有意义。 |
+| FIC | focused information criterion | 聚焦信息准则 | [第 28 章](ch28.qmd) | 针对预先指定的焦点参数最小化风险，选出的模型未必适合解释其他参数。 |
+| CV | cross-validation | 交叉验证 | [第 28 章](ch28.qmd) | 调参、外部性能评价与 DML cross-fitting 是三个不同任务，不能共用同一折后混称 CV。 |
+| LOO/LOO-CV | leave-one-out cross-validation | 留一交叉验证 | [第 19 章](ch19.qmd) | 每次留一个独立单位；簇数据应考虑留整簇，而非留单行。 |
+| GCV | generalized cross-validation | 广义交叉验证 | [第 28 章](ch28.qmd) | 用平滑矩阵迹近似 LOO，常见于线性平滑器或正则化。 |
+| FPE | final prediction error | 最终预测误差准则 | [第 28 章](ch28.qmd) | 用训练残差加复杂度修正估计新样本预测误差。 |
+| KLIC | Kullback--Leibler information criterion | 库尔贝克—莱布勒信息准则/散度 | [第 28 章](ch28.qmd) | 衡量真实密度与候选密度差异，不对称，且不是普通欧氏距离。 |
+| KL | Kullback--Leibler | 库尔贝克—莱布勒 | [第 28 章](ch28.qmd) | 常见于 KL divergence；KLIC 是原书在信息准则推导中的写法。 |
+| ISE | integrated squared error | 积分平方误差 | [第 19 章](ch19.qmd) | 对给定样本的整条函数误差积分。 |
+| MISE | mean integrated squared error | 平均积分平方误差 | [第 19 章](ch19.qmd) | 对 ISE 再取抽样期望；原书更多使用 IMSE/AIMSE 相关记法。 |
+| IMSE | integrated mean squared error | 积分均方误差 | [第 20 章](ch20.qmd) | 先在每点取 MSE 再按设计权重积分，需看具体权重定义。 |
+| AMSE | asymptotic mean squared error | 渐近均方误差 | [第 21 章](ch21.qmd) | 用主导 bias 与 variance 近似 MSE，不是有限样本精确风险。 |
+| AIMSE | asymptotic integrated mean squared error | 渐近积分均方误差 | [第 19 章](ch19.qmd) | 常用来推导最优 bandwidth rate 与常数。 |
+| MSFE | mean squared forecast error | 平均平方预测误差 | [第 15 章](ch15.qmd) | 时间序列中面向未来 forecast；与同样本拟合 MSE 不同。 |
+| MSPE | mean squared prediction error | 平均平方预测误差 | [第 28 章](ch28.qmd) | 更一般的 out-of-sample prediction 风险；forecast 常强调时间顺序。 |
+| WMSE | weighted mean squared error | 加权均方误差 | [第 28 章](ch28.qmd) | 权重决定哪些参数方向或群体更重要，不能脱离损失函数谈最优。 |
+| ROT | rule of thumb | 经验法则 | [第 19 章](ch19.qmd) | 用先导模型给 bandwidth 初值；不是无需诊断的普适最优规则。 |
+| RESET | regression specification error test | 回归设定误差检验 | [第 4 章](ch04.qmd) | 拒绝提示某类函数形式遗漏，不会自动告诉研究者正确模型或因果遗漏变量。 |
+| VIF | variance inflation factor | 方差膨胀因子 | [第 4 章](ch04.qmd) | 描述回归量线性相关带来的方差放大；高 VIF 不等同于偏误。 |
+| OVB | omitted-variable bias | 遗漏变量偏误 | [第 3 章](ch03.qmd) | 方向由遗漏变量效应和与已含回归量的偏相关共同决定。 |
+
+## 工具变量、联立方程与 GMM
+
+| 缩写 | 英文全称 | 中文释义 | 主要位置 | 阅读辨析 |
+|---|---|---|---|---|
+| IV | instrumental variables | 工具变量 | [第 12 章](ch12.qmd) | 有效性、相关性和排除限制是不同问题；第一阶段显著不能证明外生性。 |
+| 2SLS | two-stage least squares | 两阶段最小二乘 | [第 12 章](ch12.qmd) | “两阶段”是计算表示；第二阶段把拟合值当固定回归量所得普通 OLS 标准误不正确。 |
+| ILS | indirect least squares | 间接最小二乘 | [第 12 章](ch12.qmd) | 恰好识别时由 reduced-form 系数恢复结构参数，与一般过度识别 2SLS 区分。 |
+| LIML | limited-information maximum likelihood | 有限信息极大似然 | [第 12 章](ch12.qmd) | 只使用目标结构方程及相关 reduced form；弱/多工具下常比 2SLS 偏差表现更好。 |
+| FIML | full-information maximum likelihood | 完全信息极大似然 | [第 11 章](ch11.qmd) | 对整个联立系统联合指定 likelihood；效率潜力伴随更强的全系统设定风险。 |
+| JIVE | jackknife instrumental variables estimator | 刀切工具变量估计量 | [第 12 章](ch12.qmd) | 用 leave-one-out 第一阶段削弱 many-instrument own-observation bias。 |
+| JIVE1/JIVE2 | jackknife IV, variants 1 and 2 | 两种刀切 IV 变体 | [第 12 章](ch12.qmd) | 两者有限样本代数与标准化不同，不应只写“用了 JIVE”而不说明版本。 |
+| SSIV | split-sample instrumental variables | 分样本工具变量 | [第 12 章](ch12.qmd) | 用一部分样本训练第一阶段、另一部分估结构式；降低过拟合相关但牺牲样本。 |
+| GMM | generalized method of moments | 广义矩估计 | [第 13 章](ch13.qmd) | 核心是矩条件、权重和识别；不是“稳健标准误版 2SLS”的同义词。 |
+| CU-GMM | continuously updated GMM | 连续更新 GMM | [第 13 章](ch13.qmd) | 权重矩阵随候选参数同步更新，目标函数与两步 GMM 不同。 |
+| FE-IV | fixed-effects instrumental variables | 固定效应工具变量 | [第 17 章](ch17.qmd) | 因变量、内生变量、外生变量和工具都要经过同一 within 变换。 |
+| FE-2SLS | fixed-effects two-stage least squares | 固定效应两阶段最小二乘 | [第 17 章](ch17.qmd) | 是 FE-IV 的常见计算实现；第一阶段强度也必须在 within variation 上评估。 |
+| NPIV | nonparametric instrumental variables | 非参数工具变量 | [第 20 章](ch20.qmd) | 是病态逆问题；普通非参数回归的平滑参数逻辑不能原封不动搬来。 |
+| IVQR | instrumental-variable quantile regression | 工具变量分位数回归 | [第 25 章](ch25.qmd) | 识别结构分位效应需要专门秩相似/单调等条件，不是对第一阶段拟合值做 QR。 |
+| LATE | local average treatment effect | 局部平均处理效应 | [第 12 章](ch12.qmd) | 在单调性等条件下针对 compliers；不等于全体 ATE。 |
+| AR test | Anderson--Rubin test | 安德森—鲁宾检验 | [第 12 章](ch12.qmd) | 在弱工具下可保持尺寸；此处 AR 不是 autoregression。 |
+
+## 时间序列与预测
+
+| 缩写 | 英文全称 | 中文释义 | 主要位置 | 阅读辨析 |
+|---|---|---|---|---|
+| AR | autoregression/autoregressive | 自回归 | [第 14 章](ch14.qmd) | 时间序列语境由变量自身滞后解释当前值；弱 IV 章节的 AR test 是 Anderson--Rubin。 |
+| MA | moving average | 移动平均过程 | [第 14 章](ch14.qmd) | 指冲击的有限/无限滞后表示；第 28 章的 model averaging 也会简写为 MA。 |
+| ARMA | autoregressive moving average | 自回归移动平均 | [第 14 章](ch14.qmd) | 同时含 AR 与 MA 多项式，通常用于平稳序列。 |
+| ARIMA | autoregressive integrated moving average | 差分自回归移动平均 | [第 16 章](ch16.qmd) | “integrated”表示需差分至平稳；不能把任意带趋势序列都机械差分。 |
+| DL | distributed lag | 分布滞后 | [第 14 章](ch14.qmd) | 当前因变量对解释变量当前值及其滞后的动态响应。 |
+| AR-DL/ARDL | autoregressive distributed lag | 自回归分布滞后 | [第 14 章](ch14.qmd) | 同时含因变量滞后和解释变量分布滞后；不同资料用两种拼写。 |
+| ACF | autocorrelation function | 自相关函数 | [第 14 章](ch14.qmd) | 是总体或样本的相关函数；样本图不能单独证明某个 ARMA 阶数。 |
+| VAR | vector autoregression | 向量自回归 | [第 15 章](ch15.qmd) | 多变量系统中每个变量对共同滞后向量回归；reduced-form VAR 不自动给结构冲击。 |
+| SVAR | structural vector autoregression | 结构向量自回归 | [第 15 章](ch15.qmd) | 需额外 contemporaneous/long-run/sign 等限制识别结构冲击。 |
+| VECM | vector error-correction model | 向量误差修正模型 | [第 16 章](ch16.qmd) | 把协整关系与短期差分动态结合；秩决定协整关系数。 |
+| ECM | error-correction model | 误差修正模型 | [第 16 章](ch16.qmd) | 偏离长期关系后的调整项；“error”是均衡误差，不是普通回归残差的随意滞后。 |
+| DF | Dickey--Fuller | 迪基—富勒 | [第 16 章](ch16.qmd) | 单位根检验具有非标准极限，不能使用普通正态或 Student $t$ 临界值。 |
+| ADF | augmented Dickey--Fuller | 增广迪基—富勒 | [第 16 章](ch16.qmd) | 加入差分滞后吸收序列相关；滞后数与 deterministic terms 都影响检验。 |
+| KPSS | Kwiatkowski--Phillips--Schmidt--Shin | KPSS 平稳性检验 | [第 16 章](ch16.qmd) | 原假设通常是平稳，与 DF/ADF 的单位根原假设方向相反；二者可联合诊断。 |
+| IRF | impulse response function | 脉冲响应函数 | [第 15 章](ch15.qmd) | 描述一个冲击对未来路径的响应；“冲击”是否有经济含义取决于识别。 |
+| OIRF | orthogonalized impulse response function | 正交化脉冲响应 | [第 15 章](ch15.qmd) | 常借 Cholesky 正交化，变量排序会改变结果。 |
+| CIRF | cumulative impulse response function | 累积脉冲响应 | [第 15 章](ch15.qmd) | 对水平或增长响应跨期累加；解释前要核对变量是否已差分。 |
+| SIRF | structural impulse response function | 结构脉冲响应 | [第 15 章](ch15.qmd) | 依赖 SVAR 的结构识别限制，不是 reduced-form residual 的直接响应。 |
+| COIRF | cumulative orthogonalized impulse response | 累积正交化脉冲响应 | [第 15 章](ch15.qmd) | 同时包含正交化与跨期累积，两层操作都应写清。 |
+| FEVD | forecast error variance decomposition | 预测误差方差分解 | [第 15 章](ch15.qmd) | 分解各结构冲击对不同预测期误差方差的贡献；FE 在此不是 fixed effects。 |
+| LP | local projection | 局部投影 | [第 15 章](ch15.qmd) | 逐预测期直接回归响应，不要求把全部动态压入一个 VAR；此处 local 不是核平滑。 |
+| BN | Beveridge--Nelson decomposition | 贝弗里奇—纳尔逊分解 | [第 16 章](ch16.qmd) | 把序列分为永久随机趋势与平稳周期成分。 |
+| FM-OLS | fully modified OLS | 完全修正 OLS | [第 16 章](ch16.qmd) | 在协整回归中修正长期内生性和序列相关，不能用普通 OLS 稳健 SE 替代。 |
+| DOLS | dynamic OLS | 动态 OLS | [第 16 章](ch16.qmd) | 在协整回归加入差分变量的 leads/lags 以修正相关性。 |
+
+## 面板、处理效应与研究设计
+
+| 缩写 | 英文全称 | 中文释义 | 主要位置 | 阅读辨析 |
+|---|---|---|---|---|
+| FE | fixed effects | 固定效应 | [第 17 章](ch17.qmd) | 线性面板中通过 within 变换消去个体效应；不等于任何带虚拟变量的回归都有因果解释。 |
+| RE | random effects | 随机效应 | [第 17 章](ch17.qmd) | 关键是个体效应与回归量的外生性及协方差结构，不是效应“是否随机抽到”的字面区别。 |
+| FD | first differences | 一阶差分 | [第 17 章](ch17.qmd) | 用相邻期差消去个体效应；$T>2$ 时普通 FD 与 FE 一般不同。 |
+| FOD | forward orthogonal deviations | 前向正交离差 | [第 17 章](ch17.qmd) | 用未来均值去除个体效应并保持特定球形性质；工具时序要随变换重新核对。 |
+| HT | Hausman--Taylor estimator | 豪斯曼—泰勒估计量 | [第 17 章](ch17.qmd) | 用外生时变变量的内部工具识别部分时不变系数；依赖严格的变量分组。 |
+| AB | Arellano--Bond estimator | 阿雷利亚诺—邦德估计量 | [第 17 章](ch17.qmd) | 动态面板 difference GMM；AB 在别处也可能只是作者姓名首字母。 |
+| BB | Blundell--Bond estimator | 布伦德尔—邦德估计量 | [第 17 章](ch17.qmd) | system GMM，加入 levels moments；额外初始条件不是免费的效率提升。 |
+| DiD/DID | difference-in-differences | 双重差分 | [第 18 章](ch18.qmd) | 核心是反事实趋势/比较组识别，不是“有两个差分项”就自动成立。 |
+| RD/RDD | regression discontinuity/design | 回归不连续/回归不连续设计 | [第 21 章](ch21.qmd) | RD 可指方法，RDD 强调设计；阈值附近的连续性与操纵诊断是识别核心。 |
+| FRD | fuzzy regression discontinuity | 模糊回归不连续 | [第 21 章](ch21.qmd) | 阈值只使处理概率跳跃，局部 Wald 比率识别阈值处的局部效应。 |
+| ACE | average causal effect | 平均因果效应 | [第 2 章](ch02.qmd) | 原书早期使用的平均结构因果效应语言；不同文献也常写 ATE。 |
+| ATE | average treatment effect | 平均处理效应 | [第 12 章](ch12.qmd) | 对目标总体平均；与 LATE、条件效应或处理组效应不可互换。 |
+| CIA | conditional independence assumption | 条件独立假设 | [第 2 章](ch02.qmd) | 给定 $X$ 后处理与潜在未观测异质性独立；仍需共同支持。 |
+| IPW | inverse probability weighting | 逆概率加权 | [第 27 章](ch27.qmd) | 用选择/处理概率重构目标总体；小 propensity 会产生不稳定权重。 |
+| MAR | missing at random | 随机缺失 | [第 27 章](ch27.qmd) | 给定观测信息后缺失与未观测结果独立；“random”不表示缺失完全无条件随机。 |
+
+## 非参数、半参数与非线性模型
+
+| 缩写 | 英文全称 | 中文释义 | 主要位置 | 阅读辨析 |
+|---|---|---|---|---|
+| NW | Nadaraya--Watson estimator | 纳达拉亚—沃森估计量 | [第 19 章](ch19.qmd) | 此处是 local constant kernel regression；时间序列 HAC 中 NW 指 Newey--West。 |
+| LL | local linear regression | 局部线性回归 | [第 19 章](ch19.qmd) | 在每个评价点做局部一次拟合，边界偏差通常优于 NW；似然章 LL 又是 log likelihood。 |
+| LPM | linear probability model | 线性概率模型 | [第 26 章](ch26.qmd) | 二元因变量的线性条件均值近似；预测可能超出 $[0,1]$，但系数解释直接。 |
+| AME | average marginal effect | 平均边际效应 | [第 26 章](ch26.qmd) | 先按每个观测计算非线性边际效应再平均；一般不等于在平均协变量处计算。 |
+| IIA | independence of irrelevant alternatives | 无关选项独立性 | [第 26 章](ch26.qmd) | multinomial logit 的相对赔率限制，不是说各选择结果统计独立。 |
+| GEV | generalized extreme value | 广义极值分布/模型族 | [第 26 章](ch26.qmd) | nested logit 可由 GEV 生成；相关结构受生成函数约束。 |
+| GHK | Geweke--Hajivassiliou--Keane simulator | GHK 模拟器 | [第 26 章](ch26.qmd) | 递归模拟多元正态区域概率，常用于 multinomial probit likelihood。 |
+| CES | constant elasticity of substitution | 不变替代弹性 | [第 24 章](ch24.qmd) | 是生产/效用函数形式；名称中的“不变”指特定替代弹性，不是所有弹性。 |
+| BLP | Berry--Levinsohn--Pakes | 贝里—莱文索恩—佩克斯需求模型 | [第 26 章](ch26.qmd) | 离散选择需求语境中的作者缩写；与第 2 章 best linear predictor 同形异义。 |
+| CF | control function | 控制函数 | [第 12 章](ch12.qmd) | 把内生性信息以 first-stage residual/control term 带入结构式；有效性依赖模型条件。 |
+
+## 模型选择、收缩、平均与机器学习
+
+| 缩写 | 英文全称 | 中文释义 | 主要位置 | 阅读辨析 |
+|---|---|---|---|---|
+| PMS | post-model-selection estimator | 模型选择后估计量 | [第 28 章](ch28.qmd) | 把选中模型当事先固定会忽略选择随机性，常使朴素置信区间失真。 |
+| JS | James--Stein estimator | 詹姆斯—斯坦估计量 | [第 28 章](ch28.qmd) | 在特定多维正态平方损失下以偏差换风险下降，不表示每个坐标都更准。 |
+| SBIC | smoothed BIC | 平滑 BIC 模型平均 | [第 28 章](ch28.qmd) | 把 BIC 差转为连续模型权重；通常比 SAIC 更集中。 |
+| SAIC | smoothed AIC | 平滑 AIC 模型平均 | [第 28 章](ch28.qmd) | 权重反映 AIC 型预测准则，不应不加条件称作模型后验概率。 |
+| MMA | Mallows model averaging | Mallows 模型平均 | [第 28 章](ch28.qmd) | 以 Mallows 型平方预测风险选择凸组合权重。 |
+| JMA | jackknife model averaging | 刀切模型平均 | [第 28 章](ch28.qmd) | 用 leave-one-out prediction errors 选择模型权重，与 JIVE 的“jackknife”用途不同。 |
+| ML | machine learning | 机器学习 | [第 29 章](ch29.qmd) | 在本书是预测和高维估计工具集合；ML 在其他统计文献也可能指 maximum likelihood。 |
+| LARS | least angle regression | 最小角回归 | [第 29 章](ch29.qmd) | 高效追踪 Lasso/相关线性正则化路径的算法，不是一种新的识别假设。 |
+| PCA | principal component analysis | 主成分分析 | [第 29 章](ch29.qmd) | 无监督地找解释特征方差的正交方向；最大特征方差方向未必最能预测结果。 |
+| SVD | singular value decomposition | 奇异值分解 | [附录 A](appendix-a.qmd) | 将矩阵分为正交方向与奇异值，是理解秩、PCA、ridge 和病态逆问题的工具。 |
+| CART | classification and regression trees | 分类与回归树 | [第 29 章](ch29.qmd) | 递归分割形成树；单树的高方差促使 bagging 与 random forest。 |
+| OOB | out-of-bag | 袋外样本/袋外误差 | [第 29 章](ch29.qmd) | bootstrap 未抽入某棵树的观测可评价该树；不是独立外部测试集。 |
+| REC | restricted eigenvalue condition | 限制特征值条件 | [第 29 章](ch29.qmd) | 只要求 Lasso 误差锥内有足够曲率，允许整个 Gram 矩阵在 $p>n$ 时奇异。 |
+| PR | partialing-out/partial regression estimator | 偏回归（残差化）估计量 | [第 29 章](ch29.qmd) | 高维 nuisance 下先残差化 $Y,D$ 再估核心参数；此处 PR 不是 probability。 |
+| DML | double/debiased machine learning | 双重/去偏机器学习 | [第 29 章](ch29.qmd) | 结合正交 score 与 cross-fitting 为低维参数推断；“double”不是把同一模型训练两次。 |
+| DML1 | double machine learning, version 1 | DML 第一种聚合版本 | [第 29 章](ch29.qmd) | 先逐折估参数再平均；要与 DML2 的 pooled-score 聚合写清。 |
+| DML2 | double machine learning, version 2 | DML 第二种聚合版本 | [第 29 章](ch29.qmd) | 汇总各折正交 score 后统一求解；大样本一阶等价不表示有限样本完全相同。 |
+
+## 数据、机构、软件与书中标签
+
+| 缩写 | 英文全称 | 中文释义 | 主要位置 | 阅读辨析 |
+|---|---|---|---|---|
+| CPS | Current Population Survey | 美国当前人口调查 | [第 8 章](ch08.qmd) | 数据来源名，不是估计方法；复现时要核对年份、样本筛选和变量编码。 |
+| GDP | gross domestic product | 国内生产总值 | [第 14 章](ch14.qmd) | 名义/实际、总量/人均、水平/增长率是不同变量，缩写本身没有说明变换。 |
+| CPI | consumer price index | 消费者价格指数 | [第 16 章](ch16.qmd) | 价格指数通常需说明基期、季调和对数/通胀率变换。 |
+| FRED | Federal Reserve Economic Data | 美联储经济数据库 | [第 15 章](ch15.qmd) | 圣路易斯联储的数据平台；具体 series code、vintage 与 transformation 仍需记录。 |
+| FRED-MD | FRED monthly database | FRED 月度宏观数据库 | [第 15 章](ch15.qmd) | 大型月度宏观面板；发布者提供的 transformation codes 不应被忽略。 |
+| FRED-QD | FRED quarterly database | FRED 季度宏观数据库 | [第 15 章](ch15.qmd) | 季度版本；不能只按频率从 FRED-MD 机械聚合而默认定义相同。 |
+| NYSE | New York Stock Exchange | 纽约证券交易所 | [第 1 章](ch01.qmd) | 机构/市场名称，不是统计量。 |
+| AMEX | American Stock Exchange | 美国证券交易所 | [第 1 章](ch01.qmd) | 旧称常见于历史金融数据的交易所筛选。 |
+| MATLAB | matrix laboratory | MATLAB 数值计算环境 | [第 1 章](ch01.qmd) | 软件名称源自 matrix laboratory；结果可复现仍需代码、版本与数据。 |
+| GAUSS | GAUSS matrix programming language | GAUSS 矩阵编程语言 | [第 1 章](ch01.qmd) | 专有软件名，并非高斯分布的缩写。 |
+
+## 同形缩写速查
+
+这是全书阅读中最容易因“认识字母”而误判的组别：
+
+| 写法 | 语境一 | 语境二 | 判断线索 |
+|---|---|---|---|
+| AR | autoregression，自回归 | Anderson--Rubin，弱工具稳健检验 | 若出现 lag/order/stationarity，多为自回归；若出现 null/instrument/weak IV，多为检验。 |
+| BLP | best linear predictor，最佳线性预测 | Berry--Levinsohn--Pakes，离散选择需求模型 | 第 2 章投影语境是前者，第 26 章市场份额/产品需求语境是后者。 |
+| FE | fixed effects，固定效应 | forecast error（常出现在 FEVD） | panel/within 是前者；VAR forecast variance 是后者。 |
+| LL | log likelihood，对数似然 | local linear，局部线性 | likelihood/score/MLE 是前者；kernel/bandwidth 是后者。 |
+| LR | likelihood ratio，似然比 | long run，长期 | 与检验统计量、受限似然同现是前者；与 covariance/multiplier 同现常是后者。 |
+| MA | moving average，移动平均 | model averaging，模型平均 | ARMA/innovation 是前者；weights/candidate models 是后者。 |
+| MD | minimum distance，最小距离 | Markdown 文件扩展名 | 估计与权重矩阵语境是前者；仓库文件名才是后者。 |
+| ML | machine learning，机器学习 | maximum likelihood，极大似然 | features/regularization 是前者；density/score 是后者。原书通常将后者写 MLE。 |
+| NW | Newey--West | Nadaraya--Watson | HAC/long-run variance 是前者；kernel conditional mean 是后者。 |
+| PDF | probability density function | Portable Document Format | 分布积分语境是前者；书稿文件语境是后者。 |
+| PR | partialing-out regression | probability 的非正式缩写 | 本书第 29 章带正交化与 residual 的 $\hat\theta_{PR}$ 是前者。 |
+| RSS/SSR | residual sum of squares | regression sum of squares（部分教材） | 必须回看作者对 TSS 分解的定义，不能凭国内教材习惯猜。 |
+
+## 不是缩写，但应当立即读懂的运算记号
+
+| 记号 | 英文读法 | 中文含义 | 阅读提醒 |
+|---|---|---|---|
+| $\operatorname{argmin}$ | argument of the minimum | 使目标函数取最小的自变量 | 输出是参数值或集合，不是最小目标函数值。 |
+| $\operatorname{diag}$ | diagonal/diagonal matrix | 取对角或构造对角矩阵 | 具体含义由输入是矩阵还是向量决定。 |
+| $\det(A)$ 或 $\lvert A\rvert$ | determinant | 行列式 | likelihood 中 $\lvert\Sigma\rvert$ 不是逐元素绝对值。 |
+| $\operatorname{tr}(A)$ | trace | 迹 | 只允许循环换序，如 $\operatorname{tr}(ABC)=\operatorname{tr}(BCA)$。 |
+| $\operatorname{vec}(A)$ | vectorization | 按列堆叠矩阵 | 与 Kronecker product 配合时必须固定按列约定。 |
+| $\otimes$ | Kronecker product | 克罗内克积 | 维数相乘，乘法次序不能随意交换。 |
+| $\perp$ | independent/orthogonal | 独立或正交 | 概率语境常表独立，线性代数语境常表内积为零。 |
+| $\Rightarrow$ | converges in distribution | 依分布收敛 | 在渐近式中不是普通逻辑蕴含；要看上下文。 |
+| $\to_p$ | converges in probability | 依概率收敛 | 可与 Slutsky/CMT 配合，但不能自动推出均值收敛。 |
+| $\dot X$ | within-demeaned variable | 去个体均值后的变量 | 面板章的点不是时间导数，而是 within transformation。 |
+| $\hat\theta$ | estimator/estimate | 估计量或实现值 | 帽子表示由样本构造；有限样本随机性不能在推导中提前丢掉。 |
+| $\widetilde\theta$ | alternative/restricted estimator | 另一估计量或受限估计量 | 波浪线没有跨书统一含义，必须看本章定义。 |
+
+## 按字母快速定位
+
+- **A**：AB、ACE、ACF、ADF、AIC、AIMSE、AME、AMSE、AR、ARDL、ARIMA、ARMA、ATE。
+- **B**：BB、BIC、BLP、BLUE、BN。
+- **C**：CART、CDF、CEF、CES、CF、CIA、CIRF、CLAD、CLS、CLT、CMT、COIRF、CPI、CQR、CR1、CR3、CU-GMM、CV。
+- **D–F**：DF、DGP、DiD、DL、DML/DML1/DML2、DOLS、ECM、EDF、EMD、ESS、FCLT、FD、FE、FE-2SLS、FE-IV、FEVD、FGLS、FIC、FIML、FM-OLS、FOC、FOD、FPE、FRD、FRED/FRED-MD/FRED-QD、FWL。
+- **G–L**：GCV、GDP、GEV、GHK、GLS、GMM、HAC、HC0–HC3、HT、IC、IIA、ILS、IMSE、IPW、IRF、ISE、IV、IVQR、JIVE/JIVE1/JIVE2、JMA、JS、KL/KLIC、KPSS、KKT、LAD、LARS、LATE、LL、LLN、LM、LOO、LP、LPM、LR、LS。
+- **M–R**：MA、MAR、MD、MDS、MISE、ML、MLE、MMA、MME、MSE、MSFE、MSPE、NLLS、NPIV、NW、OIRF、OLS、OOB、OVB、PCA、PDF、plim、PMS、PR、QMLE、QR、RD/RDD、RE、REC、RESET、RMSE、ROT、RSS。
+- **S–W**：SAIC、SBIC、SE、SIRF、SSE、SSIV、SSR、SUR、SVAR、SVD、TSS、ULLN、VAR、VECM、VIF、WLLN、WLS、WMSE。
+
+## 阅读自检
+
+1. 看到 NW 时，如何用“long-run variance”或“kernel conditional mean”判断是哪一位作者组合？
+2. 为什么 FEVD 的 FE 不能翻译成固定效应？
+3. 2SLS 的第二阶段为什么不能直接采用普通 OLS 标准误？
+4. AIC、BIC、FIC 和 CV 的目标函数分别关注什么，为什么不存在脱离目标的“绝对最好准则”？
+5. DML 中 cross-fitting 与调参 CV 有什么不同？
+6. ADF 不拒绝单位根原假设，为什么不能写成“证明该序列就是单位根”？
+7. AB 与 BB 各增加了什么矩条件，后者为什么不只是无代价的效率改进？
+8. 在论文或代码中首次使用缩写时，是否已同时写出 estimand、样本独立单位和标准误结构？
+
+::: {.common-error}
+**最后提醒**　把英文全称背下来只能解决“字母代表什么”，不能解决“结论为何成立”。真正阅读时仍要回到定义式、识别条件和渐近前提。尤其是 robust、efficient、local、fixed、structural 等词，都只在明确的模型类和假设集合内成立。
+:::
