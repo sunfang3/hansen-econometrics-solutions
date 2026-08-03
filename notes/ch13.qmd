@@ -1,0 +1,683 @@
+---
+title: "广义矩估计"
+subtitle: "从矩条件、最优权重到受限估计与模型检验"
+hansen-chapter: "Chapter 13"
+book-pages: "412–440"
+pdf-pages: "432–460"
+status: "完整初稿"
+---
+
+::: {.book-map}
+**原书位置与本章路线**　对应 Hansen Chapter 13（书内 pp. 412–440；PDF pp. 432–460）。13.1–13.7从矩条件建立 MM/GMM 及其一般渐近分布；13.8–13.13讨论最优权重、两步/迭代估计、协方差与聚类；13.14–13.24建立 Wald、受限 GMM、distance、$J$、子集有效性与内生性检验；13.25–13.27推广到非线性、bootstrap 和条件矩；13.28–13.29给出技术证明与习题路线。
+:::
+
+::: {.bridge}
+**本科桥接**　本科 OLS 的正规方程是 $\sum_iX_i\hat e_i=0$，IV/2SLS 的核心是 $\sum_iZ_i\hat e_i$ 尽量接近 0。GMM 把这两件事统一起来：先写模型允许哪些总体矩等于零，再选择参数使样本矩在一个加权距离下最小。新困难不在“多写一个公式”，而在矩条件的维数、识别、权重矩阵和协方差必须彼此配套。
+:::
+
+## 引言（Introduction）
+
+广义矩估计（generalized method of moments, GMM）由 Lars Peter Hansen 系统建立。它包含样本均值、OLS、IV、2SLS、多元回归等熟悉估计量，也能处理非线性模型、异方差和聚类依赖。与完全指定密度的 MLE 不同，GMM 只要求模型给出若干期望限制，因此是一种半参数方法。
+
+学习本章要始终分开三层对象：
+
+1. 总体矩 $E[g_i(\beta)]$ 决定参数定义和识别；
+2. 样本矩 $g_n(\beta)$ 决定估计量；
+3. $\Omega=\operatorname{var}\{g_i(\beta)\}$ 决定最优权重和推断。
+
+把第 3 层的 $\Omega^{-1}$ 误当成第 2 层的普通样本二阶矩，或在换权重后不更新残差协方差，都会导致公式表面相似却口径错误。
+
+## 矩方程模型（Moment Equation Models）
+
+令 $\beta\in\mathcal B\subset\mathbb R^k$，$g_i(\beta)\in\mathbb R^\ell$ 是第 $i$ 个观测与参数的已知函数。矩方程模型写成
+
+::: {#hansen-eq-13-1}
+$$
+E\!\left[g_i(\beta)\right]=0.
+\tag{13.1}
+$$
+:::
+
+例如 IV 模型取 $g_i(\beta)=Z_i(Y_i-X_i'\beta)$。这里 $Z_i\in\mathbb R^\ell$，所以一次就产生 $\ell$ 条矩条件。
+
+识别要求真实参数是 [式 (13.1)](#hansen-eq-13-1) 在 $\mathcal B$ 中的唯一解。计数上必须 $\ell\ge k$，但这只是必要条件：即使矩条件多于参数，如果它们对某个参数方向不敏感，仍不能识别。局部线性化后，这要求 Jacobian
+
+$$
+G=E\!\left[\frac{\partial g_i(\beta)}{\partial\beta'}\right]
+\in\mathbb R^{\ell\times k}
+$$
+
+满列秩 $k$。$\ell=k$ 称恰好识别，$\ell>k$ 称过度识别，$\ell<k$ 则欠识别。过度识别不是“估计一定更准”的同义词：新增矩必须有效，且其相关性与权重决定实际信息量。
+
+## 矩估计量（Method of Moments Estimators）
+
+总体矩的样本对应为
+
+::: {#hansen-eq-13-2}
+$$
+g_n(\beta)=\frac1n\sum_{i=1}^n g_i(\beta).
+\tag{13.2}
+$$
+:::
+
+恰好识别时，矩估计量（method of moments estimator, MME）由 estimating equations 定义：
+
+::: {#hansen-eq-13-3}
+$$
+g_n(\hat\beta_{\mathrm{mm}})
+=\frac1n\sum_{i=1}^n g_i(\hat\beta_{\mathrm{mm}})=0.
+\tag{13.3}
+$$
+:::
+
+这套语言把熟悉估计量放在同一框架里：
+
+- 均值：$g_i(\mu)=Y_i-\mu$，解为 $\bar Y$；
+- 均值与方差：再加入 $(Y_i-\mu)^2-\sigma^2$，解为分母 $n$ 的样本方差；
+- OLS：$g_i(\beta)=X_i(Y_i-X_i'\beta)$，正规方程给出 $(X'X)^{-1}X'Y$；
+- IV：$g_i(\beta)=Z_i(Y_i-X_i'\beta)$，恰好识别时给出 $(Z'X)^{-1}Z'Y$；
+- SUR 或 generated regressors：把系数、误差协方差或第一步参数一起放入参数向量，矩方程通常变成非线性联立系统。
+
+因此“矩估计”不是某个陌生新公式，而是从 estimating equations 观察许多旧估计量。
+
+## 过度识别矩方程（Overidentified Moment Equations）
+
+在线性 IV 中，
+
+::: {#hansen-eq-13-4}
+$$
+g_n(\beta)
+=\frac1n\sum_{i=1}^nZ_i(Y_i-X_i'\beta)
+=\frac1n(Z'Y-Z'X\beta).
+\tag{13.4}
+$$
+:::
+
+若 $\ell>k$，有限样本中通常找不到一个 $\beta$ 同时令 $\ell$ 个元素全为 0。可以把 $\mu=Z'Y$、$G_n=Z'X$ 写成“辅助回归” $\mu=G_n\beta+\eta$：参数选择的目标变为让 $\eta$ 尽量小。
+
+给定对称正定权重 $W\in\mathbb R^{\ell\times\ell}$，定义
+
+$$
+J(\beta)=n\,g_n(\beta)'Wg_n(\beta),\qquad
+\hat\beta_{\mathrm{gmm}}=\arg\min_{\beta\in\mathcal B}J(\beta).
+$$
+
+$W$ 决定不同矩条件及其线性组合受到多大惩罚。乘上任意正常数不改变 minimizer；前面的 $n$ 也不改变点估计，却使最小准则在检验中具有非退化极限。恰好识别时存在 $g_n(\hat\beta)=0$，所以任何正定 $W$ 都给出同一个 MME；只有过度识别时，权重才改变点估计。
+
+## 线性矩模型（Linear Moment Models）
+
+本章首先研究
+
+::: {#hansen-eq-13-5}
+$$
+g_i(\beta)=Z_i(Y_i-X_i'\beta),
+\tag{13.5}
+$$
+:::
+
+其中 $Z_i\in\mathbb R^\ell$、$X_i\in\mathbb R^k$。它对 $\beta$ 线性，故准则是二次函数并有显式解。样本均值、OLS、IV、2SLS 都属于这一类；样本方差、SUR 联合矩和许多结构模型则因残差平方或参数乘积而非线性。
+
+“线性矩”指 $g_i(\beta)$ 对参数线性，不要求数据关系没有非线性项。例如把 $X^2$ 作为一个已知回归量，矩条件对其系数仍然线性。
+
+## GMM 估计量（GMM Estimator）
+
+将 [式 (13.4)](#hansen-eq-13-4) 代入准则并对 $\beta$ 求导，一阶条件为
+
+$$
+X'ZWZ'(Y-X\hat\beta_{\mathrm{gmm}})=0.
+$$
+
+若 $X'ZWZ'X$ 可逆，解为
+
+::: {#hansen-eq-13-6}
+$$
+\hat\beta_{\mathrm{gmm}}
+=\left(X'ZWZ'X\right)^{-1}X'ZWZ'Y.
+\tag{13.6}
+$$
+:::
+
+维数核对是：$X'Z$ 为 $k\times\ell$，$W$ 为 $\ell\times\ell$，故中间“bread”是 $k\times k$。若 $\ell=k$，利用可逆矩阵约去 $W$ 后得到 IV；若 $W=(Z'Z)^{-1}$，则 [式 (13.6)](#hansen-eq-13-6) 正是 2SLS。因此 2SLS 是线性模型的一步 GMM。
+
+这里的 $W$ 可依样本而变。渐近理论只要求适当缩放后 $\widehat W\to_pW>0$；例如软件写 $(Z'Z)^{-1}$，理论常写 $\{n^{-1}Z'Z\}^{-1}$，二者只差不影响估计量的常数倍 $n$。
+
+## GMM 估计量的分布（Distribution of GMM Estimator）
+
+令
+
+$$
+Q=E(Z_iX_i')\in\mathbb R^{\ell\times k},
+\qquad
+\Omega=E(Z_iZ_i'e_i^2)\in\mathbb R^{\ell\times\ell}.
+$$
+
+从 [式 (13.6)](#hansen-eq-13-6) 减去 $\beta$：
+
+$$
+\sqrt n(\hat\beta_{\mathrm{gmm}}-\beta)
+=\left\{\frac1nX'ZW\frac1nZ'X\right\}^{-1}
+\left\{\frac1nX'ZW\frac1{\sqrt n}Z'e\right\}.
+$$
+
+前一块由 LLN 收敛到 $(Q'WQ)^{-1}$，后一块由 CLT 中的 $n^{-1/2}Z'e\to_dN(0,\Omega)$ 得出。因此
+
+::: {#hansen-eq-13-7}
+$$
+V_\beta
+=\left(Q'WQ\right)^{-1}
+\left(Q'W\Omega WQ\right)
+\left(Q'WQ\right)^{-1}.
+\tag{13.7}
+$$
+:::
+
+于是 $\sqrt n(\hat\beta_{\mathrm{gmm}}-\beta)\to_dN(0,V_\beta)$。这又是 bread–meat–bread sandwich：bread 来自矩条件对参数的敏感度，meat 是样本矩自身协方差。随机权重只要一致收敛，其第一阶估计误差不会改变这个极限。
+
+## 有效 GMM（Efficient GMM）
+
+在同一组矩条件中，最优权重为 $W_0=\Omega^{-1}$。代入 [式 (13.7)](#hansen-eq-13-7)，中间的 $\Omega^{-1}\Omega\Omega^{-1}$ 消去，得到
+
+$$
+V_{\beta,0}=(Q'\Omega^{-1}Q)^{-1}.
+$$
+
+其效率含义是：对任何正定 $W$，
+
+$$
+V_\beta(W)-V_{\beta,0}\succeq0.
+$$
+
+直觉上，高方差或高度重复的矩条件不应与精确而独立的矩获得相同权重；$\Omega^{-1}$ 先按方差标准化，再扣除矩条件之间的相关信息。这里的“有效”首先指在给定矩集合、所有 GMM 权重中最小的渐近协方差。Hansen 进一步引用 Chamberlain 的结果：若这些矩条件就是全部模型信息，则该界也是相应半参数模型的效率界。增加额外分布假设仍可能得到不同的更强效率结论。
+
+## 有效 GMM 与 2SLS（Efficient GMM versus 2SLS）
+
+2SLS 的渐近权重是 $\{E(ZZ')\}^{-1}$，有效 GMM 的权重是 $\{E(ZZ'e^2)\}^{-1}$。若
+
+$$
+E(e^2\mid Z)=\sigma^2,
+$$
+
+则 $\Omega=\sigma^2E(ZZ')$，两个权重只差常数 $\sigma^{-2}$，因此 2SLS 就是有效 GMM。条件异方差时，这个比例关系一般消失，有效 GMM 可以重新加权矩条件而提高一阶效率。
+
+这不意味着每个有限样本中 GMM 都比 2SLS 更接近真值。有效权重本身需要估计，可能增加小样本波动；若异方差轻微或工具较弱，报告 2SLS 与有效 GMM 的敏感性通常比只展示一个“理论最优”结果更有信息。
+
+## 有效权重矩阵的估计（Estimation of the Efficient Weight Matrix）
+
+两步 GMM 先用一致的一步估计（线性 IV 中通常为 2SLS）得到 $\tilde e_i=Y_i-X_i'\tilde\beta$、$\tilde g_i=Z_i\tilde e_i$。两种 $\Omega$ 估计量是
+
+::: {#hansen-eq-13-8}
+$$
+\widehat\Omega
+=\frac1n\sum_{i=1}^n\tilde g_i\tilde g_i',
+\tag{13.8}
+$$
+:::
+
+以及中心化版本
+
+::: {#hansen-eq-13-9}
+$$
+\widehat\Omega^*
+=\frac1n\sum_{i=1}^n
+(\tilde g_i-\bar g)(\tilde g_i-\bar g)',
+\qquad
+\bar g=\frac1n\sum_i\tilde g_i.
+\tag{13.9}
+$$
+:::
+
+模型正确时 $E(g_i)=0$，二者都一致；模型错设时，[式 (13.9)](#hansen-eq-13-9) 仍估计 $\operatorname{var}(g_i)$，而 [式 (13.8)](#hansen-eq-13-8) 估计 $E(g_ig_i')$。恰好识别时样本矩正好为 0，两式相同。第二步令 $\widehat W=\widehat\Omega^{-1}$ 再用 [式 (13.6)](#hansen-eq-13-6) 估计。若 $\widehat\Omega$ 接近奇异，首先应检查重复工具、尺度和弱识别，不能把机械广义逆当成识别修复。
+
+## 迭代 GMM（Iterated GMM）
+
+两步估计的有限样本值依赖初始估计。迭代 GMM 用第二步残差重估 $\widehat\Omega$，再更新 $\hat\beta$，重复到相邻参数或准则差小于预定容差。收敛点减少了对起始权重的依赖，但与两步估计具有相同的一阶渐近分布。
+
+迭代次数不是模型质量指标。矩条件无效、工具弱或协方差结构错误时，算法收敛也只表示数值 fixed point 已找到。中心化与否可能不改变某些迭代点估计，却仍会影响标准误和检验统计量，所以实现中必须记录 weight matrix 与 variance matrix 的具体口径。
+
+## 协方差矩阵估计（Covariance Matrix Estimation）
+
+一般一步或两步 GMM 的 plug-in sandwich 为
+
+::: {#hansen-eq-13-10}
+$$
+\widehat V_\beta
+=\left(\widehat Q'\widehat W\widehat Q\right)^{-1}
+\left(\widehat Q'\widehat W\widehat\Omega\widehat W\widehat Q\right)
+\left(\widehat Q'\widehat W\widehat Q\right)^{-1},
+\qquad
+\widehat Q=\frac1nZ'X.
+\tag{13.10}
+$$
+:::
+
+有效权重下可简化为
+
+::: {#hansen-eq-13-11}
+$$
+\widehat V_\beta
+=\left(\widehat Q'\widehat\Omega^{-1}\widehat Q\right)^{-1}
+=\left\{\left(\frac1nX'Z\right)
+\widehat\Omega^{-1}
+\left(\frac1nZ'X\right)\right\}^{-1}.
+\tag{13.11}
+$$
+:::
+
+注意 $V_\beta$ 是 $\sqrt n(\hat\beta-\beta)$ 的渐近协方差，故实际 $\hat\beta$ 协方差估计为 $n^{-1}\widehat V_\beta$，标准误取其对角元平方根。权重用初始残差构造，最终协方差则应使用最终参数残差更新；混用两套残差是常见实现错误。
+
+## 聚类依赖（Clustered Dependence）
+
+若独立单位是 $G$ 个 cluster，而 cluster 内观测可任意相关，应先在组内汇总 score。一般权重下，
+
+::: {#hansen-eq-13-12}
+$$
+\widehat V_\beta
+=(X'ZWZ'X)^{-1}X'ZW\widehat S WZ'X
+(X'ZWZ'X)^{-1},
+\tag{13.12}
+$$
+:::
+
+其中
+
+::: {#hansen-eq-13-13}
+$$
+\widehat S
+=\sum_{g=1}^G Z_g'\hat e_g\hat e_g'Z_g,
+\tag{13.13}
+$$
+:::
+
+且
+
+::: {#hansen-eq-13-14}
+$$
+\hat e_g=Y_g-X_g\hat\beta_{\mathrm{gmm}}.
+\tag{13.14}
+$$
+:::
+
+若连有效权重也按 cluster score 构造，得到
+
+::: {#hansen-eq-13-15}
+$$
+\hat\beta_{\mathrm{gmm}}
+=\left(X'Z\widehat S^{-1}Z'X\right)^{-1}
+X'Z\widehat S^{-1}Z'Y.
+\tag{13.15}
+$$
+:::
+
+[式 (13.13)](#hansen-eq-13-13) 先把同一组的 $Z_g'\hat e_g$ 相加再做外积，因此保留组内所有交叉项；逐观测做 $Z_iZ_i'\hat e_i^2$ 后再按组相加会漏掉这些相关性。有效样本量更接近 cluster 数 $G$，小 $G$ 时还需有限样本修正或 cluster bootstrap。
+
+## Wald 检验（Wald Test）
+
+设 $\theta=r(\beta)\in\mathbb R^q$，$R=\partial r(\beta)'/\partial\beta$ 为 $k\times q$ Jacobian。Delta 法给出 $V_\theta=R'V_\beta R$。检验 $H_0:\theta=\theta_0$ 使用
+
+$$
+W=n\{\hat\theta-\theta_0\}'\widehat V_\theta^{-1}
+\{\hat\theta-\theta_0\}\to_d\chi_q^2.
+$$
+
+标量情形就是 GMM 估计除以其稳健标准误的平方。所有组成部分必须使用同一种异方差/聚类口径。与第 9 章一样，非线性假设的 Wald 统计量会受 $r(\beta)$ 的代数写法影响，后面的 distance test 通常更稳健。
+
+## 受限 GMM（Restricted GMM）
+
+在线性限制 $R'\beta=c$ 下，受限估计量是在限制集合上最小化 $J(\beta)$。固定 $W$ 时，
+
+::: {#hansen-eq-13-16}
+$$
+\hat\beta_{\mathrm{cgmm}}
+=\hat\beta_{\mathrm{gmm}}
+-(X'ZWZ'X)^{-1}R
+\left\{R'(X'ZWZ'X)^{-1}R\right\}^{-1}
+(R'\hat\beta_{\mathrm{gmm}}-c).
+\tag{13.16}
+$$
+:::
+
+其结构与受限 OLS 相同：从非受限估计中减去“违反限制的部分”，但投影距离由 GMM 曲率决定。在限制为真时，
+
+::: {#hansen-eq-13-17}
+$$
+\sqrt n(\hat\beta_{\mathrm{cgmm}}-\beta)
+=\left[
+I_k-(X'ZWZ'X)^{-1}R
+\{R'(X'ZWZ'X)^{-1}R\}^{-1}R'
+\right]\sqrt n(\hat\beta_{\mathrm{gmm}}-\beta).
+\tag{13.17}
+$$
+:::
+
+令 $B=(Q'WQ)^{-1}$、$C=(R'BR)^{-1}$，一般权重下的协方差为
+
+::: {#hansen-eq-13-18}
+$$
+V_{\mathrm{cgmm}}
+=V_\beta-BRC R'V_\beta-V_\beta RC R'B
++BRC R'V_\beta RC R'B.
+\tag{13.18}
+$$
+:::
+
+这里第三行首的正号是四项展开的最后一项，不是符号笔误；它来自相应线性变换对 $V_\beta$ 的左右相乘。
+
+使用非受限有效权重时，表达大幅简化：
+
+::: {#hansen-eq-13-19}
+$$
+\hat\beta_{\mathrm{cgmm}}
+=\hat\beta_{\mathrm{gmm}}
+-\widehat V_\beta R
+(R'\widehat V_\beta R)^{-1}
+(R'\hat\beta_{\mathrm{gmm}}-c),
+\tag{13.19}
+$$
+:::
+
+且
+
+::: {#hansen-eq-13-20}
+$$
+V_{\mathrm{cgmm}}
+=V_\beta-V_\beta R(R'V_\beta R)^{-1}R'V_\beta.
+\tag{13.20}
+$$
+:::
+
+对应 plug-in 估计为
+
+::: {#hansen-eq-13-21}
+$$
+\widehat V_{\mathrm{cgmm}}
+=\widetilde V_\beta-\widetilde V_\beta R
+(R'\widetilde V_\beta R)^{-1}R'\widetilde V_\beta,
+\tag{13.21}
+$$
+:::
+
+其中受限残差用于
+
+::: {#hansen-eq-13-22}
+$$
+\widetilde\Omega
+=\frac1n\sum_{i=1}^nZ_iZ_i'\tilde e_i^2,
+\qquad
+\tilde e_i=Y_i-X_i'\hat\beta_{\mathrm{cgmm}}.
+\tag{13.22}
+$$
+:::
+
+限制若错误，方差降低并不是好消息，因为估计量已向错误参数收敛；所有受限分布结论都明确条件于限制为真。
+
+## 非线性受限 GMM（Nonlinear Restricted GMM）
+
+对 $r(\beta)=0\in\mathbb R^q$，
+
+::: {#hansen-eq-13-23}
+$$
+\hat\beta_{\mathrm{cgmm}}
+=\arg\min_{r(\beta)=0}J(\beta).
+\tag{13.23}
+$$
+:::
+
+一般没有闭式解，需要 constrained optimizer。局部上用 $\widehat R=\partial r(\hat\beta_{\mathrm{cgmm}})'/\partial\beta$ 线性化，故渐近协方差仍采用 [式 (13.18)](#hansen-eq-13-18)；有效权重下采用 [式 (13.20)](#hansen-eq-13-20)。
+
+数值实现要同时检查：初值是否落在可行域，限制 Jacobian 是否满列秩，算法是否报告约束违反量，以及不同初值是否落到同一最小值。优化器“成功退出”只说明局部数值条件满足，不等于经济限制合理。
+
+## 受限回归（Constrained Regression）
+
+投影模型 $Y=X'\beta+e$、$E(Xe)=0$ 是令 $Z=X$ 的恰好识别 GMM，因此非受限 GMM 就是 OLS。加入 $R'\beta=c$ 后，有效受限 GMM 等于第 8 章的 efficient minimum distance：
+
+$$
+\hat\beta_{\mathrm{emd}}
+=\hat\beta_{\mathrm{ols}}-\widehat V_\beta R
+(R'\widehat V_\beta R)^{-1}
+(R'\hat\beta_{\mathrm{ols}}-c).
+$$
+
+这条等价关系解释了为什么在异方差下，直接使用同方差受限最小二乘未必有效：点限制相同，但用于投影回限制集合的度量应由稳健 $\widehat V_\beta$ 决定。
+
+## 多元回归（Multivariate Regression）
+
+第 11 章系统模型的联合矩条件是
+
+::: {#hansen-eq-13-24}
+$$
+E\!\left[\mathcal X'
+(Y-\mathcal X\beta)\right]=0.
+\tag{13.24}
+$$
+:::
+
+矩数与堆叠参数数相同，非受限 GMM 等于逐方程系统 OLS，并且不依赖 $W$。一旦加入跨方程限制，参数自由度减少而原矩条件数不变，模型成为过度识别，受限估计开始依赖权重。有效 GMM 会利用跨方程 score 协方差，这正好统一第 11 章 SUR/联合稳健推断与本章受限估计。
+
+共同回归量时，也可写 $E[X(Y'-X'B)]=0$ 后再向量化成 [式 (13.24)](#hansen-eq-13-24)。使用矩阵形式便于理解，推导 Jacobian 和软件优化时则应明确向量化后的参数排列。
+
+## 距离检验（Distance Test）
+
+检验 $H_0:r(\beta)=\theta_0$ 时，分别求非受限有效 GMM 的最小准则 $\widehat J$ 与受限有效 GMM 的最小准则 $\widetilde J$，定义
+
+$$
+D=\widetilde J-\widehat J\to_d\chi_q^2.
+$$
+
+小 $D$ 表示限制几乎未迫使样本矩离开 0；大 $D$ 表示限制与矩条件不相容。若受限和非受限准则使用同一个 $\widehat\Omega$，受限最小值不可能更小，故 $D\ge0$；线性限制下它还与 Wald 统计量代数相等。若分别迭代权重，两个准则函数本身不同，有限样本中可能出现 $D<0$，此时按不拒绝处理。
+
+distance test 只依赖限制集合，不依赖把同一集合写成 $r(\beta)=0$ 还是其他等价形式，因此对非线性限制通常比 Wald 更自然。计算时必须保存两个模型的完整 GMM criterion，而不是比较残差平方和。
+
+## 连续更新 GMM（Continuously-Updated GMM）
+
+连续更新 GMM（CU-GMM）让权重在每一个候选 $\beta$ 上同步变化：
+
+$$
+J_{\mathrm{CU}}(\beta)
+=n\,g_n(\beta)'
+\left\{\frac1n\sum_i g_i(\beta)g_i(\beta)'\right\}^{-1}
+g_n(\beta).
+$$
+
+它不是“把两步 GMM 多迭代几次”。迭代 GMM 每轮把上一轮权重固定后最小化二次准则；CU-GMM 在同一个目标函数内对权重求导，二者一阶条件不同。CU-GMM 往往偏差较小但尾部更厚，且目标非二次，需多初值与全局性诊断。
+
+## 过度识别检验（OverIdentification Test）
+
+若 $\ell>k$，估计后还剩 $\ell-k$ 个不能被自由参数机械压成 0 的矩方向。使用有效权重时，最小准则
+
+$$
+J=J(\hat\beta_{\mathrm{gmm}})
+=n\,g_n(\hat\beta_{\mathrm{gmm}})'
+\widehat\Omega^{-1}
+g_n(\hat\beta_{\mathrm{gmm}})
+\to_d\chi_{\ell-k}^2.
+$$
+
+这就是 Hansen $J$ 检验。拒绝意味着“所有矩条件同时成立”的联合模型与数据不相容，但单凭 $J$ 不能指出是哪个工具无效、结构方程错设、异方差口径错误还是样本异常。未拒绝也不能证明工具有效，尤其弱工具下检验功效可能很低。报告时应给 $J$、自由度与 $p$ 值，并确认 criterion 使用的是异方差/聚类一致的有效权重。
+
+## 子集过度识别检验（Subset OverIdentification Tests）
+
+将 $Z=(Z_a',Z_b')'$，其中 $Z_a$ 是 maintained-valid instruments，且单独足以识别参数；要检验 $Z_b$ 的额外有效性。用 $Z_a$ 得到有效 GMM criterion $\widetilde J$，用全部 $Z$ 得到 $\widehat J$，构造
+
+$$
+C=\widehat J-\widetilde J\to_d\chi_{\ell_b}^2.
+$$
+
+这类 difference-in-$J$ 也称 $C$ 检验。逻辑具有方向性：它只在 $Z_a$ 确实有效且识别模型的 maintained hypothesis 下检验 $Z_b$。若基准工具也可疑，不能把拒绝责任只归给新增工具。若 $Z_a$ 恰好识别，则 $\widetilde J=0$，$C$ 退化为全模型 $J$。
+
+## 内生性检验（Endogeneity Test）
+
+模型 $Y=Z_1'\beta_1+Y_2'\beta_2+e$ 中，基准工具为 $(Z_1,Z_2)$。若 $Y_2$ 外生，它本身也可加入工具集合。于是：
+
+1. 把 $Y_2$ 当内生，仅用 $(Z_1,Z_2)$ 做有效 GMM，记准则 $\widetilde J$；
+2. 再把 $Y_2$ 加入工具，记准则 $\widehat J$；
+3. $C=\widehat J-\widetilde J\to_d\chi_{k_2}^2$。
+
+这是子集过度识别检验，而非“OLS 与 IV 系数看起来差不多”的目测。拒绝说明 $Y_2$ 不能作为自身工具；不拒绝只是数据没有发现其与结构误差相关，并不自动证明 OLS 更合适。
+
+## 子集内生性检验（Subset Endogeneity Test）
+
+若回归量分为待检验的 $Y_2\in\mathbb R^{k_2}$ 与始终视为内生的 $Y_3\in\mathbb R^{k_3}$，基准模型必须用排除工具 $Z_2$ 同时识别二者，因此要求相关 rank 为 $k_2+k_3$。先用 $(Z_1,Z_2)$ 作为工具，再额外加入 $Y_2$，difference-in-$J$ 仍服从 $\chi_{k_2}^2$。
+
+自由度是被测试外生性的变量数 $k_2$，不是所有内生变量数，也不是排除工具数。先确认 alternative 下仍能识别，是使用这类检验前不可省略的一步。
+
+## 非线性 GMM（Nonlinear GMM）
+
+一般模型仍由 [式 (13.1)](#hansen-eq-13-1) 定义，但 $g_i(\beta)$ 可对参数非线性。估计量数值最小化 $n g_n(\beta)'\widehat Wg_n(\beta)$。令
+
+$$
+Q=E\!\left[\frac{\partial g_i(\beta)}{\partial\beta'}\right],
+\qquad
+\Omega=E\{g_i(\beta)g_i(\beta)'\},
+$$
+
+在一致性、可微、局部识别和统一收敛等正则条件下，渐近协方差仍是 [式 (13.7)](#hansen-eq-13-7)，有效权重仍为 $\Omega^{-1}$。
+
+与线性模型相比，关键增加三件事：目标可能有多个局部极小值；样本 Jacobian $\widehat Q$ 需要解析导数或可靠数值导数；一致性不能只靠一阶条件，而需总体准则在全参数空间唯一最小及样本准则一致逼近。Wald、受限估计、distance、$J$ 与 bootstrap 的逻辑均可延伸，但数值诊断成为推断的一部分。
+
+## GMM 的 Bootstrap（Bootstrap for GMM）
+
+i.i.d. 情形按三元组 $(Y_i,X_i,Z_i)$ 整行有放回抽样，每个 bootstrap 样本重新执行完整的初始估计、权重估计和最终 GMM。不要固定原样本权重后只重跑最后一步，否则没有复制估计流程的不确定性。与 2SLS 一样，GMM 有限矩可能不稳定，宜优先使用 percentile、BC/BCa 或 percentile-$t$ 区间，而不把 bootstrap draws 的样本标准差机械当可靠标准误。
+
+过度识别时，原样本通常满足 $g_n(\hat\beta)\ne0$。若直接 pairs bootstrap，bootstrap “总体”继承这个非零矩，难以获得高阶改进。Hall–Horowitz recentering 将 bootstrap 矩改为
+
+$$
+g_n^*(\beta)-g_n(\hat\beta_{\mathrm{gmm}}),
+$$
+
+使其在 bootstrap 世界对应的参数处满足正交限制。线性模型可等价地从 $Z^{*'}Y^*$ 中减去原样本 $Z'\hat e$。对 $J$ 检验也应使用 recentered bootstrap criterion，再以 bootstrap 统计量超过原统计量的比例计算 $p$ 值。
+
+## 条件矩方程模型（Conditional Moment Equation Models）
+
+许多经济模型直接给出更强的条件矩
+
+$$
+E\{e_i(\beta)\mid Z_i\}=0,
+$$
+
+其中 $e_i(\beta)\in\mathbb R^s$。对任意合适函数 $\phi(Z_i,\beta)$，塔式法则都给出无条件矩 $E[\phi(Z_i,\beta)e_i(\beta)]=0$，因此候选工具函数有无穷多个。工具选择的真正问题是：哪些变换既有效，又提供强且不重复的信息。
+
+当 $s=1$，令
+
+$$
+R_i=E\!\left[
+\left.\frac{\partial e_i(\beta)}{\partial\beta}\right|Z_i
+\right],
+\qquad
+\sigma_i^2=E\{e_i(\beta)^2\mid Z_i\},
+$$
+
+最优工具为 $A_i=-\sigma_i^{-2}R_i$。线性 IV 中 $e_i=Y_i-X_i'\beta$，故 $A_i=\sigma_i^{-2}E(X_i\mid Z_i)$：既要尽量准确地预测内生回归量，又要按结构误差条件方差反向加权。普通回归中 $X=Z$，它退化为 $A_i=\sigma_i^{-2}X_i$，于是有效 GMM 与 GLS 相连。
+
+这解释了为何“把 $Z,Z^2,Z^3$ 全部塞入”不自动有效：有限样本会遇到 many-instrument 问题，而低质量 first stage 也浪费条件均值信息。最优工具需要估计 $E(X\mid Z)$ 和 $\sigma^2(Z)$，实际工作要平衡近似误差与估计复杂度。
+
+## 技术证明（Technical Proofs*）
+
+distance test 的证明先说明受限和非受限残差构造的 $\widetilde\Omega,\widehat\Omega$ 都收敛到 $\Omega$，从而
+
+::: {#hansen-eq-13-25}
+$$
+\widetilde J(\hat\beta_{\mathrm{cgmm}})
+=\frac1n\tilde e'Z\widehat\Omega^{-1}Z'\tilde e+o_p(1).
+\tag{13.25}
+$$
+:::
+
+利用 $Z'\tilde e=Z'\hat e-Z'X(\hat\beta_{\mathrm{cgmm}}-\hat\beta_{\mathrm{gmm}})$ 展开平方，并用非受限 GMM 一阶条件 $X'Z\widehat\Omega^{-1}Z'\hat e=0$ 消去交叉项：
+
+::: {#hansen-eq-13-26}
+$$
+\frac1n\tilde e'Z\widehat\Omega^{-1}Z'\tilde e
+=\widehat J(\hat\beta_{\mathrm{gmm}})
++\frac1n(\hat\beta_{\mathrm{cgmm}}-\hat\beta_{\mathrm{gmm}})'
+X'Z\widehat\Omega^{-1}Z'X
+(\hat\beta_{\mathrm{cgmm}}-\hat\beta_{\mathrm{gmm}}).
+\tag{13.26}
+$$
+:::
+
+限制引起的参数差具有线性极限
+
+::: {#hansen-eq-13-27}
+$$
+\sqrt n(\hat\beta_{\mathrm{cgmm}}-\hat\beta_{\mathrm{gmm}})
+\to_d(Q'\Omega^{-1}Q)^{-1}R\,\mathcal Z,
+\tag{13.27}
+$$
+:::
+
+其中
+
+::: {#hansen-eq-13-28}
+$$
+\mathcal Z\sim N(0,V_R).
+\tag{13.28}
+$$
+:::
+
+代回 [式 (13.26)](#hansen-eq-13-26) 后，$D$ 成为标准正态向量在 $q$ 维限制空间上的二次型，故为 $\chi_q^2$。子集 $C$ 检验的证明同样把 full 与 reduced moment space 白化，再识别出秩为 $\ell_b$ 的幂等投影矩阵；正态二次型自由度等于投影矩阵的秩。
+
+证明中最值得迁移的技巧有三个：先用一致性把两个随机权重替换为共同总体极限；用一阶条件删除二次展开的交叉项；把最终统计量写成 $u'Pu$，再由 $P=P'=P^2$ 和 $\operatorname{rank}(P)$ 读取卡方自由度。
+
+## 习题阅读指南（Exercises）
+
+13.1–13.3训练“先列联合矩、再证明权重一致”；13.4逐步证明 $\Omega^{-1}$ 的效率；13.5–13.10推导 Wald、受限与非线性 GMM；13.12–13.16研究 distance、$J$ 和局部错设；13.17–13.26辨析工具生成、矩条件维数随 $n$ 增长的错误用法；13.27–13.28复现 AJR 与工资方程的有效 GMM。
+
+习题 13.12 将投影模型的准则写为
+
+::: {#hansen-eq-13-29}
+$$
+J(\beta)
+=\frac1n(Y-X\beta)'X\widehat\Omega^{-1}X'(Y-X\beta),
+\tag{13.29}
+$$
+:::
+
+并定义受限 distance
+
+::: {#hansen-eq-13-30}
+$$
+D=J(\tilde\beta)=\min_{r(\beta)=0}J(\beta).
+\tag{13.30}
+$$
+:::
+
+要利用 OLS 正规方程把 $J(\beta)$ 配方成
+$n(\beta-\hat\beta)'\widehat V_\beta^{-1}(\beta-\hat\beta)$，从而连接 GMM distance 与 minimum distance/Wald。
+
+习题 13.15 的线性限制是
+
+::: {#hansen-eq-13-31}
+$$
+R'\beta=0.
+\tag{13.31}
+$$
+:::
+
+应先写非受限估计，再用 [式 (13.16)](#hansen-eq-13-16) 投影；不能先删变量再套一个未经证明的同方差公式。习题 13.16 的局部错设
+
+::: {#hansen-eq-13-32}
+$$
+e=\delta n^{-1/2}+u,
+\qquad E(u\mid Z)=0
+\tag{13.32}
+$$
+:::
+
+与抽样误差同为 $n^{-1/2}$ 阶，所以不会破坏一致性，却在 $\sqrt n$ 极限中留下非零均值，直接展示检验的 local power。
+
+答题统一采用四步：写 $g_i(\beta)$ 及维数；检查总体唯一解/秩；指定 $W$ 与 $\Omega$ 的口径；最后从 $g_n$ 的线性化推导点估计或检验分布。只报“用 GMM 软件得到显著”没有说明用的是哪些矩，也无法判断识别和标准误是否正确。
+
+::: {.book-map}
+**章末自检**
+
+1. 为什么 $\ell\ge k$ 不是识别的充分条件？
+2. 恰好识别时为什么点估计不依赖 $W$，但标准误仍依赖 $\Omega$？
+3. 从 [式 (13.6)](#hansen-eq-13-6) 到 [式 (13.7)](#hansen-eq-13-7) 分别用了 LLN 和 CLT 的哪一部分？
+4. 2SLS 在什么条件下等于有效 GMM？条件异方差时差异来自哪里？
+5. 中心化与未中心化的 $\widehat\Omega$ 在模型正确和错设时分别估计什么？
+6. 两步、迭代与 CU-GMM 为什么不是同一个算法的三个名称？
+7. 聚类 meat 为什么必须先组内求和再做外积？
+8. Wald、distance、$J$ 与 difference-in-$J$ 各自改变的是参数限制还是矩条件集合？
+9. $J$ 不拒绝为何不能证明工具有效？
+10. 条件矩下的最优工具为什么同时包含 $E(X\mid Z)$ 与 $\sigma^{-2}(Z)$？
+:::

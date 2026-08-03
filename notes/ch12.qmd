@@ -1,0 +1,843 @@
+---
+title: "工具变量"
+subtitle: "识别、2SLS/LIML、诊断、LATE 与弱工具"
+hansen-chapter: "Chapter 12"
+book-pages: "332–411"
+pdf-pages: "352–431"
+status: "完整初稿"
+---
+
+::: {.book-map}
+**原书位置与本章路线**　对应 Hansen Chapter 12（书内 pp. 332–411；PDF pp. 352–431）。12.1–12.12从内生性、工具定义和 reduced form 推到 IV/2SLS；12.13–12.21给出 LIML、JIVE、渐近分布和推断；12.22–12.33讨论有限样本、Bootstrap、generated regressors、控制函数及内生性/过度识别检验；12.34给出 LATE；12.35–12.39处理识别失败、弱工具与多工具；12.40–12.43是两个经典应用、程序与习题。
+:::
+
+::: {.bridge}
+**本科桥接**　本科“相关性 + 外生性”必须升级为三个不同层次：排除/正交条件 $E(Ze)=0$ 是经济识别假设；$\operatorname{rank}E(ZX')=k$ 是相关性带来的点识别；样本 first-stage $F$ 只是有限样本中诊断强度的统计量。2SLS 名字中的“两阶段”是计算表示，第二步普通 OLS 输出的标准误并不正确。
+:::
+
+## 引言（Introduction）
+
+IV 的出发点不是“OLS 系数不好看”，而是研究参数由结构模型、因果问题或均衡关系定义，且解释变量与结构误差相关。供需同时决定、变量测量误差、选择行为与遗漏能力，都会让结构参数不同于线性投影参数。
+
+全章要持续分开三个问题：参数是否由可观测分布唯一确定（识别）；给定识别条件如何估计（IV/2SLS/LIML）；给定估计量如何推断（强识别渐近、弱工具稳健性）。估计命令成功运行不等于第一个问题已经解决。
+
+## 概览（Overview）
+
+结构方程是
+
+::: {#hansen-eq-12-1}
+$$
+Y=X'\beta+e,
+\tag{12.1}
+$$
+:::
+
+内生性定义为
+
+::: {#hansen-eq-12-2}
+$$
+E(Xe)\ne0.
+\tag{12.2}
+$$
+:::
+
+OLS 仍一致估计投影系数 $\beta^*=\{E(XX')\}^{-1}E(XY)$，但代入 [式 (12.1)](#hansen-eq-12-1) 后
+
+$$
+\beta^*=\beta+\{E(XX')\}^{-1}E(Xe)\ne\beta.
+$$
+
+所以所谓 endogeneity bias 的本质是对结构参数不一致，而非一定能用有限样本 $E(\hat\beta)-\beta$ 描述。只有先独立定义 $\beta$ 的结构含义，才能说 $X$ 对它“内生”；若 $\beta$ 本来就定义为投影系数，正交性按定义成立。
+
+## 例子（Examples）
+
+经典测量误差中，真实 $Z$ 满足 $E(Y\mid Z)=Z'\beta$，但只观察 $X=Z+u$。写成 $Y=X'\beta+(e-u'\beta)$ 后，$X$ 与新误差相关；标量 OLS 极限为 $\beta\{1-E(u^2)/E(X^2)\}$，向零衰减。这里不是“控制变量不够”，而是右侧变量本身含噪声。
+
+供给与需求共同决定 $(Q,P)$ 时，对 $Q$ 回归 $P$ 得到的是均衡散点的投影斜率，一般既非需求斜率也非供给斜率。教育选择例中，未观察能力同时提高教育和工资，OLS 教育系数混入选择；但多变量环境下总偏误方向不能只凭一条正相关故事确定。
+
+## 内生解释变量（Endogenous Regressors）
+
+将 $X=(X_1',X_2')'$ 与 $\beta=(\beta_1',\beta_2')'$ 分块，$X_1\in\mathbb R^{k_1}$ 外生，$X_2\in\mathbb R^{k_2}$ 内生：
+
+::: {#hansen-eq-12-3}
+$$
+Y=X_1'\beta_1+X_2'\beta_2+e.
+\tag{12.3}
+$$
+:::
+
+常把因变量改记 $Y_1$、内生右侧变量改记 $Y_2=X_2$，于是 $E(X_1e)=0$ 而 $E(Y_2e)\ne0$。截距属于 $X_1$。非线性变换也要一致处理：若 experience 内生，experience$^2$ 通常也应作为独立的内生回归量，需要相应的额外工具和秩条件。
+
+## 工具变量（Instruments）
+
+$Z\in\mathbb R^\ell$ 是 [式 (12.3)](#hansen-eq-12-3) 的工具，原书定义同时要求
+
+::: {#hansen-eq-12-5}
+$$
+E(Ze)=0,
+\tag{12.5}
+$$
+:::
+
+::: {#hansen-eq-12-6}
+$$
+E(ZZ')>0,
+\tag{12.6}
+$$
+:::
+
+以及
+
+::: {#hansen-eq-12-7}
+$$
+\operatorname{rank}\{E(ZX')\}=k,
+\qquad k=k_1+k_2.
+\tag{12.7}
+$$
+:::
+
+[式 (12.5)](#hansen-eq-12-5) 是有效性/正交性，[式 (12.6)](#hansen-eq-12-6) 排除工具自身线性冗余，[式 (12.7)](#hansen-eq-12-7) 是 relevance/rank；必要条件 $\ell\ge k$。外生回归量也应列入工具集：
+
+::: {#hansen-eq-12-8}
+$$
+Z=\begin{pmatrix}Z_1\\Z_2\end{pmatrix}
+=\begin{pmatrix}X_1\\Z_2\end{pmatrix},
+\tag{12.8}
+$$
+:::
+
+$Z_1$ 是 included exogenous regressors，$Z_2\in\mathbb R^{\ell_2}$ 是 excluded instruments。工具需改变 $Y_2$，却不能除通过 $Y_2$ 外直接改变 $Y_1$；前半可由数据诊断，后半主要靠制度背景，不能由 first stage 证明。
+
+## 例子：大学邻近度（Example: College Proximity）
+
+Card (1995) 用成长地是否邻近四年制大学作为教育工具：邻近降低就学成本，可能提高教育；排除限制则声称它不通过教育之外的渠道影响工资。原书样本 $n=3010$，OLS 每年教育回报约 7%，IV/2SLS 估计更大且标准误显著增大。
+
+一个合格实证说明应分别论证 relevance 与 exclusion，并讨论迁居选择、地区劳动力市场、家庭背景等对排除限制的威胁。看到 IV 大于 OLS 不能直接说“OLS 原先的能力偏误故事错了”；异质处理效应使不同工具识别不同 complier 的局部效应。
+
+## 约化式（Reduced Form）
+
+内生回归量对全部工具的线性投影为
+
+::: {#hansen-eq-12-10}
+$$
+Y_2=\Gamma'Z+u_2
+=\Gamma_{12}'Z_1+\Gamma_{22}'Z_2+u_2,
+\tag{12.10}
+$$
+:::
+
+其中 $\Gamma\in\mathbb R^{\ell\times k_2}$，且
+
+::: {#hansen-eq-12-11}
+$$
+\Gamma=E(ZZ')^{-1}E(ZY_2').
+\tag{12.11}
+$$
+:::
+
+把它代入结构方程，$Y_1$ 的约化式系数满足 $\lambda_2=\Gamma_{22}\beta_2$，更紧凑地
+
+::: {#hansen-eq-12-15}
+$$
+\lambda_2=\Gamma_{22}\beta_2,
+\tag{12.15}
+$$
+:::
+
+以及
+
+::: {#hansen-eq-12-16}
+$$
+\lambda=\mathcal G\beta,
+\tag{12.16}
+$$
+:::
+
+这里 $\mathcal G=E(ZZ')^{-1}E(ZX')$ 是包含 $X_1$ 块的 $\ell\times k$ 矩阵。约化式是可观测变量间的投影，可逐方程 OLS；结构关系则是对约化式系数施加的跨方程限制。first-stage 不是把内生变量“洗干净”，而是估计工具所诱发的可预测部分。
+
+## 识别（Identification）
+
+$\lambda,\mathcal G$ 由可观测矩唯一决定；$\beta$ 要从 [式 (12.16)](#hansen-eq-12-16) 唯一反解，要求
+
+::: {#hansen-eq-12-22}
+$$
+\operatorname{rank}(\mathcal G)=k,
+\tag{12.22}
+$$
+:::
+
+等价于
+
+::: {#hansen-eq-12-23}
+$$
+\operatorname{rank}\{E(ZX')\}=k.
+\tag{12.23}
+$$
+:::
+
+因块结构，核心是 $\operatorname{rank}(\mathcal G_{22})=k_2$：排除工具在控制 $Z_1$ 后必须为每个内生方向提供独立变动。$\ell=k$ 时 $\beta=\mathcal G^{-1}\lambda$；$\ell>k$ 时可写 $(\mathcal G'\mathcal G)^{-1}\mathcal G'\lambda$。前者 just identified，后者 overidentified；工具数量够只是 order condition，不能替代 rank condition。
+
+## 工具变量估计量（Instrumental Variables Estimator）
+
+恰好识别时，以样本矩替代 $E[Z(Y_1-X'\beta)]=0$ 得
+
+::: {#hansen-eq-12-24}
+$$
+\hat\beta_{\mathrm{iv}}
+=(Z'X)^{-1}Z'Y_1.
+\tag{12.24}
+$$
+:::
+
+它也等于 indirect least squares：先估 $\hat\lambda,\widehat{\mathcal G}$，再算 $\widehat{\mathcal G}^{-1}\hat\lambda$。残差满足
+
+::: {#hansen-eq-12-25}
+$$
+Z'\hat e=0.
+\tag{12.25}
+$$
+:::
+
+恰好识别时样本矩全部精确满足；这不是模型有效的证据，因为没有剩余矩可以检验。IV 不最小化原回归的 SSE，所以残差平方和可能大于 OLS，这是正常现象。
+
+## 去均值表示（Demeaned Representation）
+
+含截距且把非常数变量记为 $X,Z$，由常数工具的矩条件先得 $\hat\alpha=\bar Y_1-\bar X'\hat\beta$。代回其余矩条件：
+
+::: {#hansen-eq-12-26}
+$$
+\hat\beta_{\mathrm{iv}}
+=\left\{\sum_i(Z_i-\bar Z)(X_i-\bar X)'\right\}^{-1}
+\sum_i(Z_i-\bar Z)(Y_{1i}-\bar Y_1).
+\tag{12.26}
+$$
+:::
+
+所以 IV 斜率同样只使用去均值协变动。实现固定效应或加入组 dummy 时，必须对 $Y,X,Z$ 使用同一残差化算子，不能只残差化内生变量。
+
+## Wald 估计量（Wald Estimator）
+
+只有一个内生 $X$、一个二元工具 $Z$ 和截距时，分别对 $Z=1,0$ 取条件均值并相减：
+
+::: {#hansen-eq-12-27}
+$$
+\beta=
+\frac{E(Y\mid Z=1)-E(Y\mid Z=0)}
+{E(X\mid Z=1)-E(X\mid Z=0)}.
+\tag{12.27}
+$$
+:::
+
+样本对应为
+
+::: {#hansen-eq-12-28}
+$$
+\hat\beta=\frac{\bar Y_1-\bar Y_0}{\bar X_1-\bar X_0}.
+\tag{12.28}
+$$
+:::
+
+它与 [式 (12.24)](#hansen-eq-12-24) 完全相同。分子是 reduced-form effect，分母是 first-stage effect。分母接近零时比率极不稳定，这已经预示弱工具下常规正态近似为何失败。
+
+## 两阶段最小二乘（Two-Stage Least Squares）
+
+过度识别时，先估 $\widehat{\mathcal G}=(Z'Z)^{-1}Z'X$，再以 $\hat X=Z\widehat{\mathcal G}$ 构造
+
+::: {#hansen-eq-12-29}
+$$
+\hat\beta_{\mathrm{2sls}}
+=\{X'Z(Z'Z)^{-1}Z'X\}^{-1}
+X'Z(Z'Z)^{-1}Z'Y_1.
+\tag{12.29}
+$$
+:::
+
+定义
+
+::: {#hansen-eq-12-30}
+$$
+P_Z=Z(Z'Z)^{-1}Z',
+\tag{12.30}
+$$
+:::
+
+则
+
+::: {#hansen-eq-12-31}
+$$
+\hat\beta_{\mathrm{2sls}}=(X'P_ZX)^{-1}X'P_ZY_1.
+\tag{12.31}
+$$
+:::
+
+第一阶段对每个内生变量使用全部 $Z$；included $Z_1=X_1$ 的拟合值就是自身。第二阶段对 $(X_1,\hat Y_2)$ OLS 可得同一系数，但其普通 OLS 残差和标准误错误。用 FWL 残差化 $Z_1$ 后，内生系数还可写成
+
+::: {#hansen-eq-12-32}
+$$
+\hat\beta_2
+=\{Y_2'\widetilde Z_2(\widetilde Z_2'\widetilde Z_2)^{-1}
+\widetilde Z_2'Y_2\}^{-1}
+Y_2'\widetilde Z_2(\widetilde Z_2'\widetilde Z_2)^{-1}
+\widetilde Z_2'Y_1.
+\tag{12.32}
+$$
+:::
+
+## 有限信息最大似然（Limited Information Maximum Likelihood）
+
+联合约化式写成
+
+::: {#hansen-eq-12-33}
+$$
+\vec Y=\Pi_1'Z_1+\Pi_2'Z_2+u.
+\tag{12.33}
+$$
+:::
+
+结构关系要求 $\Pi_2\gamma=0$，$\gamma'=(1,-\beta_2')$，所以它是第 11 章的降秩回归。LIML 令
+
+::: {#hansen-eq-12-34}
+$$
+\hat\gamma
+=\arg\min_\gamma
+\frac{\gamma'\vec Y'M_1\vec Y\gamma}
+{\gamma'\vec Y'M_Z\vec Y\gamma},
+\tag{12.34}
+$$
+:::
+
+取最小广义特征值方向，并由 $\hat\beta_2=-\hat\gamma_2/\hat\gamma_1$ 复原。令最小比值为
+
+::: {#hansen-eq-12-36}
+$$
+\hat\kappa=min_\gamma
+\frac{\gamma'\vec Y'M_1\vec Y\gamma}
+{\gamma'\vec Y'M_Z\vec Y\gamma},
+\tag{12.36}
+$$
+:::
+
+则 $k$-class 表示为
+
+::: {#hansen-eq-12-37}
+$$
+\hat\beta_{\mathrm{liml}}
+=\{X'(I_n-\hat\kappa M_Z)X\}^{-1}
+X'(I_n-\hat\kappa M_Z)Y_1.
+\tag{12.37}
+$$
+:::
+
+$\kappa=0$ 对应 OLS，$\kappa=1$ 对应 2SLS；恰好识别时 LIML=IV=2SLS。强识别固定工具数渐近下 LIML 与 2SLS 等价，但在多工具有限样本中 LIML 往往偏误较小、分散更大。
+
+## 分样本 IV 与 JIVE（Split-Sample IV and JIVE）
+
+2SLS 的 $\hat X_i$ 用包含观测 $i$ 自身的第一阶段估计，故预测误差与结构误差形成有限样本相关。Split-sample IV 用样本 A 估第一阶段、样本 B 估结构式，切断相关，却浪费样本并依赖任意切分。
+
+JIVE 对每个 $i$ 使用 leave-one-out $\widehat\Gamma_{(-i)}$ 构造 $\widehat W_i=\widehat\Gamma_{(-i)}'Z_i$，再做 IV。JIVE1 删除 $Z'Z$ 和 $Z'X$ 中的第 $i$ 项；JIVE2 只调整 $Z'X$。二者旨在降低由“自我拟合”造成的有限样本偏误，不是对无效工具的补救。
+
+## 2SLS 的一致性（Consistency of 2SLS）
+
+把结构式代入 [式 (12.29)](#hansen-eq-12-29)：
+
+::: {#hansen-eq-12-39}
+$$
+\hat\beta_{\mathrm{2sls}}
+=\beta+\{X'Z(Z'Z)^{-1}Z'X\}^{-1}
+X'Z(Z'Z)^{-1}Z'e.
+\tag{12.39}
+$$
+:::
+
+逐个除以 $n$。WLLN 令 $n^{-1}Z'e\to_pE(Ze)=0$，其余矩阵趋于总体矩；[式 (12.6)](#hansen-eq-12-6) 与 [式 (12.7)](#hansen-eq-12-7) 保证连续映射中的逆存在。因此在 i.i.d.、有限二阶矩、有效且相关工具下，$\hat\beta_{2sls}\to_p\beta$。若 rank 只“几乎”成立，这个点态证明仍可能给出很差的有限样本近似。
+
+## 2SLS 的渐近分布（Asymptotic Distribution of 2SLS）
+
+对 [式 (12.39)](#hansen-eq-12-39) 乘 $\sqrt n$，随机核心是 $n^{-1/2}Z'e\to_dN(0,\Omega)$，$\Omega=E(ZZ'e^2)$。令 $Q_{XZ}=E(XZ')$、$Q_{ZZ}=E(ZZ')$，则渐近方差是
+
+$$
+V_\beta=A^{-1}
+\{Q_{XZ}Q_{ZZ}^{-1}\Omega Q_{ZZ}^{-1}Q_{ZX}\}
+A^{-1},
+\quad A=Q_{XZ}Q_{ZZ}^{-1}Q_{ZX}.
+$$
+
+同方差 $E(e^2\mid Z)=\sigma^2$ 时 $\Omega=\sigma^2Q_{ZZ}$，化为 $\sigma^2A^{-1}$。这一同方差是相对于 $Z$ 的条件，不因 excluded instruments 看似外生就自动成立；$Z$ 中的 included covariates 仍可能带来异方差。
+
+## 2SLS 方差的决定因素（Determinants of 2SLS Variance）
+
+同方差方差随结构误差方差增加，随 $X$ 被 $Z$ 解释的矩阵强度增加；对工具的任意可逆线性变换不变。固定工具维数、全部有效时加入额外工具不增加首阶渐近方差，通常提高效率。
+
+但有限样本偏误大致随工具数增加。于是“把所有可用变量都当工具”并非免费：更丰富的投影空间提高 in-sample fit，也把更多 first-stage 噪声带入 $\hat X$。效率结论与 many-instrument 偏误结论处于不同渐近框架，不能互相取消。
+
+## 协方差矩阵估计（Covariance Matrix Estimation）
+
+稳健 plug-in 估计为
+
+::: {#hansen-eq-12-40}
+$$
+\widehat V_\beta
+=\widehat A^{-1}
+\{\widehat Q_{XZ}\widehat Q_{ZZ}^{-1}
+\widehat\Omega\widehat Q_{ZZ}^{-1}\widehat Q_{ZX}\}
+\widehat A^{-1},
+\quad
+\widehat\Omega=\frac1n\sum_iZ_iZ_i'\hat e_i^2.
+\tag{12.40}
+$$
+:::
+
+关键残差是 $\hat e_i=Y_i-X_i'\hat\beta_{2sls}$，不是二阶段拟合回归 $Y_i=\hat X_i'\hat\beta+\hat v_i$ 的 $\hat v_i$。两者满足 $\hat v_i=\hat e_i+(X_i-\hat X_i)'\hat\beta$。手工两阶段可以复现系数，不能直接采用第二阶段 OLS 标准误；应使用 IV 命令或按 [式 (12.40)](#hansen-eq-12-40) 计算。
+
+## LIML 的渐近分布（LIML Asymptotic Distribution）
+
+固定工具数、强识别下可证 $n(\hat\kappa-1)=O_p(1)$，所以 [式 (12.37)](#hansen-eq-12-37) 与 2SLS 的差为 $o_p(n^{-1/2})$。两者有同一首阶正态极限，却可能有不同有限样本尾部。
+
+LIML 可视为使用 $\widetilde X=(X_1,,X_2-\hat\kappa\widehat U_2)$ 的 IV，推荐按该表示估协方差：
+
+::: {#hansen-eq-12-42}
+$$
+\widehat V_\beta
+=\left(\frac1n\widetilde X'X\right)^{-1}
+\left(\frac1n\sum_i\widetilde X_i\widetilde X_i'\hat e_i^2\right)
+\left(\frac1nX'\widetilde X\right)^{-1}.
+\tag{12.42}
+$$
+:::
+
+直接套 2SLS 协方差首阶仍有效，但没有利用 LIML 的实际 instrument 表示。
+
+## 参数函数（Functions of Parameters）
+
+对 $\theta=r(\beta)$，一致性由连续映射给出；可微时 $\sqrt n\{r(\hat\beta)-r(\beta)\}\to_dN(0,R'V_\beta R)$。梯度必须对整个结构参数向量求，并使用 IV 稳健协方差。
+
+比率、二次函数极值等会放大不确定性。原书 Card 例中经验收益曲线的峰值估计约 73 年、标准误约 249；点估计有数值不等于参数有信息。弱工具或分母近零时，Delta 法本身也可能不可靠，应结合检验反演。
+
+## 假设检验（Hypothesis Tests）
+
+对 $H_0:r(\beta)=\theta_0$ 使用稳健 Wald，强识别下趋于 $\chi_q^2$。2SLS 没有与正态 OLS 相同的有限样本 $F$ 理论，因此把 $W/q$ 与 $F_{q,n-k}$ 配对只是近似调整，不应称精确。
+
+单个系数均不显著不代表一组变量联合无效；原书经验及平方项的联合 Wald 很大。报告应包括估计方法、工具集、协方差类型、限制数与参考分布。
+
+## 有限样本理论（Finite Sample Theory）
+
+即便结构误差与 reduced-form error 联合正态，IV 是随机量比率，有限样本也非正态。Kinal 结果指出 2SLS 内生系数的 $r$ 阶矩存在当且仅当 $r<\ell_2-k_2+1$：恰好识别 IV 没有有限整数阶矩；两个以上 overidentifying restrictions 才可能有有限方差。
+
+LIML 的整数矩问题更严重，Fuller 修正通过改变 $k$-class 常数获得有限矩。这里的“没有均值/方差”不是估计量不能计算，而是抽样分布尾部太厚，少量分母近零样本主宰矩。
+
+## 2SLS 的 Bootstrap（Bootstrap for 2SLS）
+
+Pairs Bootstrap 整体抽取 $(Y_1,X,Z)$。经验分布世界的真值是原样本 2SLS，伪样本满足
+
+::: {#hansen-eq-12-43}
+$$
+Y_1^*=X^{*'}\hat\beta_{2sls}+e^*.
+\tag{12.43}
+$$
+:::
+
+但过度识别时
+
+::: {#hansen-eq-12-44}
+$$
+E^*(Z^*e^*)=n^{-1}Z'\hat e\ne0.
+\tag{12.44}
+$$
+:::
+
+需在理论中重中心化：
+
+::: {#hansen-eq-12-45}
+$$
+\frac1{\sqrt n}(Z^{*'}e^*-Z'\hat e)
+\to_{d^*}N(0,\Omega).
+\tag{12.45}
+$$
+:::
+
+利用 2SLS 一阶条件，未中心化剩余项在参数方向上抵消，因此普通 Pairs Bootstrap 首阶有效；若希望高阶改进，Hall–Horowitz 方案直接对 moment recenter。Bootstrap 检验统计量仍应围绕 $\hat\beta$，不能围绕现实原假设值。
+
+## Bootstrap 2SLS 标准误的危险（The Peril of Bootstrap 2SLS Standard Errors）
+
+若有限样本 2SLS 方差不存在，复制样本方差试图估计“无穷”，会随 seed 巨幅变化。原书黑人男性工资例中解析和 Jackknife 标准误约 0.11，两次 $B=10{,}000$ 的 Bootstrap 标准误却为 1.42 和 4.79。
+
+因此恰好识别或仅一个过度识别限制时，不应报告普通 Bootstrap 标准误。Percentile 类区间不要求矩存在，理论上更合适，但弱工具下覆盖仍可能差。诊断要查看复制估计尾部、不同 seed 和 first-stage 强度，不能把“B 很大”误当可靠保证。
+
+## 聚类依赖（Clustered Dependence）
+
+以 cluster $g$ 为独立单位，score 是 $Z_g'e_g$；cluster-robust meat 为 $\sum_gZ_g'\hat e_g\hat e_g'Z_g$，其余 bread 保持 2SLS 形式。必须整组聚类，不可把行级 $Z_{ig}\hat e_{ig}$ 当独立。
+
+first stage、结构式和工具强度诊断应使用同一聚类层级。有效样本量接近 $G$ 而非总 $n$；少 cluster 时常规正态、weak-IV 和 Bootstrap 近似都要谨慎。
+
+## 生成回归量（Generated Regressors）
+
+设理想回归量 $W=A'Z$，模型
+
+::: {#hansen-eq-12-48}
+$$
+Y=W'\beta+v,
+\qquad E(Zv)=0,
+\tag{12.48}
+$$
+:::
+
+但使用 $\hat W_i=\hat A'Z_i$ 做 OLS：
+
+::: {#hansen-eq-12-49}
+$$
+\hat\beta=left(\sum_i\hat W_i\hat W_i'\right)^{-1}
+\sum_i\hat W_iY_i.
+\tag{12.49}
+$$
+:::
+
+代入真模型得
+
+::: {#hansen-eq-12-50}
+$$
+\hat\beta-\beta
+=\left(\sum_i\hat W_i\hat W_i'\right)^{-1}
+\sum_i\hat W_i\{(W_i-\hat W_i)'\beta+v_i\}.
+\tag{12.50}
+$$
+:::
+
+第二项是第一步估计误差，普通 OLS 方差遗漏它。若只检验生成回归量那一块系数为零，该项在 $H_0$ 下消失，常规 robust Wald 可有效；一般区间则需推导两步影响函数。若 $\hat A=(Z'Z)^{-1}Z'X$，可将综合误差写成 $e=Y-X'\beta$，用 $\hat e$ 而非第二步 $\hat v$ 得到与 2SLS 相同的修正。
+
+## 含预期误差的回归（Regression with Expectation Errors）
+
+把 $W=A'Z$ 解释为 $X$ 的预期，$u=X-W$ 为 expectation error，模型允许 $Y=X'\beta+u'\alpha+\nu$。第一步回归 $X$ 对 $Z$ 得 $\hat W,\hat u$，第二步回归 $Y$ 对 $(\hat W,\hat u)$。
+
+因为 $\hat W'\hat u=0$，$\hat\beta$ 与 $\hat\alpha$ 可分开表示，但二者联合极限含 cross-covariance；原书总结为
+
+::: {#hansen-eq-12-58}
+$$
+\sqrt n
+\begin{pmatrix}\hat\beta-\beta\\\hat\alpha-\alpha\end{pmatrix}
+\to_dN(0,V).
+\tag{12.58}
+$$
+:::
+
+只有额外同方差结构使两个 block 渐近独立。标准误要同时使用结构残差 $e_i$ 与第二步残差 $\nu_i$，不能把生成预期当固定数据。
+
+## 控制函数回归（Control Function Regression）
+
+将结构误差投影到 reduced-form error：$e=u_2'\alpha+\nu$，代入得
+
+::: {#hansen-eq-12-59}
+$$
+Y=X_1'\beta_1+X_2'\beta_2+u_2'\alpha+\nu.
+\tag{12.59}
+$$
+:::
+
+用第一阶段残差 $\hat u_2$ 替代不可见 $u_2$：
+
+::: {#hansen-eq-12-60}
+$$
+Y_i=X_i'\hat\beta+\hat u_{2i}'\hat\alpha+\hat\nu_i.
+\tag{12.60}
+$$
+:::
+
+FWL 将 $X_2$ 对 $\hat U_2$ 残差化后正好得到 $P_ZX_2$，故
+
+::: {#hansen-eq-12-61}
+$$
+\hat\beta=(\widetilde X'\widetilde X)^{-1}\widetilde X'Y
+=\hat\beta_{2sls}.
+\tag{12.61}
+$$
+:::
+
+系数相等不表示第二步所有普通标准误都正确。$\hat\alpha$ 的稳健方差需合并 2SLS block、残差回归 block 与协方差；原书写成
+
+::: {#hansen-eq-12-62}
+$$
+\widehat V_\alpha
+=\widehat V_{22}+\widehat V_{\gamma\gamma}
+-\widehat V_{\gamma2}-\widehat V_{\gamma2}'.
+\tag{12.62}
+$$
+:::
+
+## 内生性检验（Endogeneity Tests）
+
+在维护 $E(Ze)=0$ 下，检验 $X_2$ 外生等价于控制函数中的 $H_0:\alpha=0$。实践步骤是估第一阶段、保存 $\hat u_2$、估计
+
+::: {#hansen-eq-12-63}
+$$
+Y_i=X_i'\hat\beta+\hat u_{2i}'\hat\alpha+\hat\nu_i,
+\tag{12.63}
+$$
+:::
+
+并对 $\hat\alpha$ 做 robust Wald。拒绝说明 OLS 与允许内生的估计存在系统差异；不拒绝可能是检验功效不足，不等于证明外生。
+
+同方差下也可比较 OLS 与 2SLS，形成 Durbin–Wu–Hausman：
+
+::: {#hansen-eq-12-64}
+$$
+T=(\hat\beta_2-\tilde\beta_2)'
+\{\widehat{\operatorname{var}}(\tilde\beta_2)
+-\widehat{\operatorname{var}}(\hat\beta_2)\}^{-1}
+(\hat\beta_2-\tilde\beta_2).
+\tag{12.64}
+$$
+:::
+
+经典差方差公式依赖同方差效率排序；一般异方差时优先用控制函数 robust Wald 或第 13 章 GMM。
+
+## 子集内生性检验（Subset Endogeneity Tests）
+
+把回归量分为确定外生 $X_1$、待检验 $X_2$、始终内生 $X_3$。$H_0$ 下可把 $X_2$ 加入工具集，$H_1$ 下不可；比较两套 2SLS 的 $X_2$ 系数并用方差差构造 Hausman 统计量。
+
+若 $X_3$ 在原假设下仍内生，经典精确 $F$ 理由不成立；robust/cluster subset test 更适合用 GMM 的 difference-in-$J$。必须明确测试哪个子集，整体 endogeneity test 不能告诉每个变量分别是否内生。
+
+## 过度识别检验（OverIdentification Tests）
+
+Sargan 推导增加
+
+::: {#hansen-eq-12-65}
+$$
+E(e^2\mid Z)=\sigma^2,
+\tag{12.65}
+$$
+:::
+
+并考虑辅助回归
+
+::: {#hansen-eq-12-66}
+$$
+e=Z'\alpha+\nu.
+\tag{12.66}
+$$
+:::
+
+以 2SLS 残差替代 $e$，score 统计量为
+
+::: {#hansen-eq-12-67}
+$$
+S=\frac{\hat e'Z(Z'Z)^{-1}Z'\hat e}{\hat\sigma^2},
+\qquad \hat\sigma^2=n^{-1}\hat e'\hat e.
+\tag{12.67}
+$$
+:::
+
+$H_0$ 下 $S\to_d\chi^2_{\ell-k}$。自由度是未被 $k$ 个参数吸收的 moment 数。拒绝说明至少一条工具正交/结构限制失败，不能指出是哪一个；不拒绝也不验证所有工具，尤其弱工具时检验功效低。异方差或聚类应使用第 13 章稳健 GMM $J$，不是强行 robust 化同方差 Sargan。
+
+## 子集过度识别检验（Subset OverIdentification Tests）
+
+分 $Z=(Z_a',Z_b')'$，维护 $Z_a$ 有效，检验 $Z_b$。要求 $Z_a$ 本身至少识别模型；若恰好识别，子集检验退化为总体 Sargan。计算上先用全部 $Z$ 得 $S$，再只用 $Z_a$ 得 $S_a$，差 $C=S-S_a\to_d\chi^2_{\ell_b}$。
+
+这个 difference test 的解释是“在维护 $Z_a$ 的前提下，新增 $Z_b$ 是否与结构矩相容”。若维护集合本身无效，检验结论也无可靠含义。稳健版本对应第 13 章的 difference-in-$J$。
+
+## Bootstrap 过度识别检验（Bootstrap Overidentification Tests）
+
+普通 Pairs Bootstrap 世界不满足零样本矩，故 Sargan 的 Bootstrap 版本要把 $Z^{*'}\hat e^*$ 减去原样本 $Z'\hat e$ 后再形成二次型。每个伪样本重估 2SLS、计算重中心统计量，Bootstrap $p$ 值是超过观测 $S$ 的比例。
+
+重中心化实施“零假设下”的伪分布；若直接对未中心的 $S^*$ 取分位数，原样本的 overidentifying discrepancy 会被当作伪世界真值，临界值随拒绝证据一起移动。
+
+## 局部平均处理效应（Local Average Treatment Effects）
+
+令二元处理 $X(z)$、结果 $Y(x)$，工具 $Z$ 独立于潜在量，并假设 monotonicity $X(1)\ge X(0)$，即无 defier。人群分 never-taker、always-taker、complier；只有 complier 的处理状态会被 $Z$ 改变。
+
+IV/Wald 比率识别
+
+::: {#hansen-eq-12-68}
+$$
+\operatorname{LATE}
+=E\{Y(1)-Y(0)\mid X(1)>X(0)\}
+=\frac{E(Y\mid Z=1)-E(Y\mid Z=0)}
+{E(X\mid Z=1)-E(X\mid Z=0)}.
+\tag{12.68}
+$$
+:::
+
+推导中，reduced-form outcome 差等于 $E[(X(1)-X(0))C]$；monotonicity 令权重只在 complier 上为 1；first-stage 差等于 complier 比例，约去后得其平均效应。不同工具改变不同 complier，LATE 可随工具变化；不能无条件外推为 ATE。
+
+## 识别失败（Identification Failure）
+
+最简单模型为
+
+::: {#hansen-eq-12-69}
+$$
+Y=X\beta+e,
+\qquad X=Z\gamma+u.
+\tag{12.69}
+$$
+:::
+
+若 $\gamma=0$，工具与内生变量不相关，$\beta$ 未识别。为展示后果，原书规范化
+
+::: {#hansen-eq-12-70}
+$$
+\operatorname{var}\!\left(
+\begin{pmatrix}e\\u\end{pmatrix}\middle|Z\right)
+=\begin{pmatrix}1&\rho\\\rho&1\end{pmatrix}.
+\tag{12.70}
+$$
+:::
+
+IV 偏差是两个 CLT 正态量之比，极限含 Cauchy 分量：不收敛到常数、没有有限均值、尾部很厚。更危险的是残差方差可在高 $\rho$ 时虚假缩小，使 $t$ 统计量看似极显著。标准误小不能补救未识别。
+
+## 弱工具（Weak Instruments）
+
+Staiger–Stock 用局部到零序列
+
+::: {#hansen-eq-12-71}
+$$
+\Gamma=n^{-1/2}C
+\tag{12.71}
+$$
+:::
+
+刻画 first stage 与其估计噪声同阶。此时 2SLS 不再有普通根号 $n$ 正态极限，而是
+
+::: {#hansen-eq-12-72}
+$$
+\hat\beta_{2sls}-\beta\to_d
+\{(Q_ZC+\xi_2)'Q_Z^{-1}(Q_ZC+\xi_2)\}^{-1}
+(Q_ZC+\xi_2)'Q_Z^{-1}\xi_e.
+\tag{12.72}
+$$
+:::
+
+极限随机、非正态且依赖未知 $C$；LIML 也有非标准随机极限。固定参数强识别理论是 $\|C\|\to\infty$ 的远端近似，不能靠增大原样本标准误公式修复弱识别。
+
+## 多工具（Many Instruments）
+
+原书简化模型为
+
+::: {#hansen-eq-12-73}
+$$
+Y=X'\beta+e,
+\qquad X=\Gamma'Z+u_2,
+\tag{12.73}
+$$
+:::
+
+并假设 reduced-form errors 条件同方差
+
+::: {#hansen-eq-12-74}
+$$
+E(uu'\mid Z)=\Sigma,
+\tag{12.74}
+$$
+:::
+
+有界四阶矩
+
+::: {#hansen-eq-12-75}
+$$
+E(\|u\|^4\mid Z)\le B<\infty,
+\tag{12.75}
+$$
+:::
+
+以及
+
+::: {#hansen-eq-12-76}
+$$
+\frac\ell n\to\alpha.
+\tag{12.76}
+$$
+:::
+
+因 $\operatorname{tr}(P_Z)=\ell$，投影噪声不再消失，2SLS 极限向 OLS 偏移，偏移随 $\alpha$ 增加；该同方差框架下 LIML 作了相应修正并保持一致。实务应报告 $\ell/n$、避免无理论筛选的大量交互工具，并比较 LIML；但原书也提醒异方差下 many-instrument LIML 结论未必保留。
+
+## 弱工具检验（Testing for Weak Instruments）
+
+单个内生变量和单个 excluded instrument 时，弱工具下 $t$ 极限可写成
+
+::: {#hansen-eq-12-82}
+$$
+T\to_d
+\frac{\xi_1}
+{\sqrt{1-2\rho\xi_1/(\mu+\xi_2)+\{\xi_1/(\mu+\xi_2)\}^2}}
+\equiv S.
+\tag{12.82}
+$$
+:::
+
+最坏相关下进一步为
+
+::: {#hansen-eq-12-83}
+$$
+S_1=\xi\left|1+\frac\xi\mu\right|,
+\qquad \xi\sim N(0,1).
+\tag{12.83}
+$$
+:::
+
+Stock–Yogo 的思想不是普通检验“first-stage 系数为零”，而是检验强度是否足以把结构检验 size distortion 控制在容忍阈值。$F>10$ 只对应特定的单内生、同方差、工具数和容忍标准；工具数增加时 2SLS 临界值可远大于 10。应匹配 $k_2,\ell_2$、估计量和目标 size 的表格，并注明条件同方差限制。
+
+## 多个内生变量下的弱工具（Weak Instruments with $k_2>1$）
+
+分别查看每条 first-stage $F$ 不足以保证 $\Gamma_{22}$ 全秩；各列都显著仍可能近共线。Stock–Yogo 使用 Cragg–Donald 最小特征值型统计量，衡量所有内生方向中最弱的一个，并按 $k_2,\ell_2$ 和估计法查非标准临界值。
+
+原书提到异方差稳健的 Kleibergen–Paap 扩展。核心解释不变：检验的原假设是“工具弱到不能控制结构推断扭曲”，而非普通的“所有 reduced-form 系数均为零”。不拒绝弱工具时，常规 2SLS $t$/Wald 不能照常解释。
+
+## 例子：Acemoglu、Johnson 与 Robinson（2001）
+
+原书报告 OLS：
+
+::: {#hansen-eq-12-86}
+$$
+\widehat{\log(\mathrm{GDPpc})}=0.52\,(0.06)\,\mathrm{risk}.
+\tag{12.86}
+$$
+:::
+
+工具是历史 settler mortality，第一阶段为
+
+::: {#hansen-eq-12-87}
+$$
+\widehat{\mathrm{risk}}=-0.61\,(0.13)\log(\mathrm{mortality}).
+\tag{12.87}
+$$
+:::
+
+2SLS 为
+
+::: {#hansen-eq-12-88}
+$$
+\widehat{\log(\mathrm{GDPpc})}=0.94\,(0.16)\,\mathrm{risk}.
+\tag{12.88}
+$$
+:::
+
+first-stage $F\approx23$，控制函数拒绝 risk 外生。教学上更重要的是识别论证：历史死亡率通过殖民定居模式影响制度，并被假设不直接影响现代 GDP。强 first stage 不排除地理、疾病环境等直接通道；统计诊断与历史机制证据必须并读。
+
+## 例子：Angrist 与 Krueger（1991）
+
+季度出生与义务教育年龄规则提供教育变动。原研究用 30 或 180 个交互工具，普通 first-stage 联合检验 $p$ 值近零，却有 $F=4.8$ 或 2.43，按原书 Stock–Yogo 框架仍属弱工具；更小的三项季度工具集得到 $F=31$。
+
+这展示“统计显著 relevance”与“足以支持结构 Wald 推断的强度”完全不同。增加工具让第二阶段标准误变小，也可能增加 many-instrument bias。原书用三项工具得到教育回报约 0.099、标准误 0.021；模型选择应依据制度机制、工具强度与稳健性，而非挑选最窄区间。
+
+## 编程（Programming）
+
+可复现程序应先生成所有内生变换和 excluded instruments，再明确语法中的结构回归量与工具。至少保存：OLS、每条 reduced form、2SLS/LIML、robust/cluster 协方差、first-stage 强度、endogeneity 和 overidentification 检验。
+
+手工复核有三条等价系数路线：直接 [式 (12.29)](#hansen-eq-12-29)、先拟合 $\hat X$ 再 OLS、控制函数 [式 (12.60)](#hansen-eq-12-60)。三者系数应在数值误差内一致；标准误必须来自各自正确的联合公式。记录样本筛选、缺失值、dummy 基准组与工具共线删除，否则经典论文复现会出现不可解释差异。
+
+## 习题阅读指南（Exercises）
+
+12.1–12.8训练 Wald、GLS-as-IV、rank 与供需识别；12.9–12.22推导 IV 分布、非线性内生项、ILS、两阶段标准误和跨样本检验；12.23–12.28用 AJR、Card、Angrist–Krueger 数据完成从 reduced form 到弱工具/Bootstrap 的全流程。
+
+每道题先写：结构参数为何不是投影参数；$X_1,X_2,Z_1,Z_2$ 及维数；排除与 rank 假设；识别状态；估计式；正确残差与协方差；弱工具/过度识别诊断；系数的因果目标（同质效应还是 LATE）。若只写“用 2SLS 命令”，没有完成识别分析。
+
+::: {.book-map}
+**章末自检**
+
+1. 为什么 $E(Xe)\ne0$ 与“OLS 不再估计任何投影”不是同一句话？
+2. 工具有效性、工具相关性和工具强度分别由什么对象表达？
+3. $\operatorname{rank}(\Gamma_{22})=k_2$ 为什么比 $\ell_2\ge k_2$ 更强？
+4. 手工两阶段为何系数正确而标准误错误？
+5. LIML、JIVE 各针对 2SLS 的哪一种有限样本问题？
+6. Sargan 拒绝与不拒绝分别不能推出什么？
+7. LATE 的 independence、exclusion、first stage 与 monotonicity 各承担哪一步？
+8. 弱工具和多工具渐近为何会推翻固定维强识别的正态结论？
+9. 为什么恰好识别 IV 的 Bootstrap 标准误可能随 seed 爆炸？
+:::

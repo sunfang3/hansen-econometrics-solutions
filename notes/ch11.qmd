@@ -1,0 +1,441 @@
+---
+title: "多元回归"
+subtitle: "方程系统、SUR、降秩回归与因子方法"
+hansen-chapter: "Chapter 11"
+book-pages: "307–331"
+pdf-pages: "327–351"
+status: "完整初稿"
+---
+
+::: {.book-map}
+**原书位置与本章路线**　对应 Hansen Chapter 11（书内 pp. 307–331；PDF pp. 327–351）。11.1–11.6把单方程 OLS 扩展为联合估计与联合协方差；11.7–11.10讨论 SUR、MLE 和跨方程限制；11.11用广义特征值解降秩回归；11.12–11.16连接 PCA、精确/近似因子与因子增强回归；11.17补充 Wishart 与 Hotelling $T^2$；11.18给出习题路线。
+:::
+
+::: {.bridge}
+**本科桥接**　分别对每个因变量做 OLS 并不困难，新增内容在“联合”二字：不同方程误差可能相关，跨方程参数函数需要协方差，排除限制又可能让 GLS 提高效率。务必区分 $i$（观测）与 $j$（方程）；否则 $X_{ji}$、$e_{ji}$ 的矩阵维数会迅速混乱。
+:::
+
+## 引言（Introduction）
+
+多元回归是若干线性回归方程构成的系统，常用于 IV 的 reduced form、VAR、需求系统和多个结果变量。它与“一个因变量、多个解释变量”的多元 OLS 不是同一个“多元”：本章的因变量本身是 $m$ 维向量。
+
+单独估计每条方程通常仍一致，但不能只把各方程输出并排放置就声称完成联合推断。检验 $\beta_1=\beta_2$、计算两方程系数差的标准误，必须估计 $\operatorname{cov}(\hat\beta_1,\hat\beta_2)$；SUR 是否优于逐方程 OLS，又取决于误差相关和解释变量集合是否不同。
+
+## 回归方程系统（Regression Systems）
+
+第 $j$ 条方程写成
+
+::: {#hansen-eq-11-1}
+$$
+Y_j=X_j'\beta_j+e_j,
+\qquad j=1,\ldots,m.
+\tag{11.1}
+$$
+:::
+
+$Y_j,e_j$ 为标量，$X_j,\beta_j\in\mathbb R^{k_j}$，总参数数 $k=\sum_jk_j$。令 $Y=(Y_1,\ldots,Y_m)'\in\mathbb R^m$、$e=(e_1,\ldots,e_m)'$，将各 $X_j'$ 放在块对角线上得到 $\mathcal X\in\mathbb R^{m\times k}$，则
+
+::: {#hansen-eq-11-2}
+$$
+Y=\mathcal X\beta+e.
+\tag{11.2}
+$$
+:::
+
+这里用花体 $\mathcal X$ 强调它是一个观测的系统设计矩阵；原书仍写作 $X$。堆叠 $n$ 个观测后，$\mathbf Y,\mathbf e\in\mathbb R^{nm}$，$\mathbf X\in\mathbb R^{nm\times k}$。
+
+以两条方程为例，单个观测的系统矩阵是
+
+$$
+\mathcal X_i=
+\begin{pmatrix}X_{1i}'&0\\0&X_{2i}'\end{pmatrix},
+\qquad
+\Sigma=
+\begin{pmatrix}\sigma_{11}&\sigma_{12}\\
+\sigma_{12}&\sigma_{22}\end{pmatrix}.
+$$
+
+块对角的 $\mathcal X_i$ 表示“第 1 条方程的系数不会直接进入第 2 条条件均值”；$\Sigma$ 的非对角元则允许两条方程仍受同一遗漏冲击影响。这两个位置承担不同角色，不能因为 $\mathcal X_i$ 块对角就误判方程彼此独立。
+
+若每条方程使用共同回归量 $X\in\mathbb R^{k_0}$，令 $B=(\beta_1,\ldots,\beta_m)\in\mathbb R^{k_0\times m}$，则单个观测可简写为
+
+::: {#hansen-eq-11-3}
+$$
+Y=B'X+e.
+\tag{11.3}
+$$
+:::
+
+样本矩阵形式是 $\mathbf Y=\mathbf X_0B+\mathbf E$，维数分别为 $n\times m,n\times k_0,k_0\times m,n\times m$；系统设计满足 $\mathcal X=I_m\otimes X'$。
+
+## 最小二乘估计（Least Squares Estimator）
+
+逐方程 OLS 堆叠起来，等价于系统设计上的 OLS：
+
+::: {#hansen-eq-11-4}
+$$
+\hat\beta=(\mathbf X'\mathbf X)^{-1}\mathbf X'\mathbf Y
+=\left(\sum_{i=1}^n\mathcal X_i'\mathcal X_i\right)^{-1}
+\left(\sum_{i=1}^n\mathcal X_i'Y_i\right).
+\tag{11.4}
+$$
+:::
+
+原因是 $\sum_i\mathcal X_i'\mathcal X_i$ 为块对角矩阵，第 $j$ 块是 $\sum_iX_{ji}X_{ji}'$；逆矩阵仍逐块取逆，右侧向量第 $j$ 块是 $\sum_iX_{ji}Y_{ji}$。因此大公式没有引入新的系数估计，只把联合协方差所需结构保留下来。
+
+残差向量 $\hat e_i=Y_i-\mathcal X_i\hat\beta\in\mathbb R^m$，误差协方差估计为
+
+::: {#hansen-eq-11-5}
+$$
+\widehat\Sigma=\frac1n\sum_{i=1}^n\hat e_i\hat e_i'.
+\tag{11.5}
+$$
+:::
+
+共同回归量时，全部系数还可一次写成
+
+::: {#hansen-eq-11-6}
+$$
+\widehat B=(\mathbf X_0'\mathbf X_0)^{-1}\mathbf X_0'\mathbf Y.
+\tag{11.6}
+$$
+:::
+
+## 系统 OLS 的均值与方差（Mean and Variance of Systems Least Squares）
+
+有限样本无偏需要对所有系统回归量条件化：
+
+::: {#hansen-eq-11-7}
+$$
+E(e\mid\mathcal X)=0.
+\tag{11.7}
+$$
+:::
+
+由 $\hat\beta-\beta=(\mathbf X'\mathbf X)^{-1}\sum_i\mathcal X_i'e_i$，给定全部 $\mathcal X$ 取期望即为 0。若 $\Sigma_i=E(e_ie_i'\mid\mathcal X_i)$，独立观测下条件方差是 sandwich：
+
+$$
+\operatorname{var}(\hat\beta\mid\mathcal X)
+=(\mathbf X'\mathbf X)^{-1}
+\left(\sum_i\mathcal X_i'\Sigma_i\mathcal X_i\right)
+(\mathbf X'\mathbf X)^{-1}.
+$$
+
+条件同方差假设是
+
+::: {#hansen-eq-11-8}
+$$
+E(ee'\mid\mathcal X)=\Sigma.
+\tag{11.8}
+$$
+:::
+
+它允许同一观测的不同方程误差相关，即 $\Sigma$ 可有非零非对角元；只要求协方差不随回归量变化。共同回归量再加 [式 (11.8)](#hansen-eq-11-8) 时，方差化为 $\Sigma\otimes(\mathbf X_0'\mathbf X_0)^{-1}$。
+
+特别地，第 $(j,\ell)$ 个协方差块为
+
+$$
+\operatorname{cov}(\hat\beta_j,\hat\beta_\ell\mid\mathbf X_0)
+=\sigma_{j\ell}(\mathbf X_0'\mathbf X_0)^{-1}.
+$$
+
+所以检验 $H_0:\beta_{ja}=\beta_{\ell a}$ 时，分母应包含
+$\operatorname{var}(\hat\beta_{ja})+\operatorname{var}(\hat\beta_{\ell a})
+-2\operatorname{cov}(\hat\beta_{ja},\hat\beta_{\ell a})$。本科单方程输出通常不给最后一项，这正是系统估计要保留的信息。
+
+## 渐近分布（Asymptotic Distribution）
+
+只要求逐方程投影正交：
+
+::: {#hansen-eq-11-9}
+$$
+E(X_je_j)=0,
+\qquad j=1,\ldots,m.
+\tag{11.9}
+$$
+:::
+
+联合 score 向量是 $\mathcal X_i'e_i=(X_{1i}e_{1i}',\ldots)'\in\mathbb R^k$。CLT 给出其协方差 $\Omega=E(\mathcal X_i'e_ie_i'\mathcal X_i)$。同方差时
+
+::: {#hansen-eq-11-10}
+$$
+\Omega=E(\mathcal X'\Sigma\mathcal X),
+\tag{11.10}
+$$
+:::
+
+共同回归量时
+
+::: {#hansen-eq-11-11}
+$$
+\Omega=E(ee'\otimes XX'),
+\tag{11.11}
+$$
+:::
+
+两条件同时成立进一步成为
+
+::: {#hansen-eq-11-12}
+$$
+\Omega=\Sigma\otimes E(XX').
+\tag{11.12}
+$$
+:::
+
+令 $Q=E(\mathcal X'\mathcal X)$，则 $\sqrt n(\hat\beta-\beta)\to_dN(0,Q^{-1}\Omega Q^{-1})$。共同回归量下
+
+::: {#hansen-eq-11-13}
+$$
+Q=I_m\otimes E(XX'),
+\tag{11.13}
+$$
+:::
+
+且再加同方差得到
+
+::: {#hansen-eq-11-14}
+$$
+V_\beta=\Sigma\otimes\{E(XX')\}^{-1}.
+\tag{11.14}
+$$
+:::
+
+若 $\theta=r(\beta_1,\ldots,\beta_m)$，用整个堆叠参数的梯度 $R=\partial r(\beta)'/\partial\beta$ 做 Delta 法。只用两条回归各自标准误、忽略协方差，会错误计算系数差、比率或跨方程弹性的精度。
+
+## 协方差矩阵估计（Covariance Matrix Estimation）
+
+一般稳健估计直接用系统残差外积替换 $e_ie_i'$：
+
+$$
+\widehat V_{\hat\beta}
+=(\mathbf X'\mathbf X)^{-1}
+\left(\sum_i\mathcal X_i'\hat e_i\hat e_i'\mathcal X_i\right)
+(\mathbf X'\mathbf X)^{-1}.
+$$
+
+共同回归量和同方差下可用 $\widehat\Sigma\otimes(\mathbf X_0'\mathbf X_0)^{-1}$。两者不是同一口径：前者允许 $\Sigma_i$ 随 $X_i$ 变化，后者依赖 [式 (11.8)](#hansen-eq-11-8)。函数参数使用 $\widehat R'\widehat V_{\hat\beta}\widehat R$；软件若分别估计方程，必须用能保留跨方程 residual covariance 的系统命令或手工堆叠。
+
+## 似不相关回归（Seemingly Unrelated Regression）
+
+SUR 模型为
+
+::: {#hansen-eq-11-15}
+$$
+Y=\mathcal X\beta+e,
+\qquad E(e\mid\mathcal X)=0,
+\qquad E(ee'\mid\mathcal X)=\Sigma.
+\tag{11.15}
+$$
+:::
+
+用 $\Sigma^{-1/2}$ 白化方程误差后做 OLS，得到 GLS：
+
+::: {#hansen-eq-11-16}
+$$
+\hat\beta_{\mathrm{gls}}
+=\left(\sum_i\mathcal X_i'\Sigma^{-1}\mathcal X_i\right)^{-1}
+\left(\sum_i\mathcal X_i'\Sigma^{-1}Y_i\right).
+\tag{11.16}
+$$
+:::
+
+堆叠样本的等价形式是
+
+::: {#hansen-eq-11-17}
+$$
+\hat\beta_{\mathrm{gls}}
+=\{\mathbf X'(I_n\otimes\Sigma^{-1})\mathbf X\}^{-1}
+\mathbf X'(I_n\otimes\Sigma^{-1})\mathbf Y.
+\tag{11.17}
+$$
+:::
+
+实际以逐方程 OLS 残差的 [式 (11.5)](#hansen-eq-11-5) 估计 $\Sigma$，形成
+
+::: {#hansen-eq-11-18}
+$$
+\hat\beta_{\mathrm{sur}}
+=\left(\sum_i\mathcal X_i'\widehat\Sigma^{-1}\mathcal X_i\right)^{-1}
+\left(\sum_i\mathcal X_i'\widehat\Sigma^{-1}Y_i\right).
+\tag{11.18}
+$$
+:::
+
+SUR 利用跨方程误差相关，在同方差系统正确时不劣于 OLS。迭代 SUR 用新残差更新 $\widehat\Sigma$，但“更多迭代”不修复同方差或条件均值错误；异方差下应采用稳健系统 GMM 思路。
+
+把效率来源拆开看会更清楚。若 $\sigma_{12}\ne0$，观察到第 2 条方程的残差方向，就提供了第 1 条方程误差方向的信息；若第 2 条方程恰好还含有第 1 条没有的回归量，这些回归量可经由误差相关帮助预测第 1 条误差。GLS 白化正是在联合残差空间里利用这条信息。若误差不相关，或者回归量集合完全相同，这条额外信息通道就关闭。
+
+可行 SUR 的计算顺序是：先逐方程 OLS；把同一观测的各方程残差排成 $\hat e_i$；用 [式 (11.5)](#hansen-eq-11-5) 得到 $\widehat\Sigma$；确认其可逆后代入 [式 (11.18)](#hansen-eq-11-18)。这里不能把各方程残差方差单独排成对角阵，否则人为删除的恰是 SUR 所利用的协方差。
+
+## SUR 与 OLS 的等价（Equivalence of SUR and Least Squares）
+
+若所有方程回归量相同，$\mathcal X_i=I_m\otimes X_i'$。此时 $\mathcal X_i'\widehat\Sigma^{-1}=(\widehat\Sigma^{-1}\otimes I)\mathcal X_i'$，相同左因子同时出现在 [式 (11.18)](#hansen-eq-11-18) 的“分母”和“分子”，约去后正是 OLS。
+
+因此仅有误差相关还不够带来系数效率增益；必须有不同方程的回归量/排除限制，让一条方程的变量信息借助误差相关帮助另一条方程。若 $\Sigma$ 对角，方程不相关，SUR 同样退化为逐方程 OLS。SUR 的 seemingly unrelated 正是说方程表面不同、却由误差协方差联系。
+
+## 最大似然估计（Maximum Likelihood Estimator）
+
+若 $e\mid\mathcal X\sim N(0,\Sigma)$，样本对数似然含 $\log\det(\Sigma^{-1})$ 与残差 Mahalanobis 距离。对 $\beta$ 的一阶条件给 GLS，对 $\Sigma$ 的一阶条件给残差外积均值；两式互相依赖，交替更新至收敛即 iterated SUR。
+
+所以正态同方差系统下 iterated SUR 与 MLE 相同。正态性赋予似然解释和精确模型，不是 [式 (11.18)](#hansen-eq-11-18) 一致性所必需；而若共同回归量使 SUR=OLS，MLE 的系数也同样等于 OLS。
+
+## 受限估计（Restricted Estimation）
+
+系统模型的独特价值之一是施加跨方程限制，例如需求系统中的 Slutsky 对称性。可对联合 OLS/SUR 估计做最小距离，可在似然中直接约束，也可在第 13 章的 GMM 中把限制写进矩条件。
+
+限制必须以堆叠参数 $\beta$ 表示，并核对独立限制数。分别估计各方程后在某一条中硬改系数，通常既不是受限最小二乘也没有正确标准误。非线性限制还要注意第 9 章的参数化问题。
+
+## 降秩回归（Reduced Rank Regression）
+
+考虑
+
+::: {#hansen-eq-11-19}
+$$
+Y=B'X+C'Z+e,
+\qquad E(ee'\mid X,Z)=\Sigma,
+\tag{11.19}
+$$
+:::
+
+$B\in\mathbb R^{k\times m}$，约束 $\operatorname{rank}(B)=r<\min(k,m)$。可分解 $B=GA'$，其中 $G\in\mathbb R^{k\times r}$、$A\in\mathbb R^{m\times r}$。因为 $GQ$ 与 $AQ^{-T}$ 给出同一 $B$，必须加如 $G'DG=I_r$ 的规范化；识别的是低维子空间，不是任意旋转下的单个载荷。
+
+先用 FWL 对 $Z$ 残差化得到 $\widetilde X,\widetilde Y$。给定 $G$，对 $A,C,\Sigma$ 的 MLE 是多元 OLS；把它们代回似然后，$G$ 解广义特征值问题：
+
+::: {#hansen-eq-11-20}
+$$
+\widehat G
+=\arg\max_G
+\frac{\det\{G'\widetilde X'\widetilde Y
+(\widetilde Y'\widetilde Y)^{-1}
+\widetilde Y'\widetilde XG\}}
+{\det(G'\widetilde X'\widetilde XG)}.
+\tag{11.20}
+$$
+:::
+
+取最大的 $r$ 个广义特征值对应向量。正交补 $A_\perp$ 则由
+
+::: {#hansen-eq-11-21}
+$$
+\widehat A_\perp
+=\arg\max_A
+\frac{\det\{A'(\widetilde Y'\widetilde Y-
+\widetilde Y'\widetilde X(\widetilde X'\widetilde X)^{-1}
+\widetilde X'\widetilde Y)A\}}
+{\det(A'\widetilde Y'\widetilde YA)}
+\tag{11.21}
+$$
+:::
+
+给出，取相应 $m-r$ 个方向。教学重点是“残差化—集中似然—广义特征分解”，而不是死记长行列式。
+
+实践中可把求解流程写成四步。第一，用 $M_Z=I-Z(Z'Z)^{-1}Z'$ 得到 $\widetilde X=M_ZX$、$\widetilde Y=M_ZY$，避免 $Z$ 的线性作用混入秩约束。第二，构造 $S_{xx}=\widetilde X'\widetilde X$、$S_{yy}=\widetilde Y'\widetilde Y$ 和 $S_{xy}=\widetilde X'\widetilde Y$。第三，解 $S_{xy}S_{yy}^{-1}S_{yx}g=\lambda S_{xx}g$，选前 $r$ 个方向组成 $\widehat G$。第四，在给定 $\widehat G$ 后回归得到 $\widehat A$ 与 $\widehat C$，最后重构 $\widehat B=\widehat G\widehat A'$。秩 $r$ 是实质限制；若 $r=\min(k,m)$，模型退回不受限多元回归。
+
+## 主成分分析（Principal Component Analysis）
+
+PCA 在约束 $h'h=1$ 且与此前方向正交下，依次最大化 $\operatorname{var}(h'X)=h'\Sigma h$。附录 A 的二次型极值说明最优 $h_j$ 是 $\Sigma$ 按特征值从大到小排列的特征向量。令 $H=(h_1,\ldots,h_k)$、$D=\operatorname{diag}(d_1,\ldots,d_k)$，则 $U=H'X$ 且 $\operatorname{var}(U)=D$：主成分彼此不相关，第 $j$ 个解释方差比例为 $d_j/\operatorname{tr}(\Sigma)$。
+
+PCA 对尺度敏感。若工资用元、资产用万元，协方差 PCA 可能被单位主导；先标准化后用相关矩阵，回答的是“各变量标准差单位下”的共同变异。原书测试分数例中第一成分近似各科平均，第二成分近似数学与语言差异；这类命名是对载荷模式的解释，不是算法自动识别的因果构念。
+
+还要区分“方差最大”与“预测目标最好”。PCA 完全不看后续因变量 $Y$，因此保留解释 $X$ 方差最多的方向，不保证是解释 $Y$ 最强的方向。删去小特征值方向是一种无监督降维；若经济问题关心因果系数，仍须另外说明为什么被删方向不携带识别所需变动。
+
+## 因子模型（Factor Models）
+
+单因子模型为
+
+::: {#hansen-eq-11-22}
+$$
+X=\lambda F+u,
+\tag{11.22}
+$$
+:::
+
+多因子推广为
+
+::: {#hansen-eq-11-23}
+$$
+X=\Lambda F+u,
+\tag{11.23}
+$$
+:::
+
+其中 $X,u\in\mathbb R^k$、$F\in\mathbb R^r$、$\Lambda\in\mathbb R^{k\times r}$。规范化 $E(FF')=I_r$、$E(Fu')=0$ 后，相关矩阵分解为
+
+::: {#hansen-eq-11-24}
+$$
+\Sigma=\Lambda\Lambda'+\Psi.
+\tag{11.24}
+$$
+:::
+
+精确因子模型要求 $\Psi$ 对角。正态准似然为
+
+::: {#hansen-eq-11-25}
+$$
+\ell_n(\Lambda,\Psi)
+=-\frac{nk}{2}\log(2\pi)
+-\frac n2\log\det(\Lambda\Lambda'+\Psi)
+-\frac n2\operatorname{tr}\{(\Lambda\Lambda'+\Psi)^{-1}\widehat\Sigma\}.
+\tag{11.25}
+$$
+:::
+
+Bartlett score 把 $X_i=\Lambda F_i+u_i$ 当 GLS 回归估计 $F_i$，理想版无偏；regression score 用 $E(F\mid X)$ 的线性投影，理想版有收缩偏差但 MSE 更小。载荷和因子只识别到正交旋转，不能把默认旋转的每一列当作唯一“真实能力”。因子数可结合特征值断点、信息准则和模型检验，不宜只凭“特征值大于 1”机械决定。
+
+旋转不识别可直接验证：对任意正交矩阵 $H$，令 $\Lambda^*=\Lambda H$、$F^*=H'F$，则 $\Lambda^*F^*=\Lambda HH'F=\Lambda F$，而 $E(F^*F^{*'})=I_r$ 仍成立。数据因此只识别 $\Lambda$ 的列空间和公共成分 $\Lambda F$。varimax 等旋转可让载荷更易命名，但没有增加样本信息；解释旋转后因子时应明确它是一种规范化选择。
+
+## 近似因子模型（Approximate Factor Models）
+
+近似因子允许 $\Psi$ 非对角，适合大量经济指标之间仍有弱相关的情况。把 $F_i$ 当未知回归量，联合最小化 $n^{-1}\sum_i\|X_i-\Lambda F_i\|^2$；集中掉 $F_i$ 后，解由样本协方差前 $r$ 个特征向量组成。若 $\widehat H,\widehat D$ 为这些特征向量和值，在 $n^{-1}\sum_i\hat F_i\hat F_i'=I_r$ 规范化下，$\widehat\Lambda=\widehat H\widehat D^{1/2}$，$\hat F_i=\widehat D^{-1/2}\widehat H'X_i$。
+
+固定 $k$ 时，个体因子数随 $n$ 一起增加，且 $\Psi$ 会扰动总体特征向量，载荷通常不一致。大 $k$ 渐近通过两点补救：特异误差最大特征值有界，公共载荷信息 $\lambda_{\min}(\Lambda'\Lambda)$ 发散。于是公共部分支配主要特征空间，因子估计误差方差趋零。这里“大数据”要求横截面变量数也增长，不只是观测数 $n$ 很大。
+
+## 含额外回归量的因子模型（Factor Models with Additional Regressors）
+
+模型 $X=\Lambda F+BZ+e$ 同时含潜在因子与可观测 $Z$。估计采用交替法：给定 $B$，对 $X-BZ$ 做因子分析；给定 $F$，把 $X$ 对 $(F,Z)$ 做多元 OLS 更新 $(\Lambda,B)$；从初始多元 OLS 的 $B$ 出发迭代至准则稳定。
+
+每一步都只条件于上一轮估计，因此最终标准误不能把生成的因子当完全已知。还应固定规范化/旋转，否则相邻迭代可能表示同一子空间却列方向跳变，造成“未收敛”的假象。
+
+## 因子增强回归（Factor-Augmented Regression）
+
+因子增强回归用少量 $F$ 代替高维且共线的 $X$：$Y=F'\beta+Z'\gamma+e$，先从 $X=\Lambda F+u$ 估计 $\hat F$，再回归 $Y$ 对 $(\hat F,Z)$。研究通常关心 $\gamma$，因子主要充当压缩后的 controls；由于旋转不唯一，不宜逐个解释 $\beta$。
+
+固定 $k$、仅令 $n\to\infty$ 时，生成因子含测量误差，第二步概率极限为
+
+::: {#hansen-eq-11-26}
+$$
+\beta^*
+=\{D^{-1}\Lambda'E(XX')\Lambda D^{-1}\}^{-1}
+\{D^{-1}\Lambda'E(XY)\}.
+\tag{11.26}
+$$
+:::
+
+代入 $E(XX')=\Lambda\Lambda'+\Psi$ 可见一般 $\beta^*\ne\beta$。当 $k\to\infty$ 且公共载荷增强时，误差项 $D^{-1}\Lambda'\Psi\Lambda D^{-1}$ 消失，才恢复一致；渐近正态还需 $k$ 相对 $\sqrt n$ 足够大。这是“先估因子再当回归量”不能直接套普通 OLS 标准误的根本原因。
+
+## 多元正态（Multivariate Normal）
+
+若 $Y_i\sim N(\mu,\Sigma)$ 独立，则平方和矩阵服从 Wishart；它是 $\chi^2$ 的矩阵推广。以 $n-1$ 为分母的样本协方差满足 $(n-1)\widehat\Sigma\sim W_m(n-1,\Sigma)$，并与 $\bar Y$ 独立。
+
+检验 $H_0:\mu=\mu_0$ 的 Hotelling 统计量 $T^2=n(\bar Y-\mu_0)'\widehat\Sigma^{-1}(\bar Y-\mu_0)$ 在正态模型下服从缩放的 $F_{m,n-m}$。与渐近 Wald 的 $\chi_m^2$ 相比，这是估计 $m\times m$ 协方差带来的有限样本校正；要求 $n>m$ 才能求逆，且一般非正态数据不能声称精确分布。
+
+当 $m=1$ 时，$T^2$ 就是普通单样本 $t$ 统计量的平方，缩放 $F$ 分布也退化为 $F_{1,n-1}=t_{n-1}^2$。这个特例把本科熟悉的 $t$ 检验与多元均值检验连接起来。若 $m$ 接近 $n$，样本协方差不仅可能不可逆，估计噪声也会很大；不能把“变量更多”误当成联合检验必然更有信息。
+
+## 习题阅读指南（Exercises）
+
+11.1–11.8通过 Kronecker 运算推导 $Q,\Omega,V_\beta$ 与稳健估计；11.9–11.13证明 GLS/SUR 两种表示、效率排序和方差一致性；11.14是 generated regressor 的 reduced-form 预演；11.15要求联合推断两方程系数。
+
+答题时先写每个对象维数，再将 $\hat\beta-\beta$ 写成联合 score 的样本均值；涉及共同回归量时明确何时用了 $I_m\otimes X'$；检验跨方程限制时保留非对角协方差块。只证明各 $\hat\beta_j$ 分别正态，还不足以推出它们的函数的正确方差。
+
+::: {.book-map}
+**章末自检**
+
+1. 一个观测的 $\mathcal X_i$ 与堆叠样本的 $\mathbf X$ 各是什么维数？
+2. [式 (11.7)](#hansen-eq-11-7) 与逐方程投影条件 [式 (11.9)](#hansen-eq-11-9) 强弱有何不同？
+3. 跨方程系数差为何不能只把两条标准误平方相加？
+4. 哪两种情形下 SUR 与 OLS 完全相同？
+5. 降秩回归为何必须规范化，广义特征值在哪一步出现？
+6. PCA 与因子模型都用特征分解，但优化目标和误差模型有什么差别？
+7. 近似因子为什么需要 $k\to\infty$ 才能改善因子估计？
+8. Wishart/Hotelling 的精确结论比渐近 Wald 多要求什么？
+:::

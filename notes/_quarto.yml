@@ -23,6 +23,11 @@ book:
         - ch08.qmd
         - ch09.qmd
         - ch10.qmd
+    - part: "第三部分　多方程方法"
+      chapters:
+        - ch11.qmd
+        - ch12.qmd
+        - ch13.qmd
   appendices:
     - appendix-a.qmd
     - appendix-b.qmd
