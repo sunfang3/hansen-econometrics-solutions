@@ -1,0 +1,284 @@
+---
+title: "分位数回归"
+subtitle: "条件分布、check loss、稳健推断与因果解释边界"
+hansen-chapter: "Chapter 24"
+book-pages: "780–800"
+pdf-pages: "800–820"
+status: "完整初稿"
+---
+
+::: {.book-map}
+**原书位置与本章路线**　对应 Hansen Chapter 24（书内 pp. 780–800；PDF pp. 800–820）。24.1–24.4由中位数、LAD 推广至分位数回归；24.5–24.10讨论形状、估计、三明治方差、聚类与分位线交叉；24.11–24.15说明因果解释、随机系数、非参数、面板和 IVQR；24.16–24.17补证明与习题。
+:::
+
+::: {.bridge}
+**本科桥接**　OLS 描述 $E(Y\mid X)$ 如何随 $X$ 变化；分位数回归描述 $Y\mid X$ 的不同位置如何变化。它不是“把样本按 $Y$ 高低分组后分别 OLS”，而是对全部样本最小化一项不对称绝对损失。不同 $\tau$ 的系数可揭示条件分布的尺度与形状变化，但若缺少额外识别假设，不能自动解释成个体处理效应异质性。
+:::
+
+## 引言（Introduction）
+
+本章假设 $Y$ 连续，使分位数唯一。条件均值只给分布中心的一种概括；条件中位数对离群值更稳健，多个条件分位数则描绘位置、离散度、偏度与尾部如何随 $X$ 改变。研究工资时，教育对第 10、50、90 百分位的关系可能完全不同，这些差异会被均值回归压缩成一个斜率。
+
+## 中位数回归（Median Regression）
+
+线性条件中位数模型为
+
+::: {#hansen-eq-24-1}
+$$
+Y=X'\beta+e,qquad \operatorname{med}(e\mid X)=0.
+\tag{24.1}
+$$
+:::
+
+连续 $Y$ 的总体中位数 $m$ 使正负偏差概率各半，因此
+
+::: {#hansen-eq-24-2}
+$$E\{\operatorname{sgn}(Y-m)\}=0.
+\tag{24.2}$$
+:::
+
+它也最小化绝对损失：
+
+::: {#hansen-eq-24-3}
+$$m=\arg\min_\theta E|Y-\theta|.
+\tag{24.3}$$
+:::
+
+条件版本依次为
+
+::: {#hansen-eq-24-4}
+$$E\{\operatorname{sgn}(e)\mid X\}=0,
+\tag{24.4}$$
+:::
+
+::: {#hansen-eq-24-5}
+$$m(x)=\arg\min_\theta E(|Y-\theta|\mid X=x),
+\tag{24.5}$$
+:::
+
+以及线性模型下
+
+::: {#hansen-eq-24-6}
+$$\beta=\arg\min_bE|Y-X'b|.
+\tag{24.6}$$
+:::
+
+若真实条件中位数并不线性，则定义最佳线性中位数预测系数
+
+::: {#hansen-eq-24-7}
+$$\beta\equiv\arg\min_bE|Y-X'b|,
+\tag{24.7}$$
+:::
+
+其一阶矩条件为
+
+::: {#hansen-eq-24-8}
+$$E\{X\operatorname{sgn}(e)\}=0.
+\tag{24.8}$$
+:::
+
+[式 (24.4)](#hansen-eq-24-4) 是正确条件中位数模型的强条件；[式 (24.8)](#hansen-eq-24-8) 只是最佳线性近似的正交条件，正如 CEF 零条件均值与线性投影零相关不能混为一谈。
+
+## 最小绝对离差（Least Absolute Deviations）
+
+LAD 最小化 $M_n(\beta)=n^{-1}\sum_i|Y_i-X_i'\beta|$。平方损失对大残差施加二次惩罚，绝对损失只线性增长，因此 LAD 对结果方向的离群值更不敏感；但高杠杆 $X$ 仍可强烈影响系数，不能简单称其“完全稳健”。
+
+目标函数连续且全局凸，却由许多平面拼接，在残差为零处不可导。最小值可能是集合，牛顿法等光滑优化并不适用；线性规划可可靠求全局解。样本 score 约满足 $n^{-1}\sum_iX_i\operatorname{sgn}(\hat e_i)\simeq0$，零残差时需用次梯度理解。
+
+## 分位数回归（Quantile Regression）
+
+线性 $\tau$ 条件分位数模型写为
+
+::: {#hansen-eq-24-9}
+$$Y=X'\beta_\tau+e,qquad Q_\tau(e\mid X)=0.
+\tag{24.9}$$
+:::
+
+定义 check loss
+
+::: {#hansen-eq-24-10}
+$$
+\rho_\tau(u)=
+\begin{cases}-(1-\tau)u,&u<0,\\ \tau u,&u\ge0,
+\end{cases}
+=u\{\tau-1(u<0)\}.
+\tag{24.10}
+$$
+:::
+
+其斜率 $\psi_\tau(u)=\tau-1(u<0)$。总体分位数依次满足
+
+::: {#hansen-eq-24-11}
+$$E\{\psi_\tau(Y-q_\tau)\}=0,
+\tag{24.11}$$
+:::
+
+::: {#hansen-eq-24-12}
+$$q_\tau=\arg\min_\theta E\rho_\tau(Y-\theta),
+\tag{24.12}$$
+:::
+
+条件分位数满足
+
+::: {#hansen-eq-24-13}
+$$E\{\psi_\tau(e)\mid X\}=0,
+\tag{24.13}$$
+:::
+
+::: {#hansen-eq-24-14}
+$$q_\tau(x)=\arg\min_\theta E\{\rho_\tau(Y-\theta)\mid X=x\},
+\tag{24.14}$$
+:::
+
+线性模型则有
+
+::: {#hansen-eq-24-15}
+$$\beta_\tau=\arg\min_bE\rho_\tau(Y-X'b).
+\tag{24.15}$$
+:::
+
+作为近似时仍用
+
+::: {#hansen-eq-24-16}
+$$\beta_\tau\equiv\arg\min_bE\rho_\tau(Y-X'b).
+\tag{24.16}$$
+:::
+
+负残差的边际惩罚为 $1-\tau$，正残差为 $\tau$；最优点使约 $\tau$ 比例结果位于拟合线下方。单调变换等变性意味着 $Q_\tau(\log Y\mid X)=\log Q_\tau(Y\mid X)$，但线性规格在变换前后不是同一个函数类。
+
+## 分位数形状示例（Example Quantile Shapes）
+
+若不同 $\tau$ 的斜率相同、仅截距变化，条件分布是位置平移；斜率随 $\tau$ 变化说明条件尺度或形状随 $X$ 变化。位置—尺度模型 $Y=X'\beta+s(X)u$ 的分位数为 $X'\beta+s(X)q_\tau(u)$，只要 $s(X)$ 随 $X$ 变化，各条线就不会平行。
+
+跨分位比较系数前要统一变量尺度并画出 $x'\hat\beta_\tau$。某个斜率更大不必等于“该人群回报更大”，因为不同条件分位对应的个体未必保持相同潜在排名。
+
+## 估计（Estimation）
+
+样本估计量最小化 $n^{-1}\sum_i\rho_\tau(Y_i-X_i'\beta)$，由线性规划求解。残差满足
+
+::: {#hansen-eq-24-17}
+$$\frac1n\sum_{i=1}^nX_i\psi_\tau(\hat e_i(\tau))\simeq0.
+\tag{24.17}$$
+:::
+
+估多个 $\tau$ 时每次都使用全样本，而非先按 $Y$ 分组。极端分位数的有效信息来自尾部附近较少观测，标准误更大；有限样本还可能出现多个最优解，应记录算法与容差。
+
+## 渐近分布（Asymptotic Distribution）
+
+令 $f_\tau(e\mid x)$ 为 $e=Y-X'\beta_\tau$ 的条件密度。局部识别曲率是
+
+::: {#hansen-eq-24-18}
+$$Q_\tau=E\{XX'f_\tau(0\mid X)\}>0.
+\tag{24.18}$$
+:::
+
+它同时要求 $X$ 有足够方向变异，且条件分位点附近确有观测。若额外假设分位点处密度不随 $X$ 变，才简化为
+
+::: {#hansen-eq-24-19}
+$$Q_\tau=E(XX')f_\tau(0).
+\tag{24.19}$$
+:::
+
+一般极限为 $\sqrt n(\hat\beta_\tau-\beta_\tau)\Rightarrow N(0,Q_\tau^{-1}\Omega_\tau Q_\tau^{-1})$，$\Omega_\tau=E(XX'\psi_\tau^2)$。正确线性分位模型下 $E(\psi_\tau^2\mid X)=\tau(1-\tau)$；错设时仍可正态，但必须保留一般三明治。尾部密度小会使 $Q_\tau$ 小、方差大，这是极端分位不精确的直接原因。
+
+## 协方差矩阵估计（Covariance Matrix Estimation）
+
+困难集中在估 $f_\tau(0\mid X)$ 所决定的 $Q_\tau$。经典同密度公式易算却类似 OLS 同方差标准误，通常不可信；正确规格稳健式允许条件密度异质；完全错设稳健式还让 $\Omega_\tau$ 保持一般形式，但常见软件未必实现。
+
+非参数 pairs bootstrap 对一般近似模型更稳妥：整行 $(Y_i,X_i)$ 重抽，每次重新估分位回归，至少 1,000 次，最终优先 percentile/BC 区间。不能只重抽残差，因为这会强加不恰当的同分布结构。
+
+## 聚类依赖（Clustered Dependence）
+
+$Q_\tau$ 不变，“肉”矩阵改为组 score 外积：对每组先求 $s_g=\sum_iX_{ig}\hat\psi_{ig,\tau}$，再累加 $s_gs_g'$。bootstrap 也必须整组重抽或使用组级乘子；逐行 bootstrap 会破坏组内依赖。
+
+当组数少时，渐近正态和普通 cluster sandwich 可能不准。报告组数、最大组规模及有限样本修正，并避免把数万行数据误当数万个独立单位。
+
+## 分位数交叉（Quantile Crossings）
+
+真条件分位数必须随 $\tau$ 单调，但各 $\tau$ 独立估计的线性近似可能交叉。交叉常提示函数形式错设、支撑尾部稀疏或抽样噪声。优先重新设定：对工资取对数、增加合理样条、限制分析支撑；之后才考虑跨方程单调约束或 rearrangement。
+
+重排可在每个 $x$ 上把估计分位数排序，不改变原系数却恢复合法分布。它修复输出的单调性，不证明原线性模型正确，也不能掩盖大范围交叉所暴露的严重错设。
+
+## 分位数因果效应（Quantile Causal Effects）
+
+潜在反应为 $Y=h(D,X,U)$，个体效应 $C(X,U)=h(1,X,U)-h(0,X,U)$。条件分位差 $q_\tau(1,x)-q_\tau(0,x)$ 一般不等于个体效应分布的 $\tau$ 分位数，因为处理前后处在同一结果分位的人可能不是同一类人。
+
+Hansen 的充分条件包括：标量 $U$；$h(d,x,u)$ 随 $u$ 单调；$C(x,u)$ 也随 $u$ 单调；给定 $X$，$D\perp U$。前两种单调性共同构成 rank preservation/rank invariance 式限制，条件独立则消除选择。满足这些强条件时分位差才等于分位处理效应；它仍是分布层面的效应，不是识别某个具体人的反事实。
+
+## 随机系数表示（Random Coefficient Representation）
+
+概率积分变换令 $U=F(Y\mid X)\sim U[0,1]$ 且与 $X$ 独立，因而 $Y=q_U(X)$。在线性模型中写为 $Y=X'\beta_U$。作为统计表示，它只是重写条件分布，不自动具有结构含义；只有把 $U$ 解释为对政策不变的潜在排名并接受额外单调性时，$\beta_U$ 才可作因果随机系数解释。
+
+## 非参数分位数回归（Nonparametric Quantile Regression）
+
+用多项式或样条 $X_K(x)'\beta_{K\tau}$ 逼近 $q_\tau(x)$，再用普通分位数回归估系数。$K$ 大降低函数逼近偏差，却提高方差和 crossing 风险；渐近理论需 $K\to\infty$ 且慢于 $n$。
+
+模型阶数没有像均值级数回归那样成熟的通用 AIC/CV 规则。应结合理论形状、相邻阶数稳定性、支撑密度、分位交叉和 bootstrap 不确定性，而非机械选择最曲折的曲线。
+
+## 面板数据（Panel Data）
+
+模型 $Q_\tau(Y_{it}\mid X_{it},\alpha_i)=X_{it}'\beta_\tau+\alpha_{i\tau}$ 不能直接 within 或差分，因为分位数算子非线性：$Q_\tau(\Delta Y)\ne\Delta Q_\tau(Y)$。直接加个体虚拟变量又在固定 $T$ 下产生 incidental parameters 问题。
+
+Canay 方法额外假设 $\alpha_{i\tau}=\alpha_i$ 对所有分位数相同：先用均值 FE 估共同 $\alpha_i$，再回归 $Y_{it}-\hat\alpha_i$ 的分位数于 $X_{it}$。简便性的代价正是共同位移假设；若个体异质性改变条件分布尺度，该法会错设。
+
+## 工具变量分位数回归（IV Quantile Regression）
+
+内生模型设 $Q_\tau(e\mid Z)=0$，推出
+
+$$E[Z\psi_\tau(Y-X'\beta_\tau)]=0.$$
+
+$\ell\ge k$ 时可用 GMM，但矩函数含指标、对 $\beta$ 不连续，普通梯度优化失败；识别还需工具对内生变量的分位结构有足够相关性。IVQR 的系数因果解释需要结构分位模型、排除限制与 rank 条件，不能只凭找到一个工具就沿用外生 QR 解释。
+
+## 技术证明（Technical Proofs*）
+
+分位损失的总体 Hessian 在真值为
+
+::: {#hansen-eq-24-20}
+$$\frac{\partial^2M(\beta_\tau;\tau)}{\partial\beta\partial\beta'}
+=E\{XX'f_\tau(0\mid X)\}>0.
+\tag{24.20}$$
+:::
+
+一阶导数可写成
+
+::: {#hansen-eq-24-21}
+$$
+\frac{\partial M(\beta;\tau)}{\partial\beta}
+=-\tau E(X)+E\!left[X F_\tau\{X'(\beta-\beta_\tau)\mid X\}\right],
+\tag{24.21}
+$$
+:::
+
+再求导得到
+
+::: {#hansen-eq-24-22}
+$$
+\frac{\partial^2M(\beta;\tau)}{\partial\beta\partial\beta'}
+=E\!left[XX'f_\tau\{X'(\beta-\beta_\tau)\mid X\}\right].
+\tag{24.22}
+$$
+:::
+
+虽然 score 不连续，却有包络
+
+::: {#hansen-eq-24-23}
+$$\|X\psi_\tau(Y-X'\beta)\|\le\|X\|.
+\tag{24.23}$$
+:::
+
+$E\|X\|^2<\infty$ 控制 score 二阶矩；指标函数属于有限全变差类，故可用第 22 章非光滑 M 估计理论，而不需要伪造普通 Taylor 展开。
+
+## 习题阅读指南（Exercises）
+
+24.1–24.9 依次证明绝对/check loss 最优化、条件矩与样本一阶条件。核心计算是 $E\psi_\tau(Y-q)=\tau-P(Y<q)=0$；从无条件到条件版本时要明确条件分布连续。
+
+24.10 以后围绕方差简化、因果分位、面板和 IVQR。每题先写 estimand：条件结果分位差、个体效应分位数或最佳线性分位预测并非同一对象；再列识别条件，最后才选择 QR、bootstrap 或 GMM。
+
+::: {.callout-important title="章末自检"}
+1. [式 (24.8)](#hansen-eq-24-8) 与 [式 (24.4)](#hansen-eq-24-4) 的逻辑强弱有何不同？
+2. check loss 为何使恰有约 $\tau$ 的结果落在拟合分位线下？
+3. $f_\tau(0\mid X)$ 为什么决定分位数回归的局部识别与精度？
+4. 分位线交叉优先提示什么问题，rearrangement 又没有解决什么？
+5. 条件分位差为何通常不等于个体处理效应分布的分位数？
+6. 面板 QR 为什么不能机械 within，Canay 方法增加了什么限制？
+:::
