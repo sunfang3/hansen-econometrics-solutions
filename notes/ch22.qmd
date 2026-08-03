@@ -1,0 +1,226 @@
+---
+title: "M 估计量"
+subtitle: "目标函数、统一一致性理论与三明治推断"
+hansen-chapter: "Chapter 22"
+book-pages: "753–762"
+pdf-pages: "773–782"
+status: "完整初稿"
+---
+
+::: {.book-map}
+**原书位置与本章路线**　对应 Hansen Chapter 22（书内 pp. 753–762；PDF pp. 773–782）。22.1–22.3定义 M 估计量并区分识别与数值求解；22.4–22.5用统一大数定律证明一致性；22.6–22.7建立光滑及非光滑情形的渐近正态；22.8构造稳健、聚类和时间序列三明治方差；22.9–22.10展开证明与习题。
+:::
+
+::: {.bridge}
+**本科桥接**　OLS 是最小化残差平方和，LAD 是最小化绝对残差，极大似然是最小化负对数似然。M 估计把它们写成同一个“最小化样本平均损失”的问题。与本科只会调用优化命令不同，本章要回答：总体目标为何唯一确定参数、样本目标为何整体接近总体目标、局部曲率和得分波动如何共同决定标准误。
+:::
+
+## 引言（Introduction）
+
+令 $W_i=(Y_i,X_i)$，单个观测的损失为 $\rho(W_i,\theta)$，参数空间为 $\Theta$。M 估计量定义为
+
+$$
+\hat\theta=\arg\min_{\theta\in\Theta}S_n(\theta),
+\qquad
+S_n(\theta)=\frac1n\sum_{i=1}^n\rho(W_i,\theta).
+$$
+
+“M”意为 maximum-likelihood type，但范围比极大似然更广。目标函数可能光滑，也可能在残差为零处有折点。统计理论与数值算法是两层问题：优化器返回一个局部最小值不证明模型识别；理论上存在唯一总体最小值也不保证某次算法已找到全局解。实证中应保存初值、收敛码、梯度、目标值并用不同初值复核。
+
+## 示例（Examples）
+
+常见损失包括：OLS 的 $(Y-X'\theta)^2$；非线性最小二乘的 $\{Y-m(X,\theta)\}^2$；LAD 的 $|Y-X'\theta|$；分位数回归的 check loss；极大似然的 $-\log f(Y\mid X,\theta)$。它们共享样本平均结构，却有不同的总体参数与光滑性。
+
+例如 probit 令 $P(Y=1\mid X)=\Phi(X'\theta)$，负对数似然为
+
+$$
+\rho_i(\theta)=-Y_i\log\Phi(X_i'\theta)
+-(1-Y_i)\log\{1-\Phi(X_i'\theta)\}.
+$$
+
+观测为 0 或 1 时分别惩罚模型赋给实际结果的低概率。矩估计、GMM 与最小距离通常不是“逐观测损失的简单平均最小化”，所以不能不加条件地套本章全部 M 估计结论。
+
+## 识别与估计（Identification and Estimation）
+
+定义总体目标
+
+$$
+S(\theta)=E\{\rho(W,\theta)\},
+\qquad
+\theta_0=\arg\min_{\theta\in\Theta}S(\theta).
+$$
+
+识别要求 $\theta_0$ 是唯一最小点。这是概率分布和模型映射的性质，不是估计软件的性质。若 $S$ 有两个同样深的最低点，增加样本只能让样本目标逼近这两个点，无法凭数据决定哪个是真参数。
+
+核验识别时可按三步做。先求任意候选值与真值的总体目标差 $S(\theta)-S(\theta_0)$；再把它改写成非负量，例如平方、KL divergence 或条件期望；最后说明该非负量等于零为何必然推出 $\theta=\theta_0$。只验证总体一阶条件 $E\psi(W,\theta_0)=0$ 不够，因为其他驻点也可能满足同一条件。
+
+识别检查要针对模型。OLS 通常需要 $E(XX')$ 非奇异；probit 除满秩外还要避免完美预测导致有限极值不存在；混合模型可能有标签交换。求解时还应区分边界解、鞍点和局部极小，可比较目标值并检查 Hessian 的特征值。
+
+## 一致性（Consistency）
+
+固定任一 $\theta$，普通大数定律只给 $S_n(\theta)\overset p\to S(\theta)$。这不足以控制随机最小点 $\hat\theta$，因为它随样本选择目标函数最有利的位置；样本目标可能在不断移动的参数处出现狭窄深坑，同时每个固定点仍然收敛。
+
+所需条件是统一收敛：
+
+$$
+\sup_{\theta\in\Theta}|S_n(\theta)-S(\theta)|\overset p\to0.
+$$
+
+再要求分离的唯一最小值：任意 $\epsilon>0$，
+
+$$
+\inf_{\|\theta-\theta_0\|\ge\epsilon}S(\theta)>S(\theta_0).
+$$
+
+证明直觉是：样本目标整张图都贴近总体目标，而总体目标离开 $\theta_0$ 后有正间隔，所以样本最小点不能长期跑到间隔之外。仅写“由 WLLN，argmin 一致”跳过了最关键的统一性与分离条件。
+
+这里的一致性对象应说清楚。若模型错设，$\theta_0$ 仍是 $E\rho(W,\theta)$ 的伪真最小点，M 估计量可以对它一致，却未必对研究者口头声称的结构参数一致。因而“估计量一致”必须同时说明相对于哪个总体目标和哪组识别假设。
+
+## 统一大数定律（Uniform Law of Large Numbers）
+
+一个便于应用的充分条件组是：$W_i$ i.i.d.；$\rho(W,\theta)$ 对 $\theta$ 几乎处处连续；存在可积包络 $G(W)$ 使 $|\rho(W,\theta)|\le G(W)$；$\Theta$ 紧。紧致性让参数空间可由有限细网格覆盖，连续性把网格控制延伸到网格间，包络则允许概率界和期望交换。
+
+这些条件是充分而非必要。开放或无界参数空间可先证明估计量以高概率落入某个紧集；指标函数造成的点态不连续若只发生在零概率集合，也可用更一般的覆盖数条件。时间序列和聚类资料需要相应依赖型 ULLN，不能因目标仍是样本平均便假装观测独立。
+
+逐项检查时，最容易漏的是包络。对 OLS，若 $\Theta$ 有界，可用常数倍的 $Y^2+\|X\|^2$ 支配损失，因此需要相应二阶矩；对负对数似然，还要排除候选概率无限接近零造成损失无界。紧致参数空间不是一句无害的正规条件，它也可能排除分离 probit/logit 中向无穷发散的系数序列。
+
+## 渐近分布（Asymptotic Distribution）
+
+定义 score/一阶条件函数
+
+$$
+\psi(W,\theta)=\frac{\partial\rho(W,\theta)}{\partial\theta},
+\quad
+\psi_n(\theta)=\frac1n\sum_i\psi(W_i,\theta).
+$$
+
+内点解满足 $\psi_n(\hat\theta)=0$。围绕 $\theta_0$ 展开：
+
+::: {#hansen-eq-22-1}
+$$
+0=\psi_n(\hat\theta)
+\simeq\psi_n(\theta_0)
++\frac{\partial^2S_n(\theta_0)}{\partial\theta\partial\theta'}
+(\hat\theta-\theta_0).
+\tag{22.1}
+$$
+:::
+
+随机主项是
+
+::: {#hansen-eq-22-2}
+$$
+\sqrt n\,\psi_n(\theta_0)
+=\frac1{\sqrt n}\sum_{i=1}^n\psi_i.
+\tag{22.2}
+$$
+:::
+
+总体一阶条件保证
+
+::: {#hansen-eq-22-3}
+$$
+0=\psi(\theta_0)=E\{\psi(W,
+\theta_0)\}.
+\tag{22.3}
+$$
+:::
+
+令 $Q=\partial^2S(\theta_0)/\partial\theta\partial\theta'$、$\Omega=E(\psi_i\psi_i')$。Hessian 大数定律、score 的 CLT 与 Slutsky 给
+
+$$
+\sqrt n(\hat\theta-\theta_0)
+\Rightarrow N(0,Q^{-1}\Omega Q^{-1}).
+$$
+
+$Q$ 衡量目标在最低点附近的曲率：越平，参数微小移动越难被目标区分；$\Omega$ 衡量样本 score 波动。两者组成“面包—肉—面包”。正确设定极大似然才有信息矩阵等式 $Q=\Omega$；拟似然或分布错设时不能擅自化简。
+
+这套展开还隐含三项检查。第一，$\theta_0$ 必须在参数空间内部，否则一阶条件可能变成不等式，极限分布也可能截断；第二，$Q$ 必须正定，近奇异意味着弱识别或冗余参数；第三，$\hat\theta$ 的一致性要先成立，才能保证 Taylor 展开真的发生在 $\theta_0$ 邻域。渐近正态不是脱离一致性的独立结论。
+
+## 更广条件下的渐近分布（Asymptotic Distribution Under Broader Conditions*）
+
+分位数回归的 score 含指标函数，随 $\theta$ 跳跃，普通 Lipschitz 条件失败。更宽的均方连续条件是：对邻域半径 $\delta$，
+
+::: {#hansen-eq-22-4}
+$$
+\left(
+E\left[
+\sup_{\|\theta-\theta_1\|<\delta}
+\|\psi(W,\theta)-\psi(W,\theta_1)\|^2
+\right]
+\right)^{1/2}
+\le C\delta^{\varpi}.
+\tag{22.4}
+$$
+:::
+
+只要跳点落在零概率事件上，指标或符号函数仍可能满足这种随机连续性。更一般地，有限全变差的一维函数、Lipschitz 函数及其有限次加减乘、极值和复合，常能形成可控的函数类。要点不是强迫每个样本损失二阶可导，而是让经验 score 在 $\theta_0$ 的缩小邻域内近似等度连续。
+
+## 协方差矩阵估计（Covariance Matrix Estimation）
+
+以 $\hat\psi_i=\psi(W_i,\hat\theta)$ 估 $\Omega$，以样本 Hessian 估 $Q$，稳健三明治为
+
+::: {#hansen-eq-22-5}
+$$
+\widehat V=\widehat Q^{-1}\widehat\Omega\widehat Q^{-1},
+\quad
+\widehat\Omega=\frac1n\sum_i\hat\psi_i\hat\psi_i'.
+\tag{22.5}
+$$
+:::
+
+$\widehat V$ 是 $\sqrt n(\hat\theta-\theta_0)$ 的渐近协方差，故 $\hat\theta_j$ 的标准误是 $\sqrt{\widehat V_{jj}/n}$。这一区别很容易在手工实现时漏掉。正确 MLE 的 inverse-Hessian 方差依赖完整分布正确；Hansen 推荐默认使用 [式 (22.5)](#hansen-eq-22-5) 的错设稳健版本。
+
+软件的缩放约定并不统一：有的软件把 Hessian 定义为损失“总和”的二阶导数，直接输出 $O(n^{-1})$ 的协方差；本章把 $Q,\Omega$ 定义为单个观测平均的极限，先得到 $V$，再除以 $n$。复核时可查看标准误是否随样本量大致按 $n^{-1/2}$ 缩小，并用维数检查确认 score 外积、Hessian 和协方差都是 $k\times k$。
+
+聚类时先在组内汇总 score：$\widehat\Omega=n^{-1}\sum_g(\sum_i\hat\psi_{ig})(\sum_i\hat\psi_{ig})'$；时间序列有序列相关时对 score 使用 HAC/Newey–West。$\widehat Q$ 的形式不变，改变的是随机波动“肉”矩阵。小组数或弱曲率还需有限样本修正和稳健推断，三明治并非万能保证。
+
+## 技术证明（Technical Proofs*）
+
+一致性证明先利用 $\hat\theta$ 最小化样本目标：
+
+$$
+0\le S(\hat\theta)-S(\theta_0)
+\le2\sup_{\theta\in\Theta}|S_n(\theta)-S(\theta)|=o_p(1).
+$$
+
+第一步得到目标值收敛；第二步用唯一最小值的分离性质把目标值收敛转为参数收敛。两步不能倒置，因为 $S$ 若在最低处平坦，目标值接近不必意味着参数接近。
+
+渐近正态证明令 $v_n(\theta)=\sqrt n\{\psi_n(\theta)-\psi(\theta)\}$。经验过程的渐近等度连续性给：对任意 $\eta,\epsilon>0$，存在 $\delta>0$ 使
+
+::: {#hansen-eq-22-6}
+$$
+\limsup_{n\to\infty}P\left[
+\sup_{\|\theta-\theta_0\|\le\delta}
+\|v_n(\theta_0)-v_n(\theta)\|>\eta
+\right]\le\epsilon.
+\tag{22.6}
+$$
+:::
+
+一致性同时保证
+
+::: {#hansen-eq-22-7}
+$$
+\limsup_{n\to\infty}P(\|\hat\theta-\theta_0\|>\delta)
+\le\epsilon.
+\tag{22.7}
+$$
+:::
+
+于是 $v_n(\hat\theta)-v_n(\theta_0)=o_p(1)$，可把随机点 $\hat\theta$ 的经验 score 换成固定点 $\theta_0$ 的 score；后者由多元 CLT 正态。再用 $Q(\theta_n^*)\overset p\to Q$ 处理局部曲率，得到三明治极限。
+
+## 习题阅读指南（Exercises）
+
+22.1 从已知误差密度 $f(e)$ 推条件似然：$f_{Y\mid X}(y\mid x)=f(y-x'\theta)$，再对负对数似然求 score 与 Hessian。先写链式法则中的负号，再计算 $Q$、$\Omega$；只有正确密度下才用信息矩阵等式化简。
+
+22.2–22.4 统一研究 $\rho=g(Y-X'\theta)$。令残差 $u=Y-X'\theta$，则 $\psi=-Xg'(u)$，局部曲率为 $XX'g''(u)$；四次损失会极度放大离群值，$1-\cos u$ 虽光滑却周期性、多重局部极小，凸性和全局识别必须单独检查。能写出导数不等于优化问题良态。
+
+::: {.callout-important title="章末自检"}
+1. 点态 WLLN 为什么不足以推出样本 argmin 的一致性？
+2. “唯一总体最小值”与“数值算法收敛”分别属于哪一层问题？
+3. [式 (22.1)](#hansen-eq-22-1) 中哪一项产生 $Q$，哪一项产生 $\Omega$？
+4. 非光滑 score 为什么仍可能有正态极限？关键替代条件是什么？
+5. [式 (22.5)](#hansen-eq-22-5) 为何还需除以 $n$ 才是 $\hat\theta$ 的协方差？
+6. 聚类或序列相关为何只改变三明治的“肉”？
+:::

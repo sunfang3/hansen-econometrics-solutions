@@ -40,6 +40,9 @@ book:
         - ch19.qmd
         - ch20.qmd
         - ch21.qmd
+    - part: "第六部分　非线性方法"
+      chapters:
+        - ch22.qmd
   appendices:
     - appendix-a.qmd
     - appendix-b.qmd
