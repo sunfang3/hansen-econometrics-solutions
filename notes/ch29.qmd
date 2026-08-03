@@ -1,0 +1,705 @@
+---
+title: "机器学习"
+subtitle: "Ridge、Lasso、树与森林、高维 IV、正交化和 DML"
+hansen-chapter: "Chapter 29"
+book-pages: "910–943"
+pdf-pages: "930–963"
+status: "完整初稿"
+---
+
+::: {.book-map}
+**原书位置与本章路线**　对应 Hansen Chapter 29（书内 pp. 910–943；PDF pp. 930–963）。29.1–29.14从高维回归、范数进入 ridge、Lasso、稀疏理论、elastic net 与 post-Lasso；29.15–29.18讨论树、bagging、random forest 和 ensemble；29.19–29.22把机器学习带入 IV、double selection、partialing-out 与 DML 推断；29.23–29.24给核心证明和习题。
+:::
+
+::: {.bridge}
+**本科桥接**　本科 OLS 默认回归量数远小于样本量，$X'X$ 可逆；高维场景允许 $p\ge n$，OLS 不唯一或极不稳定。Ridge/Lasso 用偏差换方差，树和森林直接学习 $E(Y\mid X)$。但“预测准”不自动给政策系数有效标准误：double selection、正交矩和 cross-fitting 的任务，是让高维 nuisance 学习误差在核心参数的一阶展开中消失。
+:::
+
+## 引言（Introduction）
+
+本章选择性介绍监督学习：ridge、Lasso、elastic net、regression tree、bagging、random forest、ensemble，以及面向计量推断的 Lasso IV、double selection、partialing-out 和 double/debiased machine learning（DML）。这些方法的共同点不是某个软件包，而是在未知且复杂的预测结构下用 regularization、sample splitting 和 aggregation 控制 out-of-sample risk。
+
+读者应把两种目标分开。若目标是预测 $m(x)=E(Y\mid X=x)$，评价单位是新样本 loss；若目标是低维 $\theta$ 的因果/结构推断，必须说明识别矩条件、nuisance functions、正交性、cross-fitting 与方差。把黑箱预测的 feature importance 当因果效应，是本章最需要避免的跨层误读。
+
+一个可复现的机器学习计量流程至少分五层。第一，定义观察单位、target population、outcome 和低维目标；第二，只用经济知识建立允许的特征字典与不可惩罚核心变量；第三，在训练资料内完成清洗、标准化、调参与模型拟合；第四，以独立折评价完整算法，而不是只评价最后一条回归；第五，若要推断，再构造与 nuisance 误差正交的 score 并按抽样结构估方差。每层都可能使用“交叉验证”，但调参、性能评价和 cross-fitting 的职责不同，代码中应分开命名。
+
+“预测”本身也需说明任务。预测同一时期随机新个体、预测未来时期、预测新地区或预测政策改变后的反事实，所需稳定性并不相同。随机逐行 K-fold 只近似第一种；时间漂移、簇间异质或政策支撑外外推不能靠较低随机 CV 误差证明可靠。
+
+## 大数据、高维与机器学习（Big Data, High Dimensionality, and Machine Learning）
+
+big data 强调观察数量、资料复杂度、存储与计算；high dimensionality 强调变量数 $p$ 很大，理论上尤其指 $p\gg n$；machine learning 是以算法学习预测规则的工具集合。三者常同现但不等价：百万观察、十个变量是大数据非高维；五百观察、一万个潜在控制是高维非大样本。
+
+机器学习还分 supervised learning、unsupervised learning 和 classification，本章聚焦第一类回归问题。其“training/features/tuning”分别接近计量的估计/回归量/平滑或正则参数。术语不同不改变统计问题：资料生成、抽样依赖、estimand、loss 与 uncertainty 仍须先定义。
+
+相对第 19–20 章低维非参数，本章可在成百上千变量中自动寻找重要方向，可理解为“高度非参数”。代价是以 sparsity/approximate sparsity 等结构绕过维数灾难；这些是假设，不是算法从数据中无条件创造的事实。
+
+高维方法常让 feature dictionary 很富，但这不等于可以把处理后的 post-treatment variables、colliders 或未来信息无区别放入。纯预测允许任何在部署时可用的 predictor；因果 nuisance 学习的控制集则由识别设计约束。算法只能在给定信息集中拟合，不能判断一个变量在因果图中是否应控制。
+
+## 高维回归（High Dimensional Regression）
+
+令 $Y=X'\beta+e$，$X,\beta\in\mathbb R^p$。传统渐近令 $p$ 固定，series 令 $p$ 慢于 $n$ 增长，高维理论允许 $p$ 大于甚至指数级大于 $n$。大 $p$ 可来自大量原始特征、分类变量饱和交互或一个极丰富的 basis dictionary；十个 binary 的全交互已有 $2^{10}=1024$ 列。
+
+$p>n$ 时 $\operatorname{rank}(X'X)\le n<p$，OLS 正规方程有多个解；$p<n$ 但最小特征值接近零时，逆矩阵放大噪声，系数高方差且数值不稳。regularization 通过限制系数向量、接受 bias 来稳定逆问题。
+
+维数不能只报 raw $p$。应同时报告有效样本 $n$、固定不惩罚变量、标准化方式、缺失处理、dummy/interaction dictionary、簇数和每折样本。若资料按人或时间依赖，理论中的 i.i.d. 与随机 folds 也必须相应改造。
+
+为什么 regularization 有用可从 singular vectors 看：OLS 在小 eigenvalue 方向以 $1/r_j$ 放大 $X'e$；ridge 改为 $1/(r_j+\lambda)$，Lasso 则以坐标化约束压低不稳定方向。前者与 design 的主轴平滑相连，后者依赖所选坐标系并产生稀疏。这解释了两者都能稳定预测，却对“哪些原始变量重要”给出不同答案。
+
+## $p$-范数（p-norms）
+
+对 $a\in\mathbb R^k$，$\|a\|_p=(\sum_j|a_j|^p)^{1/p}$；$\|a\|_1$ 是绝对值和，$\|a\|_2$ 是 Euclidean length，$\|a\|_\infty=\max_j|a_j|$。$\|a\|_0=\sum_j1\{a_j\ne0\}$ 只计非零元素，不满足 norm 的全部公理，却方便表达 sparsity。
+
+若 $1/p+1/q=1$，Hölder 不等式是
+
+::: {#hansen-eq-29-1}
+$$
+|a'b|\le\|a\|_p\|b\|_q.
+\tag{29.1}
+$$
+:::
+
+高维证明最常用 $p=1,q=\infty$：
+
+::: {#hansen-eq-29-2}
+$$
+|a'b|\le\|a\|_1\|b\|_\infty.
+\tag{29.2}
+$$
+:::
+
+Minkowski 是三角不等式
+
+::: {#hansen-eq-29-3}
+$$
+\|a+b\|_p\le\|a\|_p+\|b\|_p.
+\tag{29.3}
+$$
+:::
+
+若 $a$ 只有 $s=\|a\|_0$ 个非零元素，对 support 上的 $|a_j|$ 与 1 用 Cauchy–Schwarz/Hölder：
+
+::: {#hansen-eq-29-4}
+$$
+\|a\|_1\le\|a\|_2\|a\|_0^{1/2}.
+\tag{29.4}
+$$
+:::
+
+[式 (29.4)](#hansen-eq-29-4) 把维数 $p$ 换成有效稀疏度 $s$，是 Lasso rate 中出现 $\sqrt s$ 的桥梁。
+
+## Ridge 回归（Ridge Regression）
+
+Ridge 最小化 $\|Y-X\beta\|_2^2+\lambda\|\beta\|_2^2$，一阶条件为
+
+::: {#hansen-eq-29-5}
+$$
+-2X'(Y-X\beta)+2\lambda\beta=0.
+\tag{29.5}
+$$
+:::
+
+故 $\hat\beta_{ridge}=(X'X+\lambda I_p)^{-1}X'Y$。若 $X'X=H'DH$，每个 eigenvalue $r_j$ 变为 $r_j+\lambda>0$，即使 $p>n$ 也可逆。等价 constrained problem 是在 $\|\beta\|_2^2\le\tau$ 内最小 SSE；$\lambda$ 是 Lagrange multiplier。Ridge 一般沿由相关结构决定的曲线路径收缩，不是像 scalar Stein weight 一样把 OLS 沿直线整体缩放。
+
+可对不同组设 $\Lambda=\operatorname{diag}(\lambda_1I_{p_1},\ldots,\lambda_GI_{p_G})$。截距、处理变量或低阶项通常不惩罚，对应 $\lambda_g=0$。所有惩罚变量应先用 training 样本中心化和尺度标准化；否则单位大的列受到相对较弱的系数惩罚。预测时必须复用训练均值/标准差。
+
+用 LOO-CV 选 $\lambda$ 时，Theorem 29.1 给快速预测误差
+
+::: {#hansen-eq-29-6}
+$$
+\widetilde e_i(\lambda)=
+\left\{1-X_i'(X'X+\Lambda)^{-1}X_i\right\}^{-1}
+\hat e_i(\lambda).
+\tag{29.6}
+$$
+:::
+
+括号内是 ridge leverage 修正。CV 曲线可在 0、极大值或多个局部极小处最优，应在 log-$\lambda$ 网格覆盖足够宽范围并报告 1-SE/最小规则。Mallows alternative 为
+
+::: {#hansen-eq-29-7}
+$$
+C(\lambda)=\sum_{i=1}^n\hat e_i(\lambda)^2
++2\hat\sigma^2\operatorname{tr}\{(X'X+\Lambda)^{-1}X'X\}.
+\tag{29.7}
+$$
+:::
+
+trace 是 ridge effective degrees of freedom。它的同方差前提比 CV 强。
+
+从 spectral 表示还能读出有效自由度：$\operatorname{tr}\{(X'X+\lambda I)^{-1}X'X\}=\sum_j r_j/(r_j+\lambda)$。$\lambda=0$ 且满秩时等于 $p$；$\lambda\to\infty$ 时趋零；小 eigenvalue 方向先被压低。因此 ridge 不是简单“用了 $p$ 个变量”，复杂度随 penalty 连续变化。若截距不惩罚，其对应自由度保留为 1，构造 $\Lambda$ 时不能误把整块 $I_p$ 包括截距。
+
+## Ridge 回归的统计性质（Statistical Properties of Ridge Regression）
+
+令 $D=\operatorname{diag}\{\sigma^2(X_1),\ldots,\sigma^2(X_n)\}$。条件 bias 与 variance 是
+
+::: {#hansen-eq-29-8}
+$$
+\operatorname{bias}(\hat\beta_{ridge}\mid X)
+=-\lambda(X'X+\lambda I_p)^{-1}\beta,
+\tag{29.8}
+$$
+:::
+
+::: {#hansen-eq-29-9}
+$$
+\operatorname{Var}(\hat\beta_{ridge}\mid X)
+=(X'X+\lambda I_p)^{-1}(X'DX)(X'X+\lambda I_p)^{-1}.
+\tag{29.9}
+$$
+:::
+
+前式由 $E(\hat\beta\mid X)=(X'X+\lambda I)^{-1}X'X\beta$ 减 $\beta$ 得到；后式把 $Y$ 的随机部分线性传递。存在一个依未知 $\beta$ 与最低条件方差的 $\lambda$ 区间，使 ridge MSE matrix 支配 OLS，但这不是可操作选参保证。
+
+原稿建议 HC3 analog：
+
+::: {#hansen-eq-29-10}
+$$
+\widetilde V_{\hat\beta}
+=(X'X+\lambda I_p)^{-1}
+\left\{\sum_{i=1}^nX_iX_i'\widetilde e_i(\lambda)^2\right\}
+(X'X+\lambda I_p)^{-1}.
+\tag{29.10}
+$$
+:::
+
+它估 variance，不消除 [式 (29.8)](#hansen-eq-29-8) 的 regularization bias。以 ridge 点估计中心的普通区间可覆盖 penalized pseudo-target $\beta^*=(X'X+\lambda I)^{-1}X'X\beta$，却未必覆盖原 $\beta$。若要后者需 debias 或让 $\lambda=o(\sqrt n)$ 类 undersmoothing，并检查该 rate 与 $p$ 增长是否相容。
+
+## Ridge 回归示例（Illustrating Ridge Regression）
+
+原书用 875 名大学教育以上亚裔男性，估 log wage 的经验五次多项式。先把经验中心化、造一至五次幂，再把每列标准化；截距不收缩。LOO-CV 在 $\lambda=19$ 最小，ridge 曲线比 OLS 五次曲线平滑。
+
+图中 HC3 95% band 是围绕 ridge target 的 normal band，不能忘记 bias caveat。复现应同时画完整 CV path、标最小值/边界，报告标准化参数、是否精确百分比反变换，以及在经验支撑边缘的样本密度；平滑外观本身不是估计正确的证据。
+
+这个例子还说明 polynomial 预处理的顺序会改变惩罚。应先把原始经验中心化再造幂，避免高次列巨大且高度共线，然后对每个幂单独标准化；若先把经验标准化再造幂，得到的是另一套 basis 和 ridge path。两者都可预测，但 $\lambda=19$ 只对原书那套设计矩阵有意义。反事实曲线需把同一标准化逆映射应用到经验网格，不能把标准化系数直接当年经验边际效应。
+
+## Lasso
+
+Lasso（Least Absolute Shrinkage and Selection Operator）最小化
+
+$$
+\mathrm{SSE}_1(\beta,\lambda)=\|Y-X\beta\|_2^2+\lambda\|\beta\|_1.
+$$
+
+$\ell_1$ ball 有尖角，SSE ellipse 常在尖角相切，因此部分系数精确为零；ridge 的圆球通常给 interior solution。KKT 对非零系数为 $-2X_j'(Y-X\beta)+\lambda\operatorname{sgn}(\beta_j)=0$，零系数则用 subgradient 区间 $[-1,1]$。这同时完成 shrinkage 与 variable selection。
+
+若 $X'X=I_p$，解为 soft threshold：$\hat\beta_{L,j}=\operatorname{sgn}(\hat\beta_{OLS,j})(|\hat\beta_{OLS,j}|-\lambda/2)_+$。小估计归零，大估计向零移动 $\lambda/2$；hard selection 在阈值跳跃，ridge 始终线性缩小，Lasso 连续但在阈值处有折点。
+
+Lasso 对缩放和 rotation 不变性都失败。所有惩罚 feature 应标准化，但 dummy 是否缩放会改变 penalty 含义，必须说明。高度相关变量间选择可不稳定：不同 fold 可能任选一个，预测相似却“入选变量解释”不同。不能把 Lasso 选中视为变量有因果效应，也不能用 naive post-selection $p$ 值确认它。
+
+KKT 还给一个有用诊断。若第 $j$ 个标准化变量未入选，则 $|2X_j'\hat e|\le\lambda$；入选时该相关恰等于 $\lambda$ 且符号与系数一致。因此 Lasso 不是把 marginal correlation 小的变量一次删掉，而是在其他 active variables 已解释后的 residual correlation 上共同平衡。相关特征可互相替代，使一个变量越过阈值、另一个落在阈值内；active set 的不稳定未必意味着 fitted values 同样不稳。
+
+经济特征通常有 hierarchy：若放入 $x^2$ 或 $x_1x_2$，主效应应保留以维持可解释性。普通坐标 Lasso 不自动遵守，可把相关列分组、强制低阶项不惩罚或使用 group/hierarchical penalty。否则算法可能只选 interaction 而删主效应，统计上可预测但经济规格难解释。
+
+## Lasso 惩罚选择（Lasso Penalty Selection）
+
+$\lambda$ 小接近 OLS/饱和拟合，$\lambda$ 大更稀疏。常用 K-fold CV 选择预测 MSE 最小 $\lambda_{min}$；1-SE 规则在一个 SE 内取最稀疏模型，通常 bias 更大、variance 更小。两者针对预测，不保证变量选择一致或目标参数推断最优。
+
+fold 划分使 $\hat\lambda$ 随机，应固定并报告种子、折数、stratification/cluster 规则，最好 repeated CV 检查。标准化、缺失插补和 feature construction 必须在各训练折内完成。软件的 objective 常写 $n^{-1}\mathrm{SSE}+\lambda_{pkg}\|\beta\|_1$ 或 $(2n)^{-1}\mathrm{SSE}+\lambda_{pkg}\|\beta\|_1$；原稿用未除 $n$ 的 SSE，所以 $\lambda$ 数值不可跨软件直接比较。
+
+例如 package objective 为 $(2n)^{-1}\mathrm{SSE}+\lambda_{pkg}\|\beta\|_1$ 时，乘 $2n$ 后与原稿对应的 penalty 是 $\lambda_{book}=2n\lambda_{pkg}$。若 package 又按列标准差、observation weights 或 response scale 重标，映射还会改变。报告“$\lambda=0.03$”没有 objective 和标准化约定几乎不可复现；更稳妥的是同时报告非零数、effective loss 与完整参数路径。
+
+## Lasso 计算（Lasso Computation）
+
+modified LARS 从零向量开始，先选与 $Y$ 最相关的变量，沿 active variables 的 equiangular/least-squares direction 移动，直到新变量与残差相关相同或 active coefficient 回到零；重复生成整条 piecewise-linear Lasso path。coordinate descent 是软件中另一常见实现。
+
+计算审计要记录收敛 tolerance、最大迭代、$\lambda$ grid 和 warm starts。若 $p>n$ 或列完全重复，fitted values 可唯一而系数分配未必唯一；小幅扰动后的 active set 稳定性比一次路径图更有信息。
+
+## Lasso 的渐近理论（Asymptotic Theory for the Lasso）
+
+高维 projection 模型为
+
+::: {#hansen-eq-29-11}
+$$
+Y=X'\beta+e,qquad E(Xe)=0.
+\tag{29.11}
+$$
+:::
+
+令 $Q_n=X'X/n$，prediction/regression fit 是
+
+::: {#hansen-eq-29-12}
+$$
+(\hat\beta_L-\beta)'Q_n(\hat\beta_L-\beta)
+=\frac1n\sum_{i=1}^n\{X_i'(\hat\beta_L-\beta)\}^2.
+\tag{29.12}
+$$
+:::
+
+$p>n$ 时 $Q_n$ 全空间奇异，不可能要求最小 eigenvalue 正。把真 support 记为 1、零坐标为 0，在 cone $\mathcal B=\{b:\|b_0\|_1\le3\|b_1\|_1\}$ 上要求
+
+::: {#hansen-eq-29-13}
+$$
+\min_{b\in\mathcal B}\frac{b'Q_nb}{b'b}\ge c^2>0
+\quad\text{with probability approaching one}.
+\tag{29.13}
+$$
+:::
+
+restricted eigenvalue condition 只禁止与稀疏 support 相容的近共线方向，允许全矩阵奇异；它是 design assumption，不可由 Lasso 自动保证。
+
+为什么只考察 cone？basic inequality 会先证明估计误差在真零坐标上的 $\ell_1$ 不超过 active error 的三倍，所以 proof 从不需要控制任意稠密方向。若两个在真 support 内重要的列几乎完全相同，cone 中就存在预测几乎不变而 coefficient 差很大的方向，REC 失败；此时可能仍准确预测两列的合计效应，却无法分别估各系数。这也解释 prediction consistency 与 coefficient recovery 是不同问题。
+
+列标准化且 bounded Gaussian heteroskedastic errors 下，取足够大 $C$：
+
+::: {#hansen-eq-29-14}
+$$
+\lambda=C\sqrt{n\log p}.
+\tag{29.14}
+$$
+:::
+
+若 $s=\|\beta\|_0$，定理 29.3 给高概率 bounds：
+
+::: {#hansen-eq-29-15}
+$$
+(\hat\beta_L-\beta)'Q_n(\hat\beta_L-\beta)
+\le D\,s\frac{\log p}{n},
+\tag{29.15}
+$$
+:::
+
+::: {#hansen-eq-29-16}
+$$
+\|\hat\beta_L-\beta\|_1
+\le D\,s\sqrt{\frac{\log p}{n}},
+\tag{29.16}
+$$
+:::
+
+::: {#hansen-eq-29-17}
+$$
+\|\hat\beta_L-\beta\|_2
+\le D\,s^{1/2}\sqrt{\frac{\log p}{n}}.
+\tag{29.17}
+$$
+:::
+
+若 $s$ 固定，只需 $\log p=o(n)$ 就可一致，故允许 $p$ 指数增长；$s$ 增长则相应收紧。结论是 rates，不是每个非零变量选择概率趋一或 naive coefficient normality。Gaussian 可由 sub-Gaussian/self-normalized penalty loadings 等条件放松，代价是更复杂正则条件。
+
+逐个读三个 rate：[式 (29.15)](#hansen-eq-29-15) 是平均平方预测误差，量级 $s\log p/n$；[式 (29.17)](#hansen-eq-29-17) 的 coefficient $\ell_2$ 是其平方根量级；[式 (29.16)](#hansen-eq-29-16) 再多一个 $\sqrt s$，因为把 $s$ 个 active absolute errors 加总。若 $s\log p/n$ 不趋零，连预测 bound 都不消失；若要 nuisance product 小于 $n^{-1/2}$，还需本章后半更强的 $s\log p/\sqrt n\to0$。
+
+这些是 upper bounds，常数 $D$ 含 error tail 和 REC constant。$c$ 很小时 bound 可极松；只报 $p,n,s$ 不足以判断有限样本。交叉验证能选预测 penalty，却不检验 REC、稀疏或 tail assumption。理论条件应和 out-of-fold 诊断并列，而非互相替代。
+
+## 近似稀疏（Approximate Sparsity）
+
+exact sparsity 要许多真系数恰为零，既强又不可检验。approximate sparsity 令 $\beta_K$ 为最佳 $K$-sparse 近似，并要求误差 $r_K=\|Q_n(\beta-\beta_K)\|_\infty=O(K^{-s})$、$s>1$。这与 series 的 smoothness approximation 类似，但不预先告诉研究者哪个 basis 排在前面。
+
+若大量坐标有同等小但合计重要的系数，增加 $K$ 并不快速减 $r_K$，稀疏近似失败。算法仍可输出预测，Theorem 29.3 类 guarantee 却不适用。实证应把 sparsity 当敏感性假设，通过不同字典、penalty、out-of-sample performance 与 domain knowledge 评估，而不能说“Lasso 令模型稀疏，所以真模型稀疏”。
+
+与 series 的差别可用一个例子看：若 smooth 单变量函数以多项式逼近，研究者知道按次数逐步加入，误差由 smoothness 控制；若有一万条行政变量，approximate sparsity 只说存在某个小子集能逼近，却不知道是哪一组，Lasso承担搜索。这个“存在好子集”仍可能因分布改变而失效：训练期稀疏关系在新时期若转为许多分散小效应，外样本误差会增大。稀疏性既是函数近似假设也是环境稳定性假设。
+
+## Elastic Net
+
+Elastic net 用 $\lambda\{\alpha\|\beta\|_2^2+(1-\alpha)\|\beta\|_1\}$；按原稿约定 $\alpha=0$ 是 Lasso、$\alpha=1$ 是 ridge（部分软件的 mixing 参数方向相反，必须核对）。$\ell_2$ 圆化尖角，可让高度相关 feature 成组保留，同时 $\ell_1$ 仍产生零系数。
+
+$(\alpha,\lambda)$ 应在 training folds 内联合选择；若先用全样本挑 $\alpha$ 再只对 $\lambda$ CV，会低估完整搜索误差。解释与推断 caveat 仍与 Lasso 相同。
+
+在一组高度相关的行业 dummy、相邻滞后或文本词频中，纯 Lasso 常任意保留代表；ridge 倾向共同缩小但不稀疏；elastic net 的小正二次成分鼓励相关系数一起进入，active set 更稳定。它改善的是预测和组选择行为，不保证识别单个变量作用。若研究目标要求整组同时进出，group Lasso 的 group norm 比 elastic net 的混合 penalty 更直接。
+
+## Post-Lasso
+
+第一步 Lasso 得 active set $S$，第二步只在 $X_S$ 上 OLS。refitting 消除 active coefficients 的直接 shrinkage bias，常改善预测或 coefficient bias；在适当条件下保持 Lasso rate。
+
+但 post-Lasso 是 hard post-model-selection：选择错误或阈值附近微小扰动会改变 $S$，第二步普通 OLS 标准误条件于所选模型，未覆盖第一步。它不是“Lasso 后跑 OLS就获得合法因果推断”。下一节的 double selection/orthogonalization 专门处理低维目标对选择遗漏的敏感性。
+
+Post-Lasso 也可能比原 Lasso预测差：当许多入选系数真实很小，去掉 shrinkage 会重新放大 variance。因此应把 refit 看成另一候选算法，用外层 CV 比较，而非必然改进。若目的只是预测，可用 relaxed Lasso 在 Lasso 与完全 OLS refit 间再设一个收缩参数；若目的是低维推断，重点应转向正交 score，而不是追求所有高维系数无偏。
+
+## 回归树（Regression Trees）
+
+CART 可视为结点自由的零阶 spline。每次在某变量 $X_d$ 和阈值 $\gamma$ 上寻找使 SSE 降最多的二分，叶内预测为 $Y$ 均值；递归 growth 到 minimum leaf size，再用“残差 SSE+$\alpha$×叶数”cost-complexity pruning，$\alpha$ 通常由 CV 选。
+
+一次 split 可逐步计算：在当前 branch 枚举允许的 $d$；对连续 $X_d$ 只需在排序后相邻值中点枚举 $\gamma$；左右子样本各用自己的 $Y$ 均值；记录相对未分裂 branch 的 SSE 下降；在所有 branch–variable–threshold 组合中选下降最大者。接着只裂该 branch 并重复。这个 greedy 规则不回看早期 split，因此不保证给定叶数的全局最优 partition，pruning 只能从已长成的树路径中回退。
+
+minimum leaf 保证每个均值有基本样本量，maximum depth 控制高阶 interaction，cost-complexity 进一步平衡拟合与叶数。超参数应在外层训练折内选；若先在全样本长树再只 CV pruning，split locations 已泄漏 validation outcomes。
+
+树能自动处理非线性与高阶 interaction，连续和 binary feature 可混合；categorical 应先正确编码。单树的 step function 对平滑 $m(x)$ 较粗，split/leaf mean 用同一资料又高度相关，variance 大且普通分布理论困难。honest tree 用一份资料定 splits、另一份估 leaf means，牺牲样本量来解除这一依赖。
+
+树图可解释路径，却不把 split variable 变成因果变量。minimum leaf、depth、pruning、missing routing、候选 split 网格和 CV 折都需报告；时间/cluster 资料不可逐行随机分折。
+
+## Bagging
+
+对 $B$ 个 bootstrap 样本分别估高方差 base learner $\hat m_b^*(x)$，平均 $\hat m_{bag}(x)=B^{-1}\sum_b\hat m_b^*(x)$。它把 hard threshold 的跳跃在 bootstrap distribution 上平滑，通常降 variance；若 base learner bias 已大，平均不会神奇消除 bias。
+
+每个 bootstrap 约 36.8% 原观测未抽中。对观察 $i$，只平均未含 $i$ 的树得 OOB prediction，可估外样本 MSE。$B$ 控制 Monte Carlo error，不等于有效样本量；应增大到 OOB loss/重要预测稳定，而非把树数当过拟合深度。
+
+Bagging 的平均是条件于原样本的 bootstrap expectation 近似。随着 $B$ 增大，simulation variance 下降，但原样本抽样 variance 不消失；所以“有一万棵树”不等于标准误极小。估方差时 [式 (29.18)](#hansen-eq-29-18) 利用观察的 bootstrap multiplicity 与预测共同波动，回答原样本改变会怎样影响 ensemble，和简单计算树预测在 $b$ 维度的样本方差不是一回事。
+
+令 $N_{ib}$ 是第 $b$ 个 bootstrap 中观察 $i$ 出现次数，infinitesimal jackknife 方差为
+
+::: {#hansen-eq-29-18}
+$$
+\widehat V_n(x)=\sum_{i=1}^n
+\left[\frac1B\sum_{b=1}^B(N_{ib}-\bar N_i)
+\{\hat m_b^*(x)-\hat m_{bag}(x)\}\right]^2.
+\tag{29.18}
+$$
+:::
+
+subsampling 不放回抽样在理论上更易处理；bootstrap 与 subsampling 不是可无声互换的同一算法。
+
+## 随机森林（Random Forests）
+
+bagged trees 仍因每棵树总优先使用强 predictor 而高度相关。random forest 在每个 split 只随机考虑 $m<p$ 个 feature，以 decorrelation 降平均 variance。每棵树在 bootstrap/subsample 上长到规定 leaf size，森林取树预测均值；OOB 可调 $m$、leaf size、split fraction。
+
+方差直觉可写成 $B$ 个同方差、两两相关 $\rho$ 的树平均：方差约 $\sigma_T^2\{\rho+(1-\rho)/B\}$。增加 $B$ 只能消掉第二项，相关部分 $\rho\sigma_T^2$ 留下；随机抽 feature 的核心是降低 $\rho$，哪怕单树方差或 bias 稍增也可能让森林总 MSE 下降。因此树数、每裂候选数和叶大小解决不同问题，不应只把树数调得很大。
+
+OOB 对 bootstrap forest 是高效内部验证，但若研究者用 OOB 反复挑 feature dictionary、算法族和报告指标，最终 OOB 也成为被优化资料。对最后性能仍宜有外层 test/nested CV。clustered data 的 bootstrap 和 OOB 应按 cluster 抽样，否则同一人的相近记录可同时落入训练与“袋外”。
+
+随机 feature restriction 有意让单树稍弱，却让树间 covariance 大降，使 ensemble MSE 改善。变量 importance 可受 feature 尺度、类别数和相关替代变量偏置，不能作结构系数解释。
+
+原稿引用 Wager–Athey 对 fixed $p$、honest subsampled forests、regular splits 和 smooth $m$ 的 pointwise asymptotic normality。标准软件默认 bootstrap、非 honest 或 $p$ 增长时，不能直接套该 theorem。推断必须核对实现是否满足理论 estimator 的构造。
+
+Pointwise interval 只覆盖给定 $x$ 的 $m(x)$，不同时覆盖整条曲面；在叶边界、稀疏支撑或训练范围外，预测可高度不稳。若政策结论使用样本平均预测差，estimand 和 influence structure 又不同。森林的预测区间还要区分对 conditional mean 的区间与未来 $Y$ 的 prediction interval，后者必须加 irreducible outcome noise。
+
+## 集成（Ensembling）
+
+Ensembling 是跨 ridge、Lasso、tree、forest、kernel 等算法的模型平均。stacking 与第 28 章 JMA 同理：用 out-of-fold predictions，在非负、和为一 simplex 上最小化 CV loss，再用选定权重组合全样本模型。
+
+候选必须多样但事前定义；把许多近重复算法加入会改变权重几何。meta-weight 也可能过拟合，应用 nested CV 评价“含选权”的完整 ensemble。理论比单方法薄，实际优势应由 honest test/OOB 证据支持，而非 Kaggle 式 leaderboard 调参后仍在同一 test 上报告。
+
+构造 stacking matrix 时，每一列必须是同一观察的 out-of-fold prediction，而不能一列用 in-sample fitted、另一列用 OOB；否则过拟合较强的算法在权重回归中占虚假优势。选好权重后，各 base learner 可在全训练集重估，再对真正 test/deployment 预测。分类应使用 log/Brier loss 并检查概率校准，不能沿用回归 SSE 作为当然目标。
+
+## Lasso IV
+
+设 $X\in\mathbb R^k$ 为内生回归量、$Z\in\mathbb R^p$ 为大量工具，$X=\Gamma'Z+U$，所以 $\Gamma$ 的维数应为 $p\times k$；原稿正文“$p\times n$”是明显排印问题。逐个 reduced form 用 Lasso/post-Lasso 得 $\hat\Gamma$、$\hat X=Z\hat\Gamma$，再以 $\hat X$ 作 instruments。目标是从大量工具中学习接近 oracle $W=\Gamma'Z$ 的最优预测，同时避免 many-instrument bias。
+
+不分样本的 Lasso-IV 需更强 rate：
+
+::: {#hansen-eq-29-19}
+$$
+\|\Gamma\|_0\frac{\log p}{\sqrt n}\longrightarrow0.
+\tag{29.19}
+$$
+:::
+
+在正则条件下，若 $Q=E(WW')$、$\Omega=E(WW'e^2)$，
+
+::: {#hansen-eq-29-20}
+$$
+(Q^{-1}\Omega Q^{-1})^{-1/2}sqrt n
+(\hat\beta_{Lasso-IV}-\beta)
+\xrightarrow{d}N(0,I_k).
+\tag{29.20}
+$$
+:::
+
+split A 估 first stage、B 估结构，再反向并合并 moments 的 cross-fit SSIV，解除 first-stage error 与 second-stage score 依赖，只需
+
+::: {#hansen-eq-29-21}
+$$
+\|\Gamma\|_0\frac{\log p}{n}\longrightarrow0.
+\tag{29.21}
+$$
+:::
+
+cross-fitting 弱化 bias rate，却仍需 instrument relevance、exclusion、稀疏 reduced form 与足够 observations；它不修复弱或无效工具。随机 split 应固定种子、重复检查或用多折，标准误要与 cross-fit moment 匹配。
+
+这里“选择工具”与传统 first-stage $F$ 检验也不同。Lasso 可在大字典中寻找能预测 $X$ 的组合，但 moment $E(e\mid Z)=0$ 必须对整个候选字典成立；一个强预测却与结构误差相关的工具会提高 first-stage fit 并加重不一致。反之，许多单独弱但联合有效的工具可能不满足稀疏 reduced form。应用要先用制度知识筛出有效候选，再让 Lasso处理相关性/维数，最后报告识别强度与弱 IV 稳健性。
+
+若 $X$ 有 $k>1$ 个内生分量，每个 reduced form 可有不同 active instruments，$\|\Gamma\|_0$ 应理解为矩阵非零结构的整体复杂度。cross-fit fitted $\hat X_i$ 必须来自不含观察 $i$ 的 first-stage training；在全样本先选择工具再只交叉估系数仍保留选择依赖。
+
+## 双重选择 Lasso（Double Selection Lasso）
+
+核心低维 treatment $D$ 与大量控制 $X$ 的 partially linear model 为
+
+::: {#hansen-eq-29-22}
+$$
+Y=D\theta+X'\beta+e,qquad E(e\mid D,X)=0.
+\tag{29.22}
+$$
+:::
+
+若只 Lasso $Y$ 对 $(D,X)$，某 $X_j$ 对 $Y$ 的直接 effect 小却与 $D$ 强相关时，遗漏它可严重混杂 $\theta$。辅助 treatment equation 是
+
+::: {#hansen-eq-29-23}
+$$
+D=X'\gamma+V,qquad E(V\mid X)=0,
+\tag{29.23}
+$$
+:::
+
+代入得 outcome reduced form
+
+::: {#hansen-eq-29-24}
+$$
+Y=X'\eta+U,qquad \eta=\beta+\gamma\theta.
+\tag{29.24}
+$$
+:::
+
+分别 Lasso [式 (29.23)](#hansen-eq-29-23) 与 [式 (29.24)](#hansen-eq-29-24)，取 selected controls 的 union，最后 OLS $Y$ 对 $D$ 和 union，使用 heteroskedastic SE。第一组保护 treatment-related confounders，第二组保护 outcome predictors；union 偏保守以减 omitted-variable bias。有效性仍是 approximate sparsity 下的渐近结论，不是任意有限样本自动 honest。
+
+用一个遗漏变量直觉说明“双重”：若 $X_j$ 对 $Y$ 的直接系数很小，outcome Lasso 可能删它；但它与 $D$ 高度相关，短回归 omitted-variable bias 约为“$X_j$ 对 $Y$ 的效应 × $D$ 与 $X_j$ 的关系”，仍可和 $\theta$ 标准误同量级。treatment Lasso 会因第二项强而选中 $X_j$，union 把它带回最终回归。反过来，对 $Y$ 强但与 $D$ 弱的预测变量由 outcome regression 保留，可降低 residual variance。
+
+核心 treatment、截距、设计要求固定的控制和 cluster/time effects 应设为 unpenalized。最终 OLS 使用 union 仍可能在小样本含过多列，因此要报告各第一步入选数、union 大小、共同支撑和最终残差自由度；“双重”不是可以无限扩充字典的许可。
+
+## 正则化后 Lasso（Post-Regularization Lasso）
+
+对 $X$ 条件去均值得
+
+::: {#hansen-eq-29-25}
+$$
+Y-X'\eta=(D-X'\gamma)\theta+e.
+\tag{29.25}
+$$
+:::
+
+分别 Lasso/post-Lasso 估 $E(D\mid X)$ 与 $E(Y\mid X)$，残差 $\hat V=D-X'\hat\gamma$、$\hat U=Y-X'\hat\eta$，再 OLS $\hat U$ 对 $\hat V$。这就是 partialing-out Lasso，与 Robinson partially linear estimator 同一结构。
+
+原始 moment $E[D(Y-D\theta-X'\beta)]$ 对 $\beta$ 的 derivative 是 $-E(DX')$，通常非零；orthogonal moment 用 $V=D-E(D\mid X)$，derivative $-E(VX')=0$。因此 nuisance 小误差对 $\theta$ 只有二阶影响，这叫 Neyman orthogonality。
+
+更完整地写 score：$\psi(W;\theta,m,g)=\{D-g(X)\}\{Y-m(X)-\theta[D-g(X)]\}$。在真 $m_0=E(Y\mid X)$、$g_0=E(D\mid X)$ 处 $E\psi=0$。沿任意小扰动 $m_0+th_m$ 的导数为 $-E[Vh_m(X)]=0$；沿 $g_0+th_g$ 的一阶项也因 $E(e\mid D,X)=0$ 与 $E(V\mid X)=0$ 抵消。正交性是对 nuisance 方向的 Gateaux derivative 为零，不是说 nuisance 估计无需一致。
+
+最终 heteroskedastic variance 来自 influence function $V e/E(V^2)$，样本 analog 用 out-of-fold/残差 score 平方。若 observations cluster，应先按 cluster 汇总 score；不能对 DML 最后一个残差回归机械逐行 HC 而忽略原抽样结构。
+
+定理 29.5 的简化 rate 条件为
+
+::: {#hansen-eq-29-26}
+$$
+(\|\beta\|_0+\|\gamma\|_0)
+\frac{\log p}{\sqrt n}=o(1).
+\tag{29.26}
+$$
+:::
+
+于是 $\sqrt n(\hat\theta_{PR}-\theta)\Rightarrow N(0,E[V^2e^2]/E[V^2]^2)$。orthogonality 不是免假设：两套 nuisance 要足够快、$E(V^2)>0$ 表示 treatment residual variation、条件矩/抽样与 sparsity 均需成立。
+
+## 双重/去偏机器学习（Double/Debiased Machine Learning）
+
+DML 在正交 partialing-out 上加 cross-fitting。把样本分 $K$ 折；对每折用其他折学习 $\hat g_{-k}(X)=E(D\mid X)$ 与 $\hat m_{-k}(X)=E(Y\mid X)$；在留出折算 $\hat V_k=D_k-\hat g_{-k}(X_k)$、$\hat U_k=Y_k-\hat m_{-k}(X_k)$；stack 后以 $\sum_k\hat V_k'\hat U_k/\sum_k\hat V_k'\hat V_k$ 得 DML2。DML1 是折内 ratio 再平均，渐近等价但 DML2 通常首选。
+
+cross-fitting 让每个 observation 的 nuisance prediction 来自不含自己的训练样本，减少 overfit dependence；不同于普通 CV，它最终使用所有折的 orthogonal scores 而非只选 tuning。Theorem 29.6 给与 PR 相同的一阶方差。在不分样本证明中一个误差项满足
+
+一个折内有两层训练：外层把 fold $k$ 完全留出以制造 honest nuisance predictions；内层只在其余 $K-1$ 折中用 CV 选择 Lasso/forest 等超参数。若在全样本先选 $\lambda$，留出折 outcome 已影响 nuisance rule，严格 cross-fitting 被破坏。预测缓存应带 observation id 和 fold id，逐行检查每个 $\hat m_i,\hat g_i$ 的训练集合确实不含 $i$。
+
+DML2 先把所有 fold 的 numerator/denominator 加总再取 ratio，等价于解全体 cross-fit score；DML1 先每折解 ratio 再平均。折大小不等或 $E(V^2)$ 跨折变化时二者有限样本差异更明显，DML2 按 residual treatment information 自然加权。为了评估 split randomness，可预定多个 partition 重复整个 DML，报告估计分布或采取有理论依据的 median/mean aggregation，而不是只挑最接近期望结果的 seed。
+
+::: {#hansen-eq-29-27}
+$$
+\left|(\hat\gamma_{-k}-\gamma)'
+\frac{1}{\sqrt n}X_k'e_k\right|
+\le O_p\!\left(\|\gamma\|_0\frac{\log p}{\sqrt n}\right)
+=o_p(1).
+\tag{29.27}
+$$
+:::
+
+cross-fit 独立性可改善该项 rate，但其他 product remainders 仍限制总体条件。应报告 folds、seed、重复 splits、每个 nuisance learner 的 nested tuning、out-of-fold performance、orthogonal score SE 与 cluster/time splitting。DML 解决“灵活 nuisance 下低维参数推断”，不凭机器学习本身创造 unconfoundedness 或 IV exclusion。
+
+DML 报告还应包含识别诊断。$\hat V=D-\hat g(X)$ 的方差若接近零，说明给定 $X$ 后 treatment 几乎没有剩余变化，分母 $E(V^2)$ 弱，标准误会大；binary treatment 时应画 propensity score 并检查 overlap。outcome learner 预测好而 treatment learner 没有共同支撑，仍不能可靠估 $\theta$。反之，nuisance 的整体 CV 误差一般也不是充分条件，真正 remainder 依两套误差的乘积和 score 方向；应同时检查各折 residual moments 与极端权重。
+
+模型 [式 (29.22)](#hansen-eq-29-22) 假定 treatment effect 为常数且 outcome 对 $D$ 线性。若效应异质，partialling-out coefficient 是依 residual treatment variance 加权的特定平均，不应无说明称 ATE。一般 DML 可为 ATE、LATE、quantile 等目标设计不同正交 score，但必须重新写 nuisance 和识别条件，不能只把同一残差回归替换一个机器学习器。
+
+cross-fitting 的 fold 必须尊重 sampling unit。面板中同一人的全部时期放同一折，cluster randomized trial 按 cluster 分折，时间预测按 contiguous blocks 或 past-to-future 设计；否则训练集看到同一单位的近重复信息，正交 score 也无法修复 leakage。方差聚类层级应和设计/依赖层级一致，而不是和 fold 数相同。
+
+## 技术证明（Technical Proofs*）
+
+Ridge MSE 是 variance 加 bias outer product。把 OLS MSE 写到共同左右因子后，原稿得到下界
+
+::: {#hansen-eq-29-28}
+$$
+\operatorname{mse}(\hat\beta_{OLS}\mid X)
+-\operatorname{mse}(\hat\beta_{ridge}\mid X)
+\ge\lambda(X'X+\lambda I_p)^{-1}A(X'X+\lambda I_p)^{-1},
+\tag{29.28}
+$$
+:::
+
+其中 $A=(X'X)^{-1}X'DX+X'DX(X'X)^{-1}-\lambda\beta\beta'$。其最小 eigenvalue 不低于 $2\underline\sigma^2-\lambda\beta'\beta$，给 Theorem 29.2 的充分区间。
+
+Lasso proof 先控制高维 score 最大值。对标准化列，Gaussian tail 给
+
+::: {#hansen-eq-29-29}
+$$
+P\!\left(\left|\frac{X_j'e}{\sqrt{nV_{nj}}}\right|>x\right)
+\le2e^{-x^2/2}.
+\tag{29.29}
+$$
+:::
+
+对 $p$ 列用 union bound、$V_{nj}\le\bar\sigma^2$ 和 [式 (29.14)](#hansen-eq-29-14)：
+
+::: {#hansen-eq-29-30}
+$$
+P\!\left(\left\|\frac1nX'e\right\|_\infty>rac\lambda{4n}
+\,\middle|\,X\right)
+\le2p^{,1-C^2/(16\bar\sigma^2)}.
+\tag{29.30}
+$$
+:::
+
+取 $C$ 大使高概率事件
+
+::: {#hansen-eq-29-31}
+$$
+\left\|\frac1nX'e\right\|_\infty\le\frac\lambda{4n}
+\tag{29.31}
+$$
+:::
+
+成立。Lasso objective 不大于真 $\beta$ 处 objective；展开平方项，以 [式 (29.2)](#hansen-eq-29-2) 控制 score，按真零/非零 support 分块得到 basic inequality
+
+::: {#hansen-eq-29-32}
+$$
+R_n+\frac\lambda{2n}\|\hat\beta_0-\beta_0\|_1
+\le\frac{3\lambda}{2n}\|\hat\beta_1-\beta_1\|_1.
+\tag{29.32}
+$$
+:::
+
+它先推出误差向量在 REC cone，随后才可使用
+
+::: {#hansen-eq-29-33}
+$$
+R_n=(\hat\beta-\beta)'Q_n(\hat\beta-\beta)
+\ge c^2\|\hat\beta-\beta\|_2^2.
+\tag{29.33}
+$$
+:::
+
+再用 [式 (29.4)](#hansen-eq-29-4) 把 active $\ell_1$ 换为 $\sqrt s\ell_2$，得到 $\ell_2$ rate；代回得
+
+::: {#hansen-eq-29-34}
+$$
+R_n+\frac\lambda{2n}\|\hat\beta_0-\beta_0\|_1
+\le\frac{9C^2}{4c^2}\,s\frac{\log p}{n}.
+\tag{29.34}
+$$
+:::
+
+再把 active 与 inactive $\ell_1$ 合并即得 [式 (29.15)](#hansen-eq-29-15)–[式 (29.17)](#hansen-eq-29-17)。逻辑顺序是 score event → basic inequality → cone → REC → rates，任何一步都不能用“Lasso 稀疏”代替。
+
+这里常数 3 来自 penalty score event 的具体 $1/4$ 安全余量；换 objective scaling、penalty loading 或更紧 score bound，cone 常数会改变，但 proof 架构不变。normal tail 加 union bound 把单列概率乘 $p$，因此只付出 $\log p$ 而非 $p$；REC 再把 prediction norm 转成 coefficient norm。若 error heavy-tailed 到最大 score 无法以该速度控制，单纯把 $\lambda$ 设成 CV 最优并不能恢复 theorem，需要 robust loss、self-normalization 或 tail trimming 的新理论。
+
+Lasso-IV 要证明以 $\hat X$ 换 oracle $W$ 不改一阶展开，充分验证
+
+::: {#hansen-eq-29-35}
+$$
+\frac1n(\hat X-W)'X\xrightarrow{p}0,
+\tag{29.35}
+$$
+:::
+
+::: {#hansen-eq-29-36}
+$$
+\frac1{\sqrt n}(\hat X-W)'e\xrightarrow{p}0.
+\tag{29.36}
+$$
+:::
+
+reduced-form Lasso rates给
+
+::: {#hansen-eq-29-37}
+$$
+\frac1n(\hat X-W)'(\hat X-W)
+\le O_p\!\left(\|\Gamma\|_0\frac{\log p}{n}\right),
+\tag{29.37}
+$$
+:::
+
+::: {#hansen-eq-29-38}
+$$
+\|\hat\Gamma-\Gamma\|_1
+\le O_p\!\left(\|\Gamma\|_0\sqrt{\frac{\log p}{n}}\right),
+\tag{29.38}
+$$
+:::
+
+而最大 score 为
+
+::: {#hansen-eq-29-39}
+$$
+\left\|\frac1{\sqrt n}Z'e\right\|_\infty
+=O_p(\sqrt{\log p}).
+\tag{29.39}
+$$
+:::
+
+Hölder 合并后二阶段误差项满足
+
+::: {#hansen-eq-29-40}
+$$
+\left|\frac1{\sqrt n}(\hat X-W)'e\right|
+\le O_p\!\left(\|\Gamma\|_0\frac{\log p}{\sqrt n}\right)
+=o_p(1),
+\tag{29.40}
+$$
+:::
+
+这解释 [式 (29.19)](#hansen-eq-29-19)。sample split 使两个因子条件独立，改用 variance bound 得较弱 [式 (29.21)](#hansen-eq-29-21)。
+
+PR proof 把 feasible estimator 写成
+
+::: {#hansen-eq-29-41}
+$$
+\sqrt n(\hat\theta_{PR}-\theta)
+=\frac{n^{-1/2}\hat V'
+\{\hat V\theta+X(\hat\gamma-\gamma)\theta
+-X(\hat\eta-\eta)+e\}}
+{n^{-1}\hat V'\hat V}.
+\tag{29.41}
+$$
+:::
+
+目标是分母趋 $E(V^2)$，分子只剩 $n^{-1/2}V'e$。两套 nuisance prediction remainders 为
+
+::: {#hansen-eq-29-42}
+$$
+\sqrt n(\hat\gamma-\gamma)'Q_n(\hat\gamma-\gamma)
+\le O_p\!\left(\|\gamma\|_0\frac{\log p}{\sqrt n}\right)=o_p(1),
+\tag{29.42}
+$$
+:::
+
+::: {#hansen-eq-29-43}
+$$
+\sqrt n(\hat\eta-\eta)'Q_n(\hat\eta-\eta)
+\le O_p\!\left(\|\eta\|_0\frac{\log p}{\sqrt n}\right)=o_p(1),
+\tag{29.43}
+$$
+:::
+
+交叉 product 用 Cauchy–Schwarz；score product 用 Hölder：
+
+::: {#hansen-eq-29-44}
+$$
+\left|(\hat\gamma-\gamma)'
+\frac1{\sqrt n}X'e\right|
+\le O_p\!\left(\|\gamma\|_0\frac{\log p}{\sqrt n}\right)
+=o_p(1).
+\tag{29.44}
+$$
+:::
+
+这组展开把“正交化为何有效”具体化：nuisance 误差不以单独一阶项出现，而以平方或两误差乘积出现；[式 (29.26)](#hansen-eq-29-26) 让它们小于 $n^{-1/2}$ 主 score。
+
+证明最后还需两步：WLLN 使 $n^{-1}\hat V'\hat V\to E(V^2)>0$，CLT 使 $n^{-1/2}V'e\Rightarrow N\{0,E(V^2e^2)\}$；Slutsky 合并给 normal limit。方差一致性则要求 feasible residual score 与 oracle $Ve$ 的平方平均差消失。只证明 nuisance prediction rates 而没有 denominator relevance、主 score CLT 和 variance replacement，仍不是完整推断证明。
+
+## 习题阅读指南（Exercises）
+
+29.1–29.5 训练 ridge LOO、Mallows、bias/variance、augmented-data 表示与 $R^2$。证明 augmented OLS 时在 $Y$ 下加 $p$ 个零、在 $X$ 下加 $\sqrt\lambda I_p$，正规方程即 $X'X+\lambda I$。OLS 最小化无惩罚 in-sample SSE，所以 ridge 的训练 $R^2$ 不会更高；这不等于外样本预测较差。
+
+29.6–29.8 比较重复列下 ridge/Lasso 的唯一性与树的 monotone transform。Ridge 会对重复列对称分摊；Lasso 单个系数可不定但合计 fitted effect 可定。树对 $X$ 与单调 $X^2$ 产生相同排序 split，额外放 $X^2$ 不增加可分区域，只制造重复候选。
+
+29.9–29.10 用 CPS 亚裔女性与西班牙裔男性做 Lasso wage regression。应按题意建立教育连续项与教育 dummy、经验/40 的 1–9 次幂、婚姻/地区/工会 dummy；先在 training fold 标准化，明确截距是否惩罚，报告 $\lambda_{min}$ 与 1-SE active sets、fold seed、系数及 out-of-fold MSE。两样本结论不同要从支撑、样本量和选择稳定性解释，不能只数非零变量。
+
+代码层面应保存一张 feature manifest：原始变量、变换公式、reference category、是否标准化、是否惩罚、训练均值和标准差。对每个 fold 保存 observation ids 与 selected $\lambda$；最终 refit 另存 active set。这样才能判断某教育 dummy 为零究竟是 reference coding、零方差、共线删除还是 Lasso 选择，而不把软件预处理误读为经济结论。
+
+全章的统一复现检查是“重新运行算法，而非只重算最后回归”。删除缓存后同一 seed 应得到相同 folds、path、active sets、树和 DML score；换一组合理 seed 后核心预测/目标估计不应剧烈改变；所有 test/OOB 指标必须来自未参与对应调参的观察；标准误应匹配 i.i.d.、cluster 或时间依赖。若某一步使用软件默认值，版本、默认 folds、penalty mixing convention 和 stopping tolerance 都应写入讲义。
+
+最后要把预测成功与识别成功分栏报告。较低 CV loss 支持在指定部署分布下的预测规则；合法的 $\theta$ 区间还需要条件矩、共同支撑、orthogonality、nuisance rate 和抽样 CLT。任何一栏失败都应缩小结论，而不是用另一栏的好表现补票。
+
+建议章末做一个小型敏感性矩阵：行放 feature dictionary、标准化、penalty 与 learner，列放 out-of-fold loss、入选数、核心 $\hat\theta$、标准误和 residual overlap。若预测 loss 几乎不变而入选集合大变，应强调变量选择不稳定；若 $\hat\theta$ 随 learner 大变，即使各自预测相近，也提示正交 remainder、支撑或识别规格值得复查。这样的并列诊断比只展示最佳算法更符合计量学习目标。
+
+敏感性分析也要预先限定合理范围，不能运行数百种规格后只挑稳定或显著的子集。完整结果可作为机器可读附表，正文说明主规则、失败诊断与结论边界；这样既保留透明度，也避免把算法选择重新变成未披露的研究者自由度，并方便学生逐项复核。
+
+::: {.callout-important title="章末自检"}
+1. big data、high dimensionality 与 machine learning 分别强调什么？$p>n$ 时 OLS 为什么不唯一？
+2. [式 (29.4)](#hansen-eq-29-4) 如何把 nominal $p$ 换成 sparsity $s$？
+3. Ridge 与 Lasso 的 penalty geometry、变量选择、缩放敏感性和 bias 有何不同？
+4. 为什么原稿的 $\lambda=C\sqrt{n\log p}$ 不能直接与软件输出数值比较？
+5. REC 为什么允许 $Q_n$ 奇异？Theorem 29.3 给的是哪三种 rate，又没有给什么结论？
+6. honest tree、bagging、random feature subsampling 分别解除哪一种依赖或 covariance？
+7. Post-Lasso 为什么不能凭第二步 OLS 自动作普通推断？double selection 如何保护小但重要的 confounder？
+8. partialing-out score 对 nuisance 为何正交？[式 (29.42)](#hansen-eq-29-42)–[式 (29.44)](#hansen-eq-29-44) 怎样体现二阶 remainder？
+9. Cross-fitting 与调参 CV 的任务有何不同？DML 能否弥补未混杂、有效工具或共同支撑失败？
+:::
