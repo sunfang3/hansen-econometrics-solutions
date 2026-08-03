@@ -53,6 +53,22 @@ presentation/scripts/render.sh
 
 详细构建、讲者视图、PDF 和数据说明见 [presentation/README.md](presentation/README.md)。
 
+## Hansen 全书详细中文学习笔记
+
+`notes/` 提供沿 Hansen 原书顺序编排的 Quarto Book，面向从本科计量过渡到研究生计量的读者：
+
+- 覆盖 Chapter 1–29 与 Appendix A–B；
+- 逐节写明对象、条件、路线、矩阵维数、推导和常见误读；
+- 保留 Hansen 原公式编号并提供稳定的跨页锚点；
+- 附有[整书缩写与阅读记号](notes/abbreviations.qmd)，整理英文全称、中文释义和同形缩写辨析。
+
+入口与构建说明见 [notes/index.qmd](notes/index.qmd) 和 [notes/README.md](notes/README.md)。完整检查命令：
+
+~~~bash
+quarto render notes
+python3 notes/scripts/check_notes.py --scope all-current --rendered --global-audit
+~~~
+
 ## 习题解答的 R / Quarto 版
 
 各章 **Markdown 理论 + notebook 代码** 已融合为 Quarto：

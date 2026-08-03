@@ -352,7 +352,7 @@ Pointwise interval 只覆盖给定 $x$ 的 $m(x)$，不同时覆盖整条曲面�
 
 ## 集成（Ensembling）
 
-Ensembling 是跨 ridge、Lasso、tree、forest、kernel 等算法的模型平均。stacking 与第 28 章 JMA 同理：用 out-of-fold predictions，在非负、和为一 simplex 上最小化 CV loss，再用选定权重组合全样本模型。
+Ensembling 是跨 ridge、Lasso、tree、forest、kernel 等算法的模型平均。stacking 沿用第 28 章 JMA 的构造：先取得每个候选算法的 out-of-fold predictions，再在非负、和为一 simplex 上最小化 CV loss，最后用选定权重组合全样本模型。
 
 候选必须多样但事前定义；把许多近重复算法加入会改变权重几何。meta-weight 也可能过拟合，应用 nested CV 评价“含选权”的完整 ensemble。理论比单方法薄，实际优势应由 honest test/OOB 证据支持，而非 Kaggle 式 leaderboard 调参后仍在同一 test 上报告。
 

@@ -93,7 +93,7 @@ $D$ 必须定义为真实 treatment，不只是 interaction dummy。若 NJ 同�
 
 ## 多个单位（Multiple Units）
 
-多个 treated/control units 提供检验 homogeneity 的空间。basic model 同时限制：所有 units 共享 $v_t$；所有 treated units 共享 $\theta$。对 $N_2$ 个 treated regions，加入 $N_2-1$ 个 treated-region×post interactions 可检验 treatment-effect equality；少一个是为避免与 common treatment dummy 共线。对 $N_1$ 个 controls 同理加入 $N_1-1$ 个 control-region×post interactions 检查 control changes 是否相同。
+多个 treated/control units 提供检验 homogeneity 的空间。basic model 同时限制：所有 units 共享 $v_t$；所有 treated units 共享 $\theta$。对 $N_2$ 个 treated regions，加入 $N_2-1$ 个 treated-region×post interactions 可检验 treatment-effect equality；少一个是为避免与 common treatment dummy 共线。对 $N_1$ 个 controls，则按同一基准组编码加入 $N_1-1$ 个 control-region×post interactions，检查各 control region 的 before-after change 是否相同。
 
 heterogeneous treatment effects 不否定 causal framework，但 common-$\theta$ regression 可能只是特定加权平均；应报告 group-specific effects/weights。heterogeneous control changes 更直接威胁 counterfactual，因为不存在唯一 common untreated change。检验不拒绝只是样本证据弱，不能将“接受齐性”写成事实，尤其 subgroup 数少时 power 很低。
 

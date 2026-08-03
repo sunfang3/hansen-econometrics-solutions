@@ -9,6 +9,7 @@ book:
   date: last-modified
   chapters:
     - index.qmd
+    - abbreviations.qmd
     - part: "第一部分　回归"
       chapters:
         - ch01.qmd
@@ -53,7 +54,6 @@ book:
   appendices:
     - appendix-a.qmd
     - appendix-b.qmd
-    - abbreviations.qmd
 
 lang: zh-CN
 bibliography: ../presentation/references.bib

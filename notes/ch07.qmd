@@ -35,7 +35,7 @@ $$
 $$
 :::
 
-同理 $\hat Q_{XY}\to_pQ_{XY}$。第二步核对 $Q_{XX}>0$，因此 $g(A,b)=A^{-1}b$ 在极限点连续；CMT 给
+对 $\hat Q_{XY}=n^{-1}\sum_iX_iY_i$ 的每个元素应用同一个 WLLN，得到 $\hat Q_{XY}\to_pQ_{XY}$。第二步核对 $Q_{XX}>0$，因此 $g(A,b)=A^{-1}b$ 在极限点连续；CMT 给
 
 ::: {#hansen-eq-7-2}
 $$

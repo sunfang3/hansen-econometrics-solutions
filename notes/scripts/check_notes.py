@@ -6,12 +6,21 @@ from __future__ import annotations
 import argparse
 import re
 import sys
+from html.parser import HTMLParser
 from pathlib import Path
+from urllib.parse import unquote, urlsplit
 
 
 ROOT = Path(__file__).resolve().parents[2]
 NOTES = ROOT / "notes"
 READING_AID = "abbreviations.qmd"
+BOOK_SOURCES = [
+    "index.qmd",
+    READING_AID,
+    *(f"ch{i:02d}.qmd" for i in range(1, 30)),
+    "appendix-a.qmd",
+    "appendix-b.qmd",
+]
 EXPECTED = {
     "ch01.qmd": (10, "1", 1200),
     "ch02.qmd": (34, "2", 5000),
@@ -87,6 +96,7 @@ FENCED_ANCHOR = re.compile(
 )
 REFERENCE = re.compile(r"\[式 \(([1-9]\d*|[AB])\.(\d+)\)\]\(([^)]+)\)")
 QMD_LINK = re.compile(r"\((ch\d{2}|appendix-[ab])\.qmd(?:#[^)]+)?\)")
+LOCAL_QMD_LINK = re.compile(r"\]\(([^)]+\.qmd(?:#[^)]+)?)\)")
 
 
 def error(path: Path, code: str, message: str) -> str:
@@ -118,6 +128,8 @@ def check_file(path: Path, minimum_sections: int, prefix: str, minimum_chinese: 
     normalized_anchors = [(a.upper(), b) for a, b in anchors]
     if sorted(tags) != sorted(normalized_anchors):
         issues.append(error(path, "FORMULA_PAIR", "原书公式 tag 与稳定 anchor 不是一一对应。"))
+    if len(tags) != len(set(tags)) or len(anchors) != len(set(anchors)):
+        issues.append(error(path, "DUPLICATE_FORMULA", "同一原书公式编号或稳定锚点在本页重复出现。"))
     wrong_prefix = [f"{a}.{b}" for a, b in tags if a != prefix]
     if wrong_prefix:
         issues.append(error(path, "FORMULA_CHAPTER", f"公式前缀不属于本章：{wrong_prefix}。"))
@@ -194,6 +206,132 @@ def check_rendered_reading_aid(path: Path) -> list[str]:
     return issues
 
 
+class LinkCollector(HTMLParser):
+    """收集渲染 HTML 中的元素 id 与超链接。"""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.ids: set[str] = set()
+        self.hrefs: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        values = dict(attrs)
+        if values.get("id"):
+            self.ids.add(values["id"] or "")
+        if tag == "a" and values.get("href"):
+            self.hrefs.append(values["href"] or "")
+
+
+def check_book_manifest() -> list[str]:
+    """核对 Quarto 清单恰好含首页、Ch.1--29、附录与缩写材料。"""
+    config = NOTES / "_quarto.yml"
+    text = config.read_text(encoding="utf-8")
+    listed = re.findall(r"^\s+-\s+([^\s]+\.qmd)\s*$", text, re.M)
+    if listed != BOOK_SOURCES:
+        return [
+            error(
+                config,
+                "BOOK_MANIFEST",
+                f"Quarto 页面顺序不完整或有漂移。应为 {BOOK_SOURCES}，实际为 {listed}。",
+            )
+        ]
+    return []
+
+
+def check_global_source_links() -> list[str]:
+    """核对跨页 qmd 链接及公式显示编号与目标锚点。"""
+    issues: list[str] = []
+    for name in BOOK_SOURCES:
+        source = NOTES / name
+        if not source.exists():
+            issues.append(error(source, "MISSING_FILE", "Quarto 清单中的源文件不存在。"))
+            continue
+        text = source.read_text(encoding="utf-8")
+        for raw_target in LOCAL_QMD_LINK.findall(text):
+            path_part, _, fragment = raw_target.partition("#")
+            target = source.parent / path_part
+            if not target.exists():
+                issues.append(error(source, "BROKEN_SOURCE_LINK", f"链接目标不存在：{raw_target}。"))
+                continue
+            if fragment and fragment.startswith("hansen-eq-"):
+                target_text = target.read_text(encoding="utf-8")
+                if f"{{#{fragment}}}" not in target_text:
+                    issues.append(error(source, "BROKEN_SOURCE_ANCHOR", f"公式锚点不存在：{raw_target}。"))
+
+        for chapter, number, raw_target in REFERENCE.findall(text):
+            path_part, marker, fragment = raw_target.partition("#")
+            expected = f"hansen-eq-{chapter.lower()}-{number}"
+            if not marker or fragment != expected:
+                issues.append(
+                    error(
+                        source,
+                        "FORMULA_REF_MISMATCH",
+                        f"式 ({chapter}.{number}) 应指向 #{expected}，实际为 {raw_target}。",
+                    )
+                )
+                continue
+            target = source if not path_part else source.parent / path_part
+            if not target.exists() or f"{{#{expected}}}" not in target.read_text(encoding="utf-8"):
+                issues.append(error(source, "BROKEN_FORMULA_REF", f"式 ({chapter}.{number}) 的目标不存在：{raw_target}。"))
+    return issues
+
+
+def check_rendered_book() -> list[str]:
+    """遍历全部 book HTML，核对页面清单、本地页面链接和 fragment id。"""
+    output = NOTES / "_output"
+    issues: list[str] = []
+    expected = {f"{Path(name).stem}.html" for name in BOOK_SOURCES}
+    actual = {path.name for path in output.glob("*.html")}
+    if actual != expected:
+        issues.append(
+            error(
+                NOTES / "_quarto.yml",
+                "RENDERED_MANIFEST",
+                f"HTML 页面集合不符；缺少 {sorted(expected - actual)}，多出 {sorted(actual - expected)}。",
+            )
+        )
+
+    parsed: dict[Path, LinkCollector] = {}
+    for name in expected & actual:
+        path = output / name
+        collector = LinkCollector()
+        collector.feed(path.read_text(encoding="utf-8"))
+        parsed[path.resolve()] = collector
+
+    output_root = output.resolve()
+    for source_path, collector in parsed.items():
+        for href in collector.hrefs:
+            split = urlsplit(href)
+            if split.scheme or split.netloc:
+                continue
+            link_path = unquote(split.path)
+            fragment = unquote(split.fragment)
+            if link_path and not link_path.endswith(".html"):
+                continue
+            target = source_path if not link_path else (source_path.parent / link_path).resolve()
+            if output_root not in target.parents and target != output_root:
+                issues.append(error(source_path, "LINK_OUTSIDE_BOOK", f"本地 HTML 链接越出 book 输出目录：{href}。"))
+                continue
+            if not target.exists():
+                issues.append(error(source_path, "BROKEN_HTML_LINK", f"HTML 页面链接不存在：{href}。"))
+                continue
+            if fragment:
+                target_collector = parsed.get(target)
+                if target_collector is None:
+                    target_collector = LinkCollector()
+                    target_collector.feed(target.read_text(encoding="utf-8"))
+                    parsed[target] = target_collector
+                if fragment not in target_collector.ids:
+                    issues.append(error(source_path, "BROKEN_HTML_ANCHOR", f"HTML fragment 不存在：{href}。"))
+
+    abbreviation_html = output / "abbreviations.html"
+    if abbreviation_html.exists() and re.search(
+        r"<h[1-6][^>]*data-number=", abbreviation_html.read_text(encoding="utf-8")
+    ):
+        issues.append(error(NOTES / READING_AID, "READING_AID_NUMBERED", "缩写材料的标题或小节不应占用正文或附录编号。"))
+    return issues
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -206,6 +344,11 @@ def main() -> int:
         "--rendered",
         action="store_true",
         help="同时检查 _output 中的公式锚点与章节编号；应先运行 quarto render notes。",
+    )
+    parser.add_argument(
+        "--global-audit",
+        action="store_true",
+        help="核对完整 Quarto 清单、跨页源链接与全部 HTML fragment；通常与 --rendered 合用。",
     )
     args = parser.parse_args()
     issues: list[str] = []
@@ -221,12 +364,18 @@ def main() -> int:
         issues.extend(check_reading_aid(reading_aid))
         if args.rendered and reading_aid.exists():
             issues.extend(check_rendered_reading_aid(reading_aid))
+    if args.global_audit:
+        issues.extend(check_book_manifest())
+        issues.extend(check_global_source_links())
+        if args.rendered:
+            issues.extend(check_rendered_book())
     for message in issues:
         print(message)
     if issues:
         print(f"NOTES_CHECK_FAILED: {len(issues)} 个错误。")
         return 1
-    print(f"NOTES_CHECK_OK: {args.scope} 达到结构、详细度和公式编号门槛。")
+    suffix = "，并通过全书清单与链接审计" if args.global_audit else ""
+    print(f"NOTES_CHECK_OK: {args.scope} 达到结构、详细度和公式编号门槛{suffix}。")
     return 0
 
 
