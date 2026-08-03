@@ -1,0 +1,312 @@
+---
+title: "删失与选择"
+subtitle: "Tobit、CLAD/CQR、样本选择偏误与 Heckman 校正"
+hansen-chapter: "Chapter 27"
+book-pages: "842–858"
+pdf-pages: "862–878"
+status: "完整初稿"
+---
+
+::: {.book-map}
+**原书位置与本章路线**　对应 Hansen Chapter 27（书内 pp. 842–858；PDF pp. 862–878）。27.1–27.5区分潜在、删失与截断分布，推导条件均值、OLS 偏误和 Tobit likelihood；27.6–27.8讨论非参数识别、CLAD/CQR 与汇款应用；27.9–27.11从样本选择偏误进入 Heckman 参数和半参数校正；27.12–27.13处理面板扩展与习题。
+:::
+
+::: {.bridge}
+**本科桥接**　本科 OLS 的 $E(e\mid X)=0$ 是针对实际进入回归的总体。删失把本应在边界外的潜在值压到边界，选择则令某些 $Y$ 根本不被观察；二者都会使所见样本的条件均值不再等于潜在方程 $X'\beta$。Tobit 用完整正态模型同时描述是否越过边界和越过后的数值；Heckman 则把“是否进入样本”的 probit 与结果方程联系起来。
+:::
+
+## 引言（Introduction）
+
+本章有两个外观相似、资料含义不同的问题。**删失**（censoring）时每个抽样单位都存在，结果在边界处仍有记录，只是边界外的潜在值被压成同一观察值；**选择**（selection）时未入选单位的结果变量缺失。工资上限编码、检测下限属于删失；只观察就业者工资、只收到自愿回覆者评分属于选择。
+
+分析前应写清目标对象：是观测结果 $Y$ 的条件均值/分位数，还是未受边界约束的潜在 $Y^*$？OLS 准确估计 $E(Y\mid X)$ 的线性投影也可能完全没有恢复 $E(Y^*\mid X)$。纠偏方法都依额外结构，不能从一堆零值自动判断“应跑 Tobit”，也不能从数据缺失自动证明 Heckman 正态选择模型正确。
+
+还要记录边界来自哪里。问卷把所有“30 万元以上”编码成 30 万元是已知上端删失；仪器只报告检测限以上浓度是已知下端删失；抽样方案只纳入收入超过门槛者是截断；受访者拒答收入则是缺失/选择。若边界因人或时期而变，单观测 likelihood 必须使用各自阈值。若边界本身未知或由结果之外的内生规则决定，标准 Tobit 已不适用。删失的是因变量还是解释变量也不能混同：本章方法针对结果变量，协变量测量上限属于测量误差问题。
+
+## 删失（Censoring）
+
+以下删失 Tobit 模型把下界规范为 0：
+
+::: {#hansen-eq-27-1}
+$$
+\begin{aligned}
+Y^*&=X'\beta+e,\\
+e\mid X&\sim N(0,\sigma^2),\\
+Y&=\max(Y^*,0).
+\end{aligned}
+\tag{27.1}
+$$
+:::
+
+$Y^*$ 连续但不可见；$Y^*>0$ 时 $Y=Y^*$，$Y^*\le0$ 时只知道它落在删失区间，观察为 0。因此 $Y$ 是“0 处点质量 + 正半轴连续密度”的混合分布。若实际下界是 $c$，可平移为 $Y-c=\max(Y^*-c,0)$；上端删失则反向处理。
+
+需要区分三个变量：
+
+- 潜在/未删失 $Y^*$：包含边界两侧的连续值；
+- 删失 $Y=\max(Y^*,0)$：全样本都保留，负潜在值改记 0；
+- 截断 $Y^\#$：只保留 $Y>0$ 的单位，零值单位整行不在分析样本。
+
+“把零值删掉”不会恢复 $Y^*$ 的随机样本，而会把样本条件改成 $Y^*>0$。只要越过边界的概率依赖 $X$ 或 $e$，留下来的误差条件均值就不为零。还应区分数据删失与 corner solution：若家庭真实选择零消费而不存在有经济含义的负期望购买，Tobit 的单一潜在机制可能牵强；two-part/hurdle 模型允许“是否参与”和“正值多少”由不同参数决定，更适合双机制资料。
+
+[式 (27.1)](#hansen-eq-27-1) 同时要求潜在条件均值线性、误差与 $X$ 独立/同方差、条件正态。线性可用 series 放松；异方差会改变越界概率，正态尾部又直接决定边界附近校正，因此后两项对 Tobit 尤其关键。
+
+## 删失回归函数（Censored Regression Functions）
+
+记 $\mu=X'\beta$、$z=\mu/\sigma$。被删失概率是 $P(Y=0\mid X)=P(e\le-\mu\mid X)=\Phi(-z)$，未删失概率为 $\Phi(z)$。潜在条件均值是 $m^*(X)=\mu$。
+
+为推导观察均值，利用 $Y=Y^*1\{Y^*>0\}$：
+
+$$
+E(Y\mid X)=P(Y^*>0\mid X)E(Y^*\mid X,Y^*>0).
+$$
+
+右侧第一项为 $\Phi(z)$；截断正态均值为 $\mu+\sigma\phi(z)/\Phi(z)$。相乘后得到
+
+::: {#hansen-eq-27-2}
+$$
+m(X)=E(Y\mid X)
+=X'\beta\,\Phi\!\left(\frac{X'\beta}{\sigma}\right)
++\sigma\phi\!\left(\frac{X'\beta}{\sigma}\right).
+\tag{27.2}
+$$
+:::
+
+只在正值子样本中的均值是
+
+::: {#hansen-eq-27-3}
+$$
+m^\#(X)=E(Y^\#\mid X)
+=X'\beta+\sigma\lambda\!\left(\frac{X'\beta}{\sigma}\right),
+\qquad \lambda(v)=\frac{\phi(v)}{\Phi(v)}.
+\tag{27.3}
+$$
+:::
+
+$\lambda$ 是 inverse Mills ratio（逆米尔斯比率）。由于 $Y^*\le Y\le Y^\#$，同一 $X$ 下有 $m^*(x)\le m(x)\le m^\#(x)$；这比较的是三个不同分布的均值，不是三个估计器的机械大小定律。
+
+Tobit 系数 $\beta_r$ 是潜在均值的边际效应。对 [式 (27.2)](#hansen-eq-27-2) 用乘积和链式法则，含 $\phi'(z)=-z\phi(z)$ 的两项抵消，得到
+
+$$\frac{\partial E(Y\mid X=x)}{\partial x_r}=\Phi(z)\beta_r.$$
+
+因此报告 $\hat\beta_r$ 不能直接称为“观察到的 $Y$ 增加多少”。应用中至少区分：对 $P(Y>0\mid X)$ 的效应、对全样本 $E(Y\mid X)$ 的效应，以及对 $E(Y\mid X,Y>0)$ 的效应。
+
+## 最小二乘估计的偏误（The Bias of Least Squares Estimation）
+
+全样本 OLS 逼近 [式 (27.2)](#hansen-eq-27-2)，删零后的 OLS 逼近 [式 (27.3)](#hansen-eq-27-3)，二者一般都不等于潜在直线 $X'\beta$。用灵活 series 也只会更准确地估计错误目标，不能靠函数形式灵活性“消除删失”。
+
+Hansen 引用 Greene 的一个透明特例：写 $Y^*=\alpha+X'\beta+e$，令 $X\sim N(0,\Sigma)$，则观察 $Y$ 对 $X$ 的最佳线性预测斜率为
+
+::: {#hansen-eq-27-4}
+$$
+\beta_{\mathrm{BLP}}=\beta(1-\pi),
+\qquad \pi=P(Y=0).
+\tag{27.4}
+$$
+:::
+
+所以删失比例 $\pi$ 在这个特殊正态设计下把潜在斜率按比例压向零。它可作量级直觉，却不是一般校正公式：非正态 $X$、异方差或非线性条件均值下偏误依整个 $X$ 分布，不能把 OLS 除以 $1-\hat\pi$ 当作 Tobit 替代。
+
+证明路线如下。首先 $Y^*\sim N(\alpha,\sigma_Y^2)$，$\sigma_Y^2=\sigma^2+\beta'\Sigma\beta$；截断正态矩给
+
+$$E[(Y^*-\alpha)Y^*\mid Y^*>0]=\sigma_Y^2.$$
+
+其次正态联合分布使 $X$ 对 $Y^*$ 的投影残差独立于 $Y^*$：
+
+$$X=E(XY^*)\sigma_Y^{-2}(Y^*-\alpha)+u.$$
+
+条件于 $Y^*>0$ 后，上式与前一矩等式推出 $E(XY^*\mid Y^*>0)=E(XY^*)$。最后 $Y=Y^*1\{Y^*>0\}$，故
+
+$$E(XY)=(1-\pi)E(XY^*\mid Y^*>0)=(1-\pi)E(XX')\beta,$$
+
+左乘 $E(XX')^{-1}$ 即得 [式 (27.4)](#hansen-eq-27-4)。每一步依赖正态投影的独立性，不能只靠线性投影正交性替代。
+
+## Tobit 估计量（Tobit Estimator）
+
+在 $Y=0$ 时观测贡献不是 normal density 在 0 的高度，而是整个潜在区间 $Y^*\le0$ 的概率 $\Phi(-X'\beta/\sigma)$；在 $Y>0$ 时贡献才是 $\sigma^{-1}\phi((Y-X'\beta)/\sigma)$。因此 log likelihood 是
+
+$$
+\ell_n(\beta,\sigma^2)=
+\sum_{Y_i=0}\log\Phi\!\left(-\frac{X_i'\beta}{\sigma}\right)
+-\frac12\sum_{Y_i>0}\left\{\log(2\pi\sigma^2)
++\frac{(Y_i-X_i'\beta)^2}{\sigma^2}\right\}.
+$$
+
+第一部分像 probit，利用是否越界；第二部分像正态回归，利用正值的精确大小。Tobit 正是把 extensive margin 和 intensive margin 绑定到同一个 $\beta/\sigma$ 与 $\beta$。这会提高正确规格下的效率，也会在两种行为机制不同时造成系统错设。
+
+这种绑定可作规格诊断。先用 probit 解释 $1\{Y>0\}$，再在正值中用合适连续模型解释 $Y$；若变量在两部分的符号、相对系数或函数形状与 Tobit 隐含限制明显冲突，就应考虑 two-part 模型。two-part 估计的是观察结果的参与与正值分布，不一定识别一个统一潜在 $Y^*$；它不是较差的 Tobit，而是回答另一种行为机制。反过来，仅因两部分估计不同也不能在忽略抽样误差后断言 Tobit失败，应使用正式限制检验、图形拟合和稳健性比较。
+
+令 $\gamma=\beta/\sigma$、$\nu=1/\sigma>0$，Olsen 重参数化为
+
+::: {#hansen-eq-27-5}
+$$
+\ell_n(\gamma,\nu)
+=\sum_{Y_i=0}\log\Phi(-X_i'\gamma)
++\sum_{Y_i>0}\log\!\left(\frac{\nu}{\sqrt{2\pi}}\right)
+-\frac12\sum_{Y_i>0}(Y_i\nu-X_i'\gamma)^2.
+\tag{27.5}
+$$
+:::
+
+第三项是负二次型，第二项 $\log\nu$ 凹；第一项因 $\lambda'(u)<0$ 也凹，所以目标在 $(\gamma,\nu)$ 中全局凹。估计后恢复 $\hat\sigma=1/\hat\nu$、$\hat\beta=\hat\gamma/\hat\nu$，其协方差用 delta method 转换。还应检查下界、删失比例、条件正态/同方差、极端预测和是否把“真实零”误当测量删失。
+
+## Tobit 回归中的识别（Identification in Tobit Regression）
+
+先考虑 $Y^*=m(X)+e$、$Y=\max(Y^*,0)$，$e\perp X$，但 $m$ 和误差 CDF $F$ 都未知。观察到的删失概率是 $F\{-m(x)\}$。若 $m(X)$ 有全实线支撑，就存在删失概率趋近零的区域，那里近似观察到完整误差分布；识别 $F$ 后，可由全局删失概率反推出 $m(x)$。因此 normal 不是原则上必需，但误差独立与足够支撑承担关键识别工作。
+
+若 $m(X)$ 有上界 $\bar m$ 且 $F(-\bar m)>0$，误差分布在从未被观察的左尾可任意改变，其均值和位置不识别，因而 $m(x)$ 截距也不识别。所谓 identification at infinity 正是借 $X$ 的极端支撑寻找几乎不删失的子总体；有限样本即使理论支撑无界，尾部观测稀少也可能使估计很脆弱。
+
+Powell 改以条件分位数：若 $Q_\tau(e_\tau\mid X)=0$，则单调变换的分位数等变性给
+
+$$Q_\tau(Y\mid X=x)=\max\{q_\tau(x),0\}.$$
+
+只要 $q_\tau(x)>0$，潜在 $\tau$ 分位数等于观察分位数，因而无需误差独立、同方差或已知分布。若该 $x$ 处删失比例不低于 $\tau$，观察到的 $\tau$ 分位数停在 0，潜在值在 0 下方的具体位置不识别。这是“分位数对删失更稳健”的准确边界，而不是任何分位点在任何 $x$ 上都可恢复。
+
+## CLAD 与 CQR 估计量（CLAD and CQR Estimators）
+
+中位模型设 $\operatorname{med}(e\mid X)=0$、$Y=\max(X'\beta+e,0)$，所以 $\operatorname{med}(Y\mid X)=\max(X'\beta,0)$。censored least absolute deviations（CLAD）估计量为
+
+$$
+\hat\beta_{\mathrm{CLAD}}=arg\min_\beta
+\frac1n\sum_{i=1}^n\left|Y_i-\max(X_i'\beta,0)\right|.
+$$
+
+一般 $\tau$ 分位数使用第 24 章 check loss：
+
+$$
+\hat\beta_{\mathrm{CQR}}(\tau)=\arg\min_\beta
+\frac1n\sum_{i=1}^n\rho_\tau\{Y_i-\max(X_i'\beta,0)\}.
+$$
+
+相对 Tobit，它们不要求正态或同方差；相对普通 LAD/QR，目标因内部的 $\max$ 一般不全局凸，且导数分段不连续。数值优化要用多初值、报告最小目标值并检查解是否稳定，不能把软件一次收敛当作全局解证明。
+
+识别只来自 $X'\beta>0$、潜在分位数越过删失点的区域。该区域必须有正概率，且其中回归量设计矩阵满秩；若某变量只在高度删失区域变化，它的系数无法靠其他区域“借来”识别。CLAD/CQR 的渐近正态理论因此比普通 QR 多一层未删失子总体的支撑和秩条件。
+
+## 删失回归示例（Illustrating Censored Regression）
+
+原书重访菲律宾 8,684 户的非政府转移收入，以 5 个结点的收入线性样条加 15 个控制变量；因变量把国内、国外和实物转移相加，约 18% 为零。这个比例已足以使忽略删失的潜在回归解释受到明显影响。
+
+OLS、Tobit、LAD、CLAD 对“低收入段斜率接近 $-1$、约 20,000 比索处出现断点、高收入段趋平”的形状结论较一致，但水平不同。LAD/CLAD 低于均值模型部分来自高度右偏：无条件均值约 7,700，中位数约 1,200；Tobit 也比 OLS 低则反映删失校正。由于斜率为负，收入越高删失概率越大，OLS 观察均值相对潜在均值的正向偏移也随收入增加。
+
+原书偏好 CLAD，是因为它同时允许删失并对非正态稳健。复现时仍应分别说明：四条曲线估计的目标（均值或中位数）不同，控制变量固定在样本均值只是作图约定，断点是否由预定样条结点驱动，以及标准误是否覆盖结点选择。仅因曲线形状相近不能宣布四种模型互相验证。
+
+## 样本选择偏误（Sample Selection Bias）
+
+设总体结果 $Y=X'\beta+e$ 且 $E(e\mid X)=0$，但只观察 $S=1$ 的单位。所见条件均值为
+
+$$E(Y\mid X,S=1)=X'\beta+E(e\mid X,S=1).$$
+
+选择本身不必导致偏误；关键是选择后误差均值是否仍为零。例如按已观察的 $X_1>0$ 抽样，在条件均值正确时 OLS 可保持一致；按 $Y>0$ 抽样却直接利用含 $e$ 的结果，通常内生。
+
+若 $S=1\{X'\gamma+u>0\}$，把 $e$ 对 $u$ 投影为 $e=\rho u+\varepsilon$，且误差与 $X$ 独立、$u$ 与 $\varepsilon$ 独立，则
+
+$$E(Y\mid X,S=1)=X'\beta+\rho E(u\mid u>-X'\gamma).$$
+
+$u\sim N(0,1)$ 时截断正态均值是 $\lambda(X'\gamma)$，从而
+
+::: {#hansen-eq-27-6}
+$$
+E(Y\mid X,S=1)=X'\beta+\rho\lambda(X'\gamma).
+\tag{27.6}
+$$
+:::
+
+直接在选中样本回归 $Y$ 对 $X$，等于遗漏了与 $X$ 一般相关的非线性项。$\rho=0$ 时选择误差与结果误差不相关，选择对斜率无偏；若 $X'\gamma$ 只是常数，校正项也只是截距位移。一般情况下选择既可能压平也可能加陡回归函数，不能照搬删失下的衰减直觉。
+
+工资只对就业者可见、自愿培训参与、调查不回应和自愿评分都可产生选择，但“可能”不等于可从已选择样本识别。若完全没有未选择者的 $S,X,Z$ 信息，也没有可信设计或工具，数据本身无法告诉我们缺失结果的分布，所谓校正会主要由假设推动。
+
+## Heckman 模型（Heckman’s Model）
+
+Heckman 参数模型需要完整样本的选择指标和协变量：
+
+$$
+\begin{aligned}
+Y^*&=X'\beta+e,\\
+S^*&=Z'\gamma+u,\qquad S=1\{S^*>0\},\\
+Y&=Y^*\text{ if }S=1,\quad Y\text{ missing if }S=0,\\
+\begin{pmatrix}e\\u\end{pmatrix}
+&\sim N\!\left(0,
+\begin{bmatrix}\sigma^2&\sigma_{21}\\\sigma_{21}&1\end{bmatrix}\right).
+\end{aligned}
+$$
+
+选择潜变量尺度不可见，所以固定 $\operatorname{Var}(u)=1$。结果误差与选择误差的协方差 $\sigma_{21}$ 把未观测能力等共同因素传到所见工资。截断正态计算给
+
+::: {#hansen-eq-27-7}
+$$
+E(Y\mid X,Z,S=1)=X'\beta+\sigma_{21}\lambda(Z'\gamma).
+\tag{27.7}
+$$
+:::
+
+Heckman 两步法应完整执行：先在**全样本**以 probit 回归 $S$ 对 $Z$ 得 $\hat\gamma$；再对每个被选择单位构造 $\hat\lambda_i=\phi(Z_i'\hat\gamma)/\Phi(Z_i'\hat\gamma)$；最后只在 $S_i=1$ 子样本回归 $Y_i$ 对 $(X_i,\hat\lambda_i)$，得到 $\hat\beta$ 与 $\hat\sigma_{21}$。$\hat\lambda$ 是 generated regressor，普通第二步 OLS 标准误漏掉第一步不确定性；须用 Heckman 两步方差、堆叠矩条件 sandwich，或对整个两步流程 bootstrap。
+
+模型可仅凭联合正态的非线性函数形式在 $Z=X$ 时形式识别，但这类识别通常脆弱。最好让 $Z$ 至少包含一个强且可信的排除变量：它影响是否被选择，却不在控制 $X$ 后直接影响潜在结果。否则 $X$ 与 $\lambda(X'\hat\gamma)$ 高度共线，$\hat\beta$ 对正态尾部规格极敏感。
+
+排除变量的论证要同时覆盖 relevance 与 exclusion。例如“幼儿数量”可能强烈影响母亲是否就业，但也可能通过工作经历、职业选择或家庭生产直接关联潜在工资，不能只凭第一阶段显著就宣布有效。还要画选择 propensity 的分布：若某类 $X$ 几乎从不被选中，其潜在结果主要靠正态外推。Heckman 校正与缺失数据中的 MAR/IPW 也不等价；前者允许选择依赖与结果误差相关的未观测因素，但以联合分布和排除限制约束这种关系，后者通常要求给定观测协变量后选择与潜在结果独立。
+
+联合 MLE 对 $S=0$ 使用 $1-\Phi(Z'\gamma)$，对 $S=1$ 使用“结果 normal density × 给定结果仍被选择的条件概率”，同时估计 $\beta,\gamma,\sigma^2,\sigma_{21}$。正确联合正态下 MLE 更有效率，错设时也可能比两步更脆弱。$\sigma_{21}=0$ 的检验可诊断该参数模型内的外生选择，却不能验证排除限制、联合正态或所有缺失机制。
+
+## 非参数选择（Nonparametric Selection）
+
+放松联合正态，令 $Y^*=m(X)+e$、$S=1\{g(Z)+u>0\}$，并假设 $(e,u)\perp(X,Z)$。选择只依 $g(Z)$ 与 $u$ 的排序，故二者尺度不能分开；可把 $u$ 的分布规范成 standard normal，以 $p(Z)=P(S=1\mid Z)=\Phi\{g(Z)\}$ 识别单指标。
+
+把 $m,g$ 用适当 series 近似为 $X'\beta,Z'\gamma$ 后，选中样本均值可写成三种等价形式：
+
+::: {#hansen-eq-27-8}
+$$
+E(Y\mid X,Z,S=1)=X'\beta+h_1(Z'\gamma),
+\tag{27.8}
+$$
+:::
+
+::: {#hansen-eq-27-9}
+$$
+E(Y\mid X,Z,S=1)=X'\beta+h_2\{p(Z)\},
+\tag{27.9}
+$$
+:::
+
+::: {#hansen-eq-27-10}
+$$
+E(Y\mid X,Z,S=1)=X'\beta+h_3\{\lambda(Z'\gamma)\}.
+\tag{27.10}
+$$
+:::
+
+其中 $h_1(v)=E(e\mid u>-v)$，$h_2$、$h_3$ 只是分别以 propensity score 或 inverse Mills ratio 重参数化同一个选择校正函数。估计先以灵活二元模型得 $\hat\gamma$ 或 $\hat p$，再在选中样本回归 $Y$ 对 $X$ 与相应一维指标的多项式/样条。以 $\hat\lambda$ 展开在接近正态时低阶就较准确；以 $\hat p$ 展开解释更直接。
+
+灵活性没有消除识别问题：若 $Z$ 没有排除于 $X$ 的相关变量，$m(X)$ 与未知 $h(\cdot)$ 很难分开；propensity score 接近 0 或 1 时又缺乏共同支撑。阶数选择应平衡校正函数偏差和方差。标准误必须覆盖第一步以及阶数/带宽的既定规则；bootstrap 时要从第一步重估，而不能把 $\hat p$ 固定后只重抽第二步。
+
+## 面板数据（Panel Data）
+
+panel Tobit 为 $Y_{it}^*=X_{it}'\beta+u_i+e_{it}$、$Y_{it}=\max(Y_{it}^*,0)$。随机效应 Tobit 以联合正态并限制 $u_i$ 与回归量关系换取简单 likelihood；若个体效应与 $X_{it}$ 相关，普通 RE 与横截面 Tobit 一样会错设。
+
+固定效应不能用 within transformation 消掉：$\max(X_{it}'\beta+u_i+e_{it},0)$ 的时间均值不是把 $u_i$ 线性分离后的式子。Honoré 在 $T=2$ 下利用两期潜在结果关于特定 45 度线的对称性，构造不依赖 $u_i$ 的矩条件并用 GMM；它避免为每个个体估计一个非线性固定效应，但依赖误差的独立/对称结构。
+
+面板选择模型还含 $S_{it}^*=Z_{it}'\gamma+\eta_i+v_{it}$。Kyriazidou 的思路是在两期都被选择的个体中，比较选择指数近似相同的两期：当 $Z_{i1}'\gamma\approx Z_{i2}'\gamma$，两期选择校正项近似抵消，再用核权重的差分最小二乘估 $\beta$。实际步骤包含第一步估 $\gamma$、只留 $S_{i1}=S_{i2}=1$、以 $(Z_{i1}-Z_{i2})'\hat\gamma$ 构造核权重；带宽与 generated index 都要进入推断。
+
+这两类面板方法都不是把横截面命令加上个体虚拟变量。固定 $T$ 时直接 Tobit FE MLE 会遇到 incidental-parameter bias；只在两期都为正的观测上做普通差分又会因“两个时期都越界”的内生筛选而留下选择偏误。Honoré 和 Kyriazidou 分别用对称矩条件与相同选择指数加权处理这些非线性障碍，代价是更强的误差结构、支撑条件和较慢的非参数收敛。
+
+## 习题阅读指南（Exercises）
+
+27.1–27.5 训练删失/截断正态矩与条件均值估计。NLLS 应明确把 [式 (27.2)](#hansen-eq-27-2) 或 [式 (27.3)](#hansen-eq-27-3) 当回归函数，并约束 $\sigma>0$；上端删失要重新写事件方向，不能只把下界改个符号。按 $X_1>0$ 选样与按 $Y>0$ 选样的对比，应从 $E(e\mid X,S=1)$ 是否为零作答。
+
+27.6–27.8 要重写异方差 Tobit likelihood，并从联合正态截断均值推出 [式 (27.7)](#hansen-eq-27-7)。每个零值贡献其自身 $X$ 下的区间概率，正值贡献其异方差 normal density；$\sigma^2(X)=\gamma_0+X^2\gamma_1$ 必须保持为正。
+
+27.9 的 CHJ2004 练习应把 `tinkind`、`income` 除以 1,000，按题意造折点变量，报告零值比例，再以相同样本/规格比较 OLS、删零 OLS、Tobit、CLAD。解释时区分均值与中位数、潜在与观察效应，不只比较显著性。
+
+27.10 的工资 cap 是上端删失：先用未 cap 的 log wage 建基准，再分别估 cap 后 OLS、删去 cap 样本、上端 Tobit 和 CLAD；若不知道 cap，尾部压平会被误读为教育回报递减。必须记录 $wage=earnings/(hours\times weeks)$ 中零工时/周数和非正工资的处理。
+
+27.11 的 DDK2011 先按全样本均值/方差标准化总分，构造下端 0 删失，再比较完整分数、删失分数和删零样本 OLS；题目要求按学校 cluster，因为处理与误差可能在学校内相关。删失是人为构造，故原始完整回归提供可观察 benchmark，正适合展示两种朴素处理偏向哪个对象。
+
+::: {.callout-important title="章末自检"}
+1. 删失与截断分别保留哪些单位？为什么删去边界值不会恢复随机样本？
+2. 从截断正态均值怎样逐步得到 [式 (27.2)](#hansen-eq-27-2) 和 [式 (27.3)](#hansen-eq-27-3)？
+3. Tobit 的 $\beta_r$、全样本观察均值效应和正值条件均值效应为什么不是同一个量？
+4. [式 (27.4)](#hansen-eq-27-4) 依赖哪些特殊条件，为何不能当通用偏误校正？
+5. Tobit likelihood 中零值和正值分别贡献概率还是密度？
+6. CLAD/CQR 放松了哪些 Tobit 假设，又需要怎样的未删失支撑和秩条件？
+7. 选择进入样本何时不导致斜率偏误？[式 (27.6)](#hansen-eq-27-6) 如何把问题写成遗漏变量？
+8. Heckman 两步法为何最好有排除变量，为什么第二步普通 OLS 标准误不对？
+9. 非参数选择的三种校正指标有何关系？bootstrap 时为什么必须重估第一步？
+:::
