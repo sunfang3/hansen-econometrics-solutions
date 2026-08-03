@@ -1,0 +1,610 @@
+---
+title: "非平稳时间序列"
+subtitle: "从函数型极限定理到单位根、协整与 VECM"
+hansen-chapter: "Chapter 16"
+book-pages: "547–596"
+pdf-pages: "567–616"
+status: "完整初稿"
+---
+
+::: {.book-map}
+**原书位置与本章路线**　对应 Hansen Chapter 16（书内 pp. 547–596；PDF pp. 567–616）。16.1–16.8先建立 partial-sum process、Brownian motion、Beveridge–Nelson 分解、FCLT 与 stochastic integral；16.9–16.14据此推导 DF/ADF 与 KPSS 的非标准分布；16.15–16.21转向 spurious regression、nonstationary VAR、cointegration、VECM 与 Johansen trace test；16.22–16.23补足关键证明和习题入口。
+:::
+
+::: {.bridge}
+**本科桥接**　本科教材常把“单位根就差分”“协整就做误差修正”当作操作规则。本章要回答这些规则背后的四个问题：为何随机游走按 $n^{-1/2}$ 缩放后不是正态随机变量而是一整条 Brownian path；为何单位根系数以 $n$ 而非 $\sqrt n$ 速度收敛；为何普通 $t$ 临界值失效；以及为何若 $\beta'Y_t$ 平稳，levels VAR 必然能改写为含 $\alpha\beta'Y_{t-1}$ 的 VECM。
+:::
+
+## 引言（Introduction）
+
+第 14 章的平稳理论要求联合分布或至少一二阶矩不随日历时间漂移。随机游走 $Y_t=Y_{t-1}+e_t$ 不满足这一点：若 $Y_0=0$ 且 $e_t$ 方差为 $\sigma^2$，则 $\operatorname{var}(Y_t)=t\sigma^2$ 随 $t$ 增长。宏观总量、价格、汇率和利率却常呈现这种高度持久、长时间游走的形态。
+
+非平稳不是一个可忽略的小修正。它同时改变样本矩的数量级、估计量的收敛速度和检验统计量的极限分布。因此本章每次推导都先做“阶数核对”：水平 $Y_t=O_p(\sqrt n)$，平方和 $\sum Y_{t-1}^2=O_p(n^2)$，水平乘 innovation 的和 $\sum Y_{t-1}e_t=O_p(n)$。若仍机械套用平稳回归的 $O_p(n)$、$O_p(\sqrt n)$ 阶数，就会得到错误标准误和临界值。
+
+## 部分和过程与函数收敛（Partial Sum Process and Functional Convergence）
+
+令 $e_t\in\mathbb R^m$ 为相对于 $\mathcal F_t$ 的平稳遍历 martingale difference sequence（MDS），$E(e_te_t')=\Sigma<\infty$。随机游走可递推成 $Y_t=Y_0+S_t$，其中 $S_t=\sum_{i=1}^t e_i$。把离散时间写成样本比例 $r\in[0,1]$，定义
+
+$$
+S_n(r)=n^{-1/2}S_{\lfloor nr\rfloor}
+=n^{-1/2}\sum_{t=1}^{\lfloor nr\rfloor}e_t.
+$$
+
+固定一个 $r$，MDS CLT 只给出 $S_n(r)\to_dN(0,r\Sigma)$；单位根统计量却同时使用所有 $r$，所以需要在函数空间中证明整条随机函数 $S_n(\cdot)$ 收敛。uniform metric 是 $\rho(f,g)=\sup_{0\le r\le1}\|f(r)-g(r)\|$。函数型 CLT 的两块条件是：任意有限组时间点的 finite-dimensional distributions 收敛；过程 asymptotically equicontinuous，使越来越细的局部跳动不会逃逸。
+
+极限 $B(r)$ 是 covariance matrix 为 $\Sigma$ 的 vector Brownian motion：$B(0)=0$，$B(r)\sim N(0,r\Sigma)$，不相交区间的 increments 独立。若 $W$ 是 standard Brownian motion，则 $B=\Sigma^{1/2}W$。Hansen 定理 16.1 给出 $S_n\Rightarrow B$；这里的箭头是函数弱收敛，不只是“每一期近似正态”。由于 $n^{-1/2}Y_0=o_p(1)$，也有 $n^{-1/2}Y_{\lfloor nr\rfloor}\Rightarrow B(r)$。
+
+这里容易漏掉一个关键层次。普通 CLT 只允许计算某个固定 $r$ 下的概率；而后文的 $\sup_rS_n(r)$、$\int S_n(r)^2dr$、去趋势 residual path 都是整条函数的映射。只有函数收敛配合相应映射在 uniform metric 下连续，continuous mapping theorem 才能把 $S_n\Rightarrow B$ 传递给这些统计量。随机积分又不是普通连续映射，因而第 16.8 节还需专门定理。把三者混称为“用 CLT”会掩盖真正需要验证的条件。
+
+## Beveridge–Nelson 分解（Beveridge-Nelson Decomposition）
+
+一般 unit-root process 的差分并非白噪声，而有 Wold representation $\Delta Y_t=\Theta(L)e_t$。Hansen 的 Assumption 16.1 要求无 deterministic component、均值为零、有限 covariance，并要求 Wold 尾和满足
+
+::: {#hansen-eq-16-1}
+$$
+\sum_{j=0}^{\infty}
+\left\|\sum_{\ell=j+1}^{\infty}\Theta_\ell\right\|<\infty.
+\tag{16.1}
+$$
+:::
+
+这比 $\sum\|\Theta_j\|<\infty$ 更强，其作用是让下面的 transitory component 本身收敛。把 lag polynomial 分解为
+
+::: {#hansen-eq-16-2}
+$$
+\Theta(z)=\Theta(1)+(1-z)\Theta^*(z),
+\tag{16.2}
+$$
+:::
+
+其中
+
+::: {#hansen-eq-16-3}
+$$
+\Theta^*(z)=\sum_{j=0}^{\infty}\Theta_j^*z^j,
+\tag{16.3}
+$$
+:::
+
+而尾和系数为
+
+::: {#hansen-eq-16-4}
+$$
+\Theta_j^*=-\sum_{\ell=j+1}^{\infty}\Theta_\ell.
+\tag{16.4}
+$$
+:::
+
+令 $\xi_t=\Theta(1)e_t$、$U_t=\Theta^*(L)e_t$，把 [式 (16.2)](#hansen-eq-16-2) 代回可得 $\Delta Y_t=\xi_t+U_t-U_{t-1}$；再从 1 累加到 $t$，中间的 $U_i$ telescoping，得到
+
+$$
+Y_t=\underbrace{\sum_{i=1}^t\xi_i}_{S_t\text{：永久成分}}
++\underbrace{U_t}_{\text{暂时成分}}+\underbrace{(Y_0-U_0)}_{V_0}.
+$$
+
+$S_t$ 接收的冲击永不消失，$U_t$ 平稳且只造成暂时偏离。两者由同一 $e_t$ 驱动，通常相关；所以 BN 分解的“永久/暂时”不是两个独立 structural shocks。以 $\Delta Y_t=e_t+\Theta_1e_{t-1}$ 为例，$\Delta S_t=(I+\Theta_1)e_t$、$U_t=-\Theta_1e_t$，相关性一眼可见。
+
+## 函数型中心极限定理（Functional CLT）
+
+BN 分解说明，按 $\sqrt n$ 缩放时平稳的 $U_{\lfloor nr\rfloor}$ 与固定初值 $V_0$ 都消失，只有永久部分留下。因此 $Z_n(r)=n^{-1/2}Y_{\lfloor nr\rfloor}\Rightarrow B(r)$，而 $B$ 的 covariance 是差分的 long-run covariance。对一般 mixing 差分，Hansen 定理 16.4 写成
+
+::: {#hansen-eq-16-5}
+$$
+\Omega=
+\sum_{\ell=-\infty}^{\infty}
+E\!\left(\Delta Y_t\Delta Y_{t-\ell}'\right).
+\tag{16.5}
+$$
+:::
+
+可分解为 $\Omega=\Sigma+\Lambda+\Lambda'$，其中 $\Sigma=\operatorname{var}(\Delta Y_t)$，$\Lambda=\sum_{\ell\ge1}E(\Delta Y_t\Delta Y_{t-\ell}')$。注意 $\Lambda$ 不必对称。若 $\Delta Y_t=\Theta(L)e_t$ 且 $e_t$ 为 MDS，则 $\Omega=\Theta(1)\Sigma_e\Theta(1)'$。
+
+逻辑链是：先对差分应用 FCLT；再由 BN 分解证明 level 与 partial sum 的 uniform distance 为 $o_p(1)$；最后用 Slutsky 得到 level 的函数极限。不能只凭“$Y_t$ 是累加和”略过 serial correlation，因为它恰好通过 $\Omega$ 改变 Brownian scale。
+
+例如 $\Delta Y_t=\phi\Delta Y_{t-1}+e_t$、$|\phi|<1$ 时，$\Theta(1)=(1-\phi)^{-1}$，所以 $\omega^2=\sigma_e^2/(1-\phi)^2$。当 $\phi$ 接近 1，one-period variance 与 long-run variance 可相差很大。DF-type ratio 中 scale 有时抵消，但凡 statistic 同时涉及另一个过程、HAC normalization 或多变量 rotation，$\Omega$ 都必须正确估计。
+
+## 单整阶数（Orders of Integration）
+
+标量 $Y_t$ 是 $I(0)$，指它 weakly stationary 且 long-run variance 严格为正；$Y_t$ 是 $I(d)$，指 $\Delta^dY_t$ 为 $I(0)$。因此 $I(1)$ 需要一次差分，$I(2)$ 需要两次；$I(-1)$ 则表示已经 over-differenced，例如平稳 $X_t$ 的 $\Delta X_t$ long-run variance 为零。
+
+“平稳”等于 $I(0)$ 还差一个正 long-run variance 条件。若 $Y_t=a(L)e_t$ 平稳，则 $\Delta Y_t=(1-L)a(L)e_t$ 的 transfer function 在 1 处为零，故 long-run variance 为零，不能把它当作普通 $I(0)$。向量过程 full-rank $I(0)$ 要求 $\Omega>0$；若 $\Omega$ 奇异，存在非零 $b$ 使 $b'\Delta Y_t$ 的长期方差为零，这正是协整可能出现的信号。
+
+ARMA 差分模型 $a(L)\Delta Y_t=b(L)e_t$ 在 $a(z)$ invertible 且 $b(1)\ne0$ 时给出 $Y_t\sim I(1)$，其 long-run variance 为 $\sigma^2b(1)^2/a(1)^2$。这一检查比只看“AR 系数似乎接近 1”更精确。
+
+## 均值、局部均值与趋势（Means, Local Means, and Trends）
+
+对 $I(1)$ 序列，sample mean 的数量级不是 $O_p(1)$，而是 $O_p(\sqrt n)$：
+
+$$
+n^{-1/2}\bar Y
+=\int_0^1 Z_n(r)\,dr
+\Rightarrow\int_0^1B(r)\,dr.
+$$
+
+前半样本与后半样本的缩放均值分别收敛到 $2\int_0^{1/2}B$ 和 $2\int_{1/2}^1B$，二者是不同随机变量。于是“分样本均值不稳定”不是小样本噪声，而是 unit-root path 的固有特征；把 $\bar Y$ 当作固定 population mean 的一致估计会失去含义。
+
+把随机游走对 $(1,t)$ 做 OLS 也会拟合出很显眼的 trend。令 $X(r)=(1,r)'$、$D_n=\operatorname{diag}(1,n)$，则
+
+$$
+D_nn^{-1/2}\hat\beta
+\Rightarrow
+\left(\int_0^1XX'\right)^{-1}\int_0^1XB.
+$$
+
+右侧完全由随机 Brownian path 决定，不能解释为真实 deterministic growth。图形上的高 $R^2$ 和平滑 trend 因而不构成趋势识别证据。
+
+## 去均值与去趋势（Demeaning and Detrending）
+
+去均值后的 $Y_t^*=Y_t-\bar Y$ 满足
+
+$$
+n^{-1/2}Y_{\lfloor nr\rfloor}^*
+\Rightarrow B^*(r)
+=B(r)-\int_0^1B(s)\,ds.
+$$
+
+线性去趋势是把 $B(r)$ 对 $X(r)=(1,r)'$ 投影后取残差：
+
+$$
+B^{**}(r)=B(r)-X(r)'
+\left(\int_0^1XX'\right)^{-1}\int_0^1XB.
+$$
+
+用首尾差分估计趋势得到的是 Brownian bridge $V(r)=B(r)-rB(1)$，满足 $V(0)=V(1)=0$。$B^*$、$B^{**}$ 与 $V$ 不是同一过程。平稳回归中估计几个 deterministic coefficients 通常是一阶无关的；单位根环境中它改变整条极限路径，因此也改变 DF、ADF、KPSS 和协整检验的临界值。实证报告必须同时写明“无常数 / 有常数 / 有常数和趋势”，不能先任意 detrend 再使用另一种 case 的临界值。
+
+## 随机积分（Stochastic Integrals）
+
+回归 numerator 含 $\sum X_te_{t+1}$。当 $X_t$ 为 integrated regressor 时，它不是平稳 score 的普通 CLT，而收敛到 stochastic integral。若 $X_n(r)=D_n^{-1}X_{\lfloor nr\rfloor}\Rightarrow X(r)$ 且 $S_n\Rightarrow B$，则在 Hansen 定理 16.6 的 MDS 和 adaptedness 条件下
+
+$$
+\frac1{\sqrt n}D_n^{-1}\sum_{t=0}^{n-1}X_te_{t+1}'
+\Rightarrow\int_0^1X(r)\,dB(r)'.
+$$
+
+左端取 $X_t=S_t$ 时得到 $n^{-1}\sum S_te_{t+1}'\Rightarrow\int B\,dB'$。积分使用左端点，因此 $X_t\in\mathcal F_t$ 而未来 innovation $e_{t+1}$ 条件均值为零；这正是 discrete score 与 Itô integral 对齐的原因。
+
+若 increment $Z_t$ serially correlated，Hansen 定理 16.7 给出 $n^{-1}\sum S_tZ_{t+1}'\Rightarrow\int B,dB'+\Lambda$。额外的 one-sided long-run covariance $\Lambda$ 是 contemporaneous/endogeneity correction；忽略它会把协整回归的极限中心写错。
+
+## AR(1) 的估计（Estimation of an AR(1)）
+
+在 $Y_t=\alpha Y_{t-1}+e_t$ 且 $\alpha=1$ 下，
+
+$$
+n(\hat\alpha-1)
+=\frac{n^{-1}\sum Y_{t-1}e_t}{n^{-2}\sum Y_{t-1}^2}
+\Rightarrow
+\frac{\int_0^1W,dW}{\int_0^1W^2}.
+$$
+
+分母由 CMT 得到 $\sigma^2\int W^2$，分子由 stochastic-integral theorem 得到 $\sigma^2\int W,dW$，$\sigma^2$ 消去。Itô identity 是
+
+$$
+\int_0^1W,dW=\frac12\{W(1)^2-1\}.
+$$
+
+普通微积分会漏掉 $-1/2$，因为 Brownian path nowhere differentiable 且 quadratic variation 为 1。于是 $\hat\alpha$ 以 $n^{-1}$ 的 superconsistent rate 收敛，却有偏斜、非 normal 的 Dickey–Fuller coefficient distribution。“收敛更快”不等于“可使用常规正态推断”。
+
+经典 $t$ ratio 也收敛到
+
+$$
+T\Rightarrow\frac{\int_0^1W,dW}{(\int_0^1W^2)^{1/2}},
+$$
+
+而不是 $N(0,1)$。原因不是 standard error 计算粗糙，而是 numerator 与 denominator 都由同一条随机 path 的 functionals 构成。
+
+## 带截距的 AR(1) 估计（AR(1) Estimation with an Intercept）
+
+估计 $Y_t=\mu+\alpha Y_{t-1}+e_t$ 时，FWL 告诉我们 $\hat\alpha$ 等于用 demeaned $Y_{t-1}$ 的 slope，因此 $W$ 被 $W^*$ 取代：
+
+$$
+n(\hat\alpha-1)\Rightarrow
+\frac{\int W^*dW}{\int W^{*2}},
+\qquad
+T\Rightarrow\frac{\int W^*dW}{(\int W^{*2})^{1/2}}.
+$$
+
+若同时估计线性 trend，则换成 $W^{**}$。这一步解释了为什么三套 DF critical values 差异很大：deterministic regressors 不是只“损失一两个自由度”，而是先把 Brownian path 投影到不同函数空间，再计算非线性比率。
+
+应用时应先由 alternative 决定 deterministic specification。若备择是围绕常数均值平稳，放 intercept；若备择是 trend-stationary，放 intercept 和 trend。不能看完图或 test result 后反复增删趋势并只报告最容易拒绝的版本。
+
+## 单整过程与平稳过程的样本协方差（Sample Covariances of Integrated and Stationary Processes）
+
+Hansen 定理 16.12 处理 $X_t$ 非平稳、$u_t$ 平稳均值零时的交叉项。若 $D_n^{-1}X_{\lfloor nr\rfloor}\Rightarrow X(r)$ 且极限路径连续，而 $u_t$ 平稳遍历、$E|u_t|<\infty$，则
+
+$$
+C_n=\frac1nD_n^{-1}\sum_{t=1}^nX_tu_t\to_p0.
+$$
+
+证明不能直接把 $X_t$ 当常数应用 LLN。正确办法是把 $[0,1]$ 分成有限小区间：每块用左端 $X$ 乘该块 $u_t$ 平均，遍历定理使后者趋零；块内 $X$ 的偏差由 functional convergence 的 stochastic equicontinuity 控制。这个结果稍后使 unit-root regressor 与 stationary lag differences 的交叉矩在适当尺度下消失，从而形成 mixed-rate block diagonal limit。
+
+## 含单位根的 AR($p$)（AR(p) Models with a Unit Root）
+
+若 $a(L)\Delta Y_t=e_t$，其中 $a(z)$ 为 invertible 的 $(p-1)$ 阶 polynomial，则 levels representation 是
+
+::: {#hansen-eq-16-6}
+$$
+Y_t=a_1Y_{t-1}+\cdots+a_pY_{t-p}+e_t,
+\qquad \sum_{j=1}^pa_j=1.
+\tag{16.6}
+$$
+:::
+
+通过线性变换把 regressors 分成一个 level 和 $p-1$ 个 stationary differences：
+
+::: {#hansen-eq-16-7}
+$$
+Y_t=\rho Y_{t-1}+\beta'X_{t-1}+e_t,
+\qquad
+X_{t-1}=(\Delta Y_{t-1},\ldots,\Delta Y_{t-p+1})'.
+\tag{16.7}
+$$
+:::
+
+其中 $\rho=\sum_ja_j=1$。level coefficient 用 $n$ 缩放，difference coefficients 用 $\sqrt n$ 缩放；定理 16.13 的 joint limit 是
+
+::: {#hansen-eq-16-8}
+$$
+\begin{pmatrix}
+n(\hat\rho-1)\\[2pt]
+\sqrt n(\hat\beta-\beta)
+\end{pmatrix}
+\Rightarrow
+\begin{pmatrix}
+a(1)\dfrac{\int_0^1W\,dW}{\int_0^1W^2}\\[10pt]
+N(0,V)
+\end{pmatrix},
+\qquad V=Q^{-1}\Omega Q^{-1}.
+\tag{16.8}
+$$
+:::
+
+回到原 AR coefficients $a=(a_1,\ldots,a_p)'$，$n^{-1}$ 的 unit-root direction 在 $\sqrt n$ 尺度下消失，得到 singular normal limit
+
+::: {#hansen-eq-16-9}
+$$
+\sqrt n(\hat a-a)\Rightarrow N(0,GVG').
+\tag{16.9}
+$$
+:::
+
+$GVG'$ 的 rank 为 $p-1$，所以 [式 (16.9)](#hansen-eq-16-9) 不能描述 coefficient sum 的一阶行为；检验 $\sum a_j=1$ 必须回到 [式 (16.8)](#hansen-eq-16-8)。这也解释一个看似矛盾的事实：许多个别 AR coefficient 的常规 inference 仍近似有效，而 unit-root restriction 的 inference 完全非标准。
+
+## 单位根检验（Testing for a Unit Root）
+
+ADF 检验 $H_0:\rho=1$ 对 $H_1:\rho<1$，在 [式 (16.7)](#hansen-eq-16-7) 中计算 $\operatorname{ADF}=(\hat\rho-1)/s(\hat\rho)$。拒绝域在左尾。定理 16.14 的极限可统一写为
+
+$$
+\operatorname{ADF}\Rightarrow
+\frac{\int_0^1U,dW}{(\int_0^1U^2)^{1/2}},
+$$
+
+其中 $U$ 随 deterministic specification 改变：无 deterministic terms 时 $U=W$；带 intercept 时是适合 ADF regression 的 demeaned/projection-adjusted Brownian process；带 intercept 与 trend 时再投影掉 $(1,r)$。因此必须使用对应 case 的 DF 临界值，绝不能用 standard normal 或普通 $t$ 临界值。
+
+lag order 太小会留下 serial correlation，使 ADF regression misspecified；太大会耗费 precision、降低 power。可用带相同 deterministic terms 的 AIC 选 $p$，并清楚区分软件中的 difference lags $q=p-1$ 与 levels AR order $p$。
+
+最重要的语言纪律是：不拒绝 $H_0$ 只能说“数据未提供足够证据反对单位根”，不能说“证明该序列就是单位根”。ADF 也不应机械充当 levels/differences selector。应先依据经济机制和研究 estimand 提出 stationarity/unit-root baseline，再让 ADF 成为诊断证据；同时报告 coefficient estimate、lag、deterministic terms、statistic、所用 critical-value case 与 p-value。
+
+有限样本 power 还受 local-to-unity alternatives 影响。若真实 $\rho_n=1-c/n$，它随样本量一起靠近 1，序列既不是固定 $|\rho|<1$ 的常规平稳情形，也不是精确单位根；ADF 的极限会依赖 $c$，在 $c$ 小时很难拒绝。这说明“点估计 0.98”和“不拒绝”不能单独决定数据变换。还应查看 confidence set、样本长度、是否有 break，以及 levels specification 所针对的经济问题。
+
+## KPSS 平稳性检验（KPSS Stationarity Test）
+
+KPSS 把假设方向反过来：local-level model $Y_t=\mu+\theta S_t+e_t$、$S_t=S_{t-1}+u_t$ 中检验 $H_0:\operatorname{var}(u_t)=0$（stationary）对 $H_1>0$（unit root）。用 null residual $\hat e_t$ 的 cumulative sums 构造
+
+$$
+\operatorname{KPSS}_1=
+\frac{1}{n^2\hat\omega^2}
+\sum_{i=1}^n\left(\sum_{t=1}^i\hat e_t\right)^2,
+$$
+
+$\hat\omega^2$ 是 Bartlett/Newey–West long-run variance。若 null 允许 linear trend，则先对 $(1,t)$ 回归取 residual，得到 $\operatorname{KPSS}_2$。两者在大值时拒绝，极限分别是 Brownian bridge 和 second-level Brownian bridge 的平方积分。
+
+truncation $M$ 至关重要：$M$ 太小，在 highly persistent stationary process 下低估 long-run variance 而过拒绝；$M$ 太大，在 unit-root alternative 下可能把 denominator 撑大、削弱 power。Hansen 建议用诸如 $M\approx3n^{1/3}$ 的 reference rule，而不是在 null 下把趋近 1 的 sample autocorrelation 直接代入 Andrews formula。
+
+联合解读 ADF 与 KPSS 比单独“裁决”更诚实：ADF 拒绝而 KPSS 不拒绝，支持 stationarity；ADF 不拒绝而 KPSS 拒绝，支持 unit root；两者都不拒绝说明信息弱；两者都拒绝提示 structural break、fractional integration、nonlinearity、lag/trend specification 或 size distortion，需要重新建模。
+
+一个可复核的检验表应每行对应一种预先说明的 deterministic specification，列出 ADF 的 levels AR order、difference lags、统计量与 p-value，再列 KPSS 的 kernel、$M$、统计量与临界值。若结果对 lag 或 $M$ 极敏感，应把敏感性本身作为结论，而不是挑选支持先验的一格。检验提供的是关于模型近似的证据，不是对“随机变量本体”的永久分类。
+
+## 伪回归（Spurious Regression）
+
+考虑两个彼此独立的随机游走：
+
+::: {#hansen-eq-16-10}
+$$
+Y_t=Y_{t-1}+e_{1t},
+\tag{16.10}
+$$
+:::
+
+::: {#hansen-eq-16-11}
+$$
+X_t=X_{t-1}+e_{2t}.
+\tag{16.11}
+$$
+:::
+
+尽管 innovations independent，demeaned paths 分别收敛到独立的 $W_1^*,W_2^*$，sample correlation 和 OLS slope 却收敛到非退化 Brownian functionals，而不是 0。例如
+
+$$
+\hat\beta\Rightarrow
+\frac{\int_0^1W_1^*W_2^*}{\int_0^1W_2^{*2}}.
+$$
+
+也就是说增加样本不会让虚假 slope 消失。更糟的是普通 $t$ ratio 要除以 $\sqrt n$ 才有非退化极限，所以未经缩放的 $|t|$ 反而随 $n$ 增大。其根源是静态回归
+
+::: {#hansen-eq-16-12}
+$$
+Y_t=\alpha+\beta X_t+\xi_t
+\tag{16.12}
+$$
+:::
+
+的 error $\xi_t=Y_t$ 自身为 $I(1)$，完全超出 stationary robust/HAC theory。White standard error 无法修复；Newey–West 也只为 stationary score 的 long-run variance 设计。
+
+在这个特定例子中加入 lagged dependent variable 可恢复正确 dynamic specification：
+
+::: {#hansen-eq-16-13}
+$$
+Y_t=\alpha+\beta X_t+\delta Y_{t-1}+e_t.
+\tag{16.13}
+$$
+:::
+
+真值为 $\beta=0,\delta=1$，error 回到 innovation。一般问题不能只靠“总加一个 lag”解决；还要判断 deterministic trend、cointegration 和 sufficient dynamics。诊断顺序应是先画 levels/differences，检查 integration 与 breaks，再决定差分、ECM 或动态 levels model，而不是先相信静态高 $R^2$。
+
+## 非平稳 VAR（NonStationary VARs）
+
+若 $D(L)\Delta Y_t=e_t$ 且 $D(z)$ invertible，levels VAR 可写为
+
+::: {#hansen-eq-16-14}
+$$
+Y_t=A_1Y_{t-1}+\cdots+A_pY_{t-p}+e_t,
+\qquad \sum_{j=1}^pA_j=I_m,
+\tag{16.14}
+$$
+:::
+
+也可写成 mixed form
+
+::: {#hansen-eq-16-15}
+$$
+\Delta Y_t=AY_{t-1}+D_1\Delta Y_{t-1}+\cdots
++D_{p-1}\Delta Y_{t-p+1}+e_t,
+\qquad A=0.
+\tag{16.15}
+$$
+:::
+
+$A\in\mathbb R^{m\times m}$ 的 estimator 以 $n$ 收敛并有 multivariate DF limit；short-run $D_j$ 的 vec estimator 以 $\sqrt n$ 收敛并 asymptotically normal。故 levels VAR 并非遇到 unit root 就所有 inference 都失效：不只落在 long-run sum direction 上的 fixed-horizon coefficients 往往由较慢的 normal component 主导。
+
+两个重要例外必须单列。第一，检验 $\sum A_j=I_m$ 直接命中 unit-root direction，分布非标准。第二，long-run impulse matrix $C=(I_m-\sum A_j)^{-1}$ 在 unit root 处奇异；很长 horizon 的 cumulative IRF 因而有严重 bias、non-normality 和差的 conventional coverage。报告 levels VAR 的 long-horizon IRF 时，应使用适合 persistent systems 的 inference，并做 horizon 与 specification sensitivity。
+
+## 协整（Cointegration）
+
+若 $Y_t\in\mathbb R^m$ 的若干 linear combinations 平稳，而其余方向保留 common stochastic trends，则 $Y_t$ cointegrated。形式上存在 full-rank $[\beta,\beta_\perp]$，使 $\beta'Y_t\in\mathbb R^r$ 与 $\beta_\perp'\Delta Y_t\in\mathbb R^{m-r}$ 都为 $I(0)$。$Z_t=\beta'Y_t$ 是 equilibrium error；$\beta$ 的 columns 是 cointegrating vectors。
+
+只识别 column space $\mathcal C(\beta)$：对任意 nonsingular $H\in\mathbb R^{r\times r}$，$\beta H$ 张成同一空间。$r=1$ 时常把一个 nonzero coefficient normalize 为 1；$r>1$ 时必须结合经济 restrictions 才能给每一列独立解释。不能把软件任意 normalization 后的每列都当作唯一经济关系。
+
+Granger representation theorem 从 Wold form 开始：
+
+::: {#hansen-eq-16-16}
+$$
+\Delta Y_t=\theta+\Theta(L)e_t.
+\tag{16.16}
+$$
+:::
+
+协整要求 $\beta'\Theta(1)=0$，故 $\Theta(1)=\beta_\perp\eta'$；permanent–transitory representation 为
+
+::: {#hansen-eq-16-17}
+$$
+Y_t=\beta_\perp\{\gamma t+\eta'S_t\}+U_t+V_0.
+\tag{16.17}
+$$
+:::
+
+永久 trend 只在 $\beta_\perp$ 空间内，premultiply by $\beta'$ 后消失。适当 root 与 rank 条件还给出 convergent VAR
+
+::: {#hansen-eq-16-18}
+$$
+A(L)Y_t=a+e_t,
+\tag{16.18}
+$$
+:::
+
+以及最关键的 error-correction form
+
+::: {#hansen-eq-16-19}
+$$
+\Delta Y_t=\alpha\beta'Y_{t-1}
++\Gamma(L)\Delta Y_{t-1}+a+e_t.
+\tag{16.19}
+$$
+:::
+
+$\alpha\in\mathbb R^{m\times r}$ 是 adjustment/loadings matrix：第 $i$ 行说明第 $i$ 个变量如何响应上一期 equilibrium error。若差分均值为零，intercept 可限制到 cointegrating relation：
+
+::: {#hansen-eq-16-20}
+$$
+\Delta Y_t=\alpha(\beta'Y_{t-1}+\mu)
++\Gamma(L)\Delta Y_{t-1}+e_t.
+\tag{16.20}
+$$
+:::
+
+从 [式 (16.19)](#hansen-eq-16-19) 到“长期均衡”的直觉要看符号。若 $r=1$ 且 $z_{t-1}=\beta'Y_{t-1}+\mu>0$，只有当相关 $\alpha_i$ 的方向使未来 $z_t$ 向零移动时，系统才 mean-revert。单看 $\alpha_i$ 显著不够，还要结合 $\beta$ 与整个 feedback $\beta'\alpha$。
+
+以两变量 $\beta=(1,-1)'$ 为例，$z_{t-1}=Y_{1,t-1}-Y_{2,t-1}-c$。若 $z_{t-1}>0$ 表示 $Y_1$ 相对过高，$\alpha_1<0$ 会压低 $\Delta Y_1$，$\alpha_2>0$ 会抬高 $\Delta Y_2$，两种调整都缩小 spread。若 $\alpha_2=0$，第二个变量 weakly exogenous for $\beta$：长期偏离只由第一个变量纠正，但这不自动表示第二个变量在所有短期或结构意义上外生。
+
+rank 也有清楚的 common-trend 解释。在 $m$ 个 $I(1)$ variables 且 cointegrating rank 为 $r$ 时，系统有 $m-r$ 个独立 stochastic trends。$r=0$ 表示没有 stationary levels combination；$r=m$ 表示 levels 全部 stationary，已不属于 full-rank $I(1)$ 系统；只有 $0<r<m$ 是通常所说的 cointegrated I(1) system。
+
+## 截距与趋势的作用（Role of Intercept and Trend）
+
+Hansen 列出五种 deterministic specifications。Model 1 无 intercept/trend，主要用于教学；Model 2 把 intercept 限制在 $\beta'Y_{t-1}+\mu$ 内，适合自身不呈 linear trend 的利率；Model 3 放 unrestricted intercept $a$，使 levels 可含 linear trend，但 cointegrating error 无 trend；Model 4 同时有 unrestricted intercept，并允许 cointegrating relation 含 $\mu t$；Model 5 再加 unrestricted $bt$，会在 levels 中诱导 quadratic trend，通常不适合宏观应用。
+
+选择 deterministic terms 是模型的一部分，不是版面装饰。限制放在 cointegrating space 内还是外，会改变 levels 中允许的 trend、rank-test limit process 和 critical values。应用中应先分别画每个 level 与候选 equilibrium error，再说明为何某个 trend model 符合经济含义；不要依据哪个模型给出更小 p-value 倒推 specification。
+
+## 协整回归（Cointegrating Regression）
+
+当 $r=1$，分割 $Y_t=(Y_{1t},Y_{2t}')'$ 并把首系数 normalize 为 1。无显式 trend 时估计
+
+::: {#hansen-eq-16-21}
+$$
+Y_{1t}=\mu+\beta'Y_{2t}+u_{1t};
+\tag{16.21}
+$$
+:::
+
+允许 cointegrating relation 有 trend 时估计
+
+::: {#hansen-eq-16-22}
+$$
+Y_{1t}=\mu+\theta t+\beta'Y_{2t}+u_{1t}.
+\tag{16.22}
+$$
+:::
+
+在确有协整时 OLS $\hat\beta$ 以 $n^{-1}$ superconsistent rate 收敛，因为 denominator 是 $O_p(n^2)$、numerator 是 $O_p(n)$。但极限包含 stochastic integral 和 $\Sigma_{21}+\Lambda_{21}$，一般 non-normal；superconsistency 不能为 naive standard error 辩护。FM-OLS 估计 long-run covariance 后修正 endogeneity/serial correlation；DOLS 在回归中加入 $\Delta Y_{2t}$ 的 leads 与 lags，使剩余 score 获得标准极限。
+
+Engle–Granger 两步检验先估计 [式 (16.21)](#hansen-eq-16-21) 或 [式 (16.22)](#hansen-eq-16-22)，再对 residual 做 ADF。null 下第一阶段本来就是 spurious regression，因此 residual ADF 不是 ordinary DF distribution；critical values 还依赖 system variables 数 $m$ 与 detrending case。拒绝发生在更负的一侧。已知 $\beta$ 时可直接对 $\beta'Y_t$ 做普通 ADF；未知且估计 $\beta$ 时必须用 Engle–Granger/Phillips–Ouliaris critical values。
+
+## VECM 估计（VECM Estimation）
+
+有限阶 VECM($p$) 是
+
+::: {#hansen-eq-16-23}
+$$
+\Delta Y_t=\alpha\beta'Y_{t-1}
++\Gamma_1\Delta Y_{t-1}+\cdots
++\Gamma_{p-1}\Delta Y_{t-p+1}+a+e_t.
+\tag{16.23}
+$$
+:::
+
+其中 $\Pi=\alpha\beta'$ 的 rank 为 $r$，所以这是第 11 章 reduced-rank regression。Johansen MLE 的计算步骤是：第一，把 $\Delta Y_t$ 和 $Y_{t-1}$ 分别对 short-run differences 与 deterministic terms 回归，得到 residual matrices $\widehat U_0,\widehat U_1$；第二，解 generalized eigenvalue problem，取最大的 $r$ 个 eigenvectors 得 $\hat\beta$；第三，给定 $\hat\beta'Y_{t-1}$，逐方程 OLS 得 $\hat\alpha,\hat\Gamma_j,\hat a$。
+
+维数核对：$Y_t,e_t\in\mathbb R^m$，$\beta,\alpha\in\mathbb R^{m\times r}$，故 $\beta'Y_{t-1}\in\mathbb R^r$、$\alpha\beta'Y_{t-1}\in\mathbb R^m$；每个 $\Gamma_j\in\mathbb R^{m\times m}$。cointegrating vectors 的 normalization 必须与 standard errors 一起报告。
+
+实证上先用 levels VAR 的 AIC 等选择 $p$，VECM 中便有 $p-1$ 个 difference lags；再依据 theory/rank tests 选 $r$ 和 trend model。解释时先写 normalized $\hat\beta$ 所定义的 equilibrium error，再逐个解释 $\hat\alpha_i$ 的 correction direction，最后才讨论 short-run $\Gamma_j$。把 $\alpha$ 与 $\beta$ 混成一个“协整系数”会丢失长期关系和调整速度的分工。
+
+Johansen generalized eigenvalues 可直观理解为：先 partial out 已知的 short-run dynamics 和 deterministic terms，再寻找 $Y_{t-1}$ 的哪些 linear combinations 最能解释 $\Delta Y_t$ residual。大的 canonical correlations 对应较强的 stationary equilibrium relations。这个解释只是计算直觉；rank 的统计判断仍需 nonstandard trace critical values，经济解释仍需对 $\beta$ 加 normalization 或 overidentifying restrictions。
+
+## VECM 中的协整检验（Testing for Cointegration in a VECM）
+
+从 unrestricted mixed model 出发：
+
+::: {#hansen-eq-16-24}
+$$
+\Delta Y_t=\Pi Y_{t-1}
++\Gamma_1\Delta Y_{t-1}+\cdots
++\Gamma_{p-1}\Delta Y_{t-p+1}+a+e_t.
+\tag{16.24}
+$$
+:::
+
+Granger representation theorem 使“有 $r$ 个 cointegrating relations”等价于 $H(r):\operatorname{rank}(\Pi)=r$。Johansen trace statistic 为
+
+$$
+LR(r)=-n\sum_{j=r+1}^{m}\log(1-\hat\lambda_j),
+$$
+
+大值拒绝 $H(r)$。其极限是 multivariate DF functional，取决于 $m-r$ 与 trend model，绝不是通常的 $\chi^2$。顺序检验从 $r=0$ 开始：若拒绝则检验 $r=1$，直到第一次不拒绝；但每一步都在重复检验，大系统中还会同时遭遇 size accumulation 与 low power。
+
+更稳妥的用法是由经济模型提出候选 $r$，再把 $LR(r)$ 当 specification check，并比较邻近 ranks 下结果是否稳定。输出至少记录 $m$、levels VAR order $p$、trend model、每个 $LR(r)$、对应 case 的 critical value/p-value 和最终 rank 理由。“不拒绝 $r=2$”并不等于排除了 $r=3$；它只说明 rank-$2$ restriction 没有被当前样本否定。
+
+rank 选择还会传递到所有后续结果。低估 $r$ 会留下本应 stationary 的 direction 作为虚假 common trend；高估 $r$ 则会把真正永久的 shock 强迫成 mean-reverting。两者都会扭曲 long-run IRF。因此 rank、lag 与 deterministic terms 应联合做 robustness grid，并优先检查 residual autocorrelation 和 VECM stability，而不是只报告一串 trace-test 星号。
+
+## 技术证明（Technical Proofs*）
+
+本节保留原书式 (16.25)–(16.30)，并说明每个证明真正解决的障碍。
+
+定理 16.1 除 finite-dimensional convergence 外，还要证 asymptotic equicontinuity。把 $[0,1]$ 划成长度 $\delta$ 的网格，用 maximal inequality、CLT 与 Markov inequality 控制每块 partial-sum fluctuation；选择 $\delta=\epsilon\eta^4/48^2$ 后得到原书界
+
+::: {#hansen-eq-16-25}
+$$
+\frac{48^2}{\eta^4}\,\delta=\epsilon.
+\tag{16.25}
+$$
+:::
+
+于是对任意 $\epsilon,\eta>0$，足够小 $\delta$ 使 uniform local oscillation 超过 $\eta$ 的概率小于 $\epsilon$。这一步把“每个固定点收敛”升级为“整条 path 收敛”。
+
+Itô identity 的起点是 stochastic integral 的左端 Riemann sums：
+
+::: {#hansen-eq-16-26}
+$$
+\int_0^1W,dW
+=\operatorname*{plim}_{N\to\infty}
+\sum_{i=0}^{N-1}W\!\left(\frac{i}{N}\right)
+\left[W\!\left(\frac{i+1}{N}\right)-W\!\left(\frac{i}{N}\right)\right].
+\tag{16.26}
+$$
+:::
+
+对每个 increment 用 $(W_{i+1})^2-W_i^2=2W_i\Delta W_i+(\Delta W_i)^2$，求和后首项 telescopes，且 $\sum(\Delta W_i)^2\to_p1$，遂得到 $\int WdW=\{W(1)^2-1\}/2$。
+
+定理 16.12 把 nonstationary $X_{nt}$ 的连续极限转化为 uniform modulus 控制。先由极限路径 almost surely continuous 选 $\delta$ 使
+
+::: {#hansen-eq-16-27}
+$$
+P\!\left(
+\sup_{|r-s|\le\delta}|X(r)-X(s)|>\epsilon
+\right)\le\eta.
+\tag{16.27}
+$$
+:::
+
+再把 sample covariance 分块。块首 $X$ 乘块内 $u_t$ 平均由 ergodic theorem 消失；块内 $X$ 变化乘 $n^{-1}\sum|u_t|=O_p(1)$ 也消失。这就是第 16.11 节所用结论的完整路线。
+
+Granger representation theorem 的核心坐标变换取 $H=[\beta,\beta_\perp]$，把系统分成 stationary coordinate $X_{1t}=\beta'Y_t$ 与 differenced common-trend coordinate $\Delta X_{2t}=\beta_\perp'\Delta Y_t$。在另一组 innovation coordinates $H_\eta=[\eta_\perp,\bar\eta]$ 下，原书得到
+
+::: {#hansen-eq-16-28}
+$$
+\begin{pmatrix}X_{1t}\\ \Delta X_{2t}\end{pmatrix}
+=\begin{pmatrix}\mu\\ \gamma\end{pmatrix}
++D(L)H_\eta'e_t.
+\tag{16.28}
+$$
+:::
+
+rank condition 保证 $D(1)$ nonsingular，root condition 保证 $D(L)^{-1}$ coefficients 可和。因此反演为
+
+::: {#hansen-eq-16-29}
+$$
+H_\eta D(L)^{-1}
+\begin{pmatrix}X_{1t}\\ \Delta X_{2t}\end{pmatrix}
+=a+e_t.
+\tag{16.29}
+$$
+:::
+
+再把 $(X_{1t},\Delta X_{2t})$ 换回 $Y_t$，得到 levels VAR；对 $A(L)$ 做 BN factorization 则得到 VECM。证明的逻辑不是一句“由 Granger theorem 即得”，而是：协整先让 long-run impact $\Theta(1)$ 降秩；降秩决定 stationary/common-trend coordinates；在这些 coordinates 中验证 polynomial invertible；最后才恢复 VAR/ECM representation。
+
+Johansen trace limit 的 proof sketch 把 reduced-rank likelihood 的小 eigenvalues 缩放为 $\hat\rho_j=n\hat\lambda_j$。对 stationary cointegrating directions 用 LLN，对 $m-r$ 个 stochastic-trend directions用 FCLT 和 stochastic integrals。partialled-out limiting eigenvalue equation 的关键矩阵是
+
+::: {#hansen-eq-16-30}
+$$
+\rho\int_0^1XX'
+-\left(\int_0^1X,dW'\right)
+ \left(\int_0^1dW,X'\right).
+\tag{16.30}
+$$
+:::
+
+它的 $m-r$ 个 roots 之和正是 trace statistic 的 Brownian functional。不同 trend models 改变 partialling 后的 $X(r)$，所以临界值必须随 specification 改变。
+
+## 习题阅读指南（Exercises）
+
+原书 16.1–16.5 先练基础对象：random-walk moments 不恒定，故 standardized level 也未必 stationary；MA(2) 的 BN 分解应按 [式 (16.4)](#hansen-eq-16-4) 求尾和；$Y_t=X_t+u_t$ 的 stationary $u_t$ 在 $\sqrt n$ 尺度消失；$\Delta e_t$ 虽 stationary 却 long-run variance 为零；两条共享 common trend 的序列用消去该 trend 的 vector 找 cointegration。
+
+16.6–16.11 专门纠错。$|\alpha|<1$ 的 $\sqrt n$ normal approximation 在 $\alpha=1$ 处不连续，不能把“0.9 接近 1”简单代入两套 asymptotics；用普通 $t=2$ 或 $1.96$ confidence interval 检验 unit root 都错在 critical distribution；先 detrend 再使用“无 intercept/trend”临界值错在 projection case 不匹配；ADF 不拒绝也不能断言“就是单位根”。作答时应明确写出 null、statistic limit、正确 rejection tail 与允许的结论。
+
+16.12–16.14 是数据练习。建议固定 reproducible workflow：记录 FRED-MD variable 与样本区间；画 level、difference 和必要的 log transformation；依据 frequency 给出候选 maximum lag；在同一 deterministic specification 下用 AIC 选 ADF/VAR order；KPSS 报告 $M$ 与 long-run variance kernel；Johansen 报 levels order、VECM difference lags、trend model 和各 rank 的 trace statistics。不要把“不拒绝”改写成“接受”，也不要只贴软件表而不解释设定。
+
+::: {.callout-important title="章末自检"}
+1. 能否解释为什么 unit-root level 的 sample mean 是 $O_p(\sqrt n)$，而不是一致估计固定均值？
+2. 能否从 numerator $O_p(n)$、denominator $O_p(n^2)$ 推出 $\hat\alpha-1=O_p(n^{-1})$，并说明为何这仍不能使用普通正态临界值？
+3. 能否区分 DF/ADF 的 unit-root null 与 KPSS 的 stationarity null，并正确解释四种联合结果？
+4. 能否从 $\beta'\Theta(1)=0$ 说明 long-run impact 降秩，再解释 $\alpha\beta'Y_{t-1}$ 如何维持 equilibrium relation？
+5. 能否写清 Engle–Granger residual test 与 ordinary ADF 的临界值为何不同，以及 Johansen trace test 为何不是 $\chi^2$？
+6. 面对软件输出，能否同时核对 integration assumption、lag order、deterministic specification、rank、normalization 与 rejection tail？
+:::

@@ -1,0 +1,593 @@
+---
+title: "多元时间序列"
+subtitle: "VAR、脉冲响应、结构识别与动态因子"
+hansen-chapter: "Chapter 15"
+book-pages: "509–546"
+pdf-pages: "529–566"
+status: "完整初稿"
+---
+
+::: {.book-map}
+**原书位置与本章路线**　对应 Hansen Chapter 15（书内 pp. 509–546；PDF pp. 529–566）。15.1–15.13从多方程动态投影建立 VAR、估计与协方差；15.14–15.22讨论 predictive regression、VAR/LP 脉冲响应、正交化与 FEVD；15.23–15.29集中处理 recursive、short-run、long-run 与 proxy-SVAR 识别；15.30–15.32介绍动态因子、证明与习题。
+:::
+
+::: {.bridge}
+**本科桥接**　VAR 可先理解成“每个变量都对系统内所有变量的滞后做 AR-DL”，但系数矩阵本身通常很难解释。真正新增的难点是：reduced-form innovations 同期相关，必须用经济限制把它们变成 structural shocks，才能给 impulse response 贴上因果名称。Cholesky 是一种识别假设，不是纯计算技巧。
+:::
+
+## 引言（Introduction）
+
+令 $Y_t=(Y_{1t},\ldots,Y_{mt})'\in\mathbb R^m$。多元时间序列同时建模变量自身动态与跨变量预测关系，最常见模型是 Sims 推广的 vector autoregression（VAR）。它适合预测、Granger causality、冲击传播和 forecast error decomposition。
+
+本章始终分开三层：VAR coefficient 描述 reduced-form conditional projection；innovation $e_t$ 是不可由过去线性预测的部分；structural shock $\varepsilon_t$ 需要额外 contemporaneous/long-run/external-IV restriction 才能识别。
+
+## 多方程时间序列模型（Multiple Equation Time Series Models）
+
+把每个 $Y_{jt}$ 对 $Y_{t-1},\ldots,Y_{t-p}$ 的 AR-DL 方程堆叠，得到
+
+::: {#hansen-eq-15-1}
+$$
+Y_t=a_0+A_1Y_{t-1}+\cdots+A_pY_{t-p}+e_t.
+\tag{15.1}
+$$
+:::
+
+$a_0,e_t\in\mathbb R^m$，每个 $A_\ell\in\mathbb R^{m\times m}$；$A_{\ell,ij}$ 是 $Y_{j,t-\ell}$ 在第 $i$ 条方程的系数。$\Sigma=E(e_te_t')$ 一般非对角，表示同一期未预测冲击相关；这不妨碍每条方程使用共同 regressors 单独 OLS。
+
+以 $m=2,p=1$ 为例，第一行同时含 $Y_{1,t-1}$ 自身惯性和 $Y_{2,t-1}$ 的预测作用，第二行反向亦然。检验 $Y_2$ 不 Granger-cause $Y_1$ 就是检验第一行相应所有滞后系数为 0，而不是要求 $\Sigma_{12}=0$。前者是跨期预测限制，后者是当期 innovations 的相关性，两者处在不同时间维度。
+
+## 线性投影（Linear Projection）
+
+将向量 $Y_t$ 投影到整个过去 $\widetilde Y_{t-1}$，innovation 定义为
+
+::: {#hansen-eq-15-2}
+$$
+e_t=Y_t-P_{t-1}[Y_t].
+\tag{15.2}
+$$
+:::
+
+它满足 $E(e_t)=0$、$E(e_{t-\ell}e_t')=0$（$\ell\ge1$），但同一期不同分量可相关。若真实 conditional mean 非线性，linear innovation 只是多元白噪声，不必是 vector MDS。
+
+## 多元 Wold 分解（Multivariate Wold Decomposition）
+
+协方差平稳且非确定的向量过程有
+
+::: {#hansen-eq-15-3}
+$$
+Y_t=\mu+\sum_{\ell=0}^{\infty}\Theta_\ell e_{t-\ell},
+\qquad \Theta_0=I_m.
+\tag{15.3}
+$$
+:::
+
+$\Theta_\ell\in\mathbb R^{m\times m}$，第 $(i,j)$ 元表示第 $j$ 个 reduced-form innovation 对第 $i$ 个变量的线性传播。可逆性和可和条件下还存在
+
+::: {#hansen-eq-15-4}
+$$
+A(L)Y_t=a_0+e_t,
+\qquad
+A(z)=I_m-\sum_{\ell=1}^{\infty}A_\ell z^\ell.
+\tag{15.4}
+$$
+:::
+
+$\Theta(z)=A(z)^{-1}$。由 $A(L)\Theta(L)=I_m$ 比较 $z^j$ 系数，得到递推
+$\Theta_j=\sum_{\ell=1}^jA_\ell\Theta_{j-\ell}$；有限 VAR($p$) 中把 $A_\ell=0$（$\ell>p$）。
+
+## 脉冲响应（Impulse Response）
+
+baseline IRF 定义为 $P_t(Y_{t+h})$ 对 $e_t$ 的导数。由 [式 (15.3)](#hansen-eq-15-3)，
+
+$$
+\operatorname{IRF}(h)=\Theta_h.
+$$
+
+它是对 correlated reduced-form innovation 的响应，尚不能把某列直接称作货币政策/供给冲击。若变量以差分进入，level response 是 $\sum_{\ell=0}^h\Theta_\ell$；长期累计响应为 $\Theta(1)=A(1)^{-1}$。报告必须注明 unit shock 还是 one-standard-deviation shock，以及 level/difference 的累计口径。
+
+## VAR(1) 模型（VAR(1) Model）
+
+$Y_t=a_0+A_1Y_{t-1}+e_t$ 的递推为
+
+$$
+Y_t=(I_m-A_1)^{-1}a_0+\sum_{j=0}^{\infty}A_1^je_{t-j}.
+$$
+
+若 $A_1$ 所有 eigenvalue 的模小于 1，矩阵幂几何衰减，级数收敛并继承 innovation 的平稳遍历。单看每个 $A_1$ 元素小于 1 不是稳定条件；跨方程反馈可能让 eigenvalue 超过 1。
+
+求均值时对 VAR 方程取期望得到 $\mu=a_0+A_1\mu$，所以 $\mu=(I_m-A_1)^{-1}a_0$。这个逆存在仍不充分保证平稳；稳定性要求所有动态方向衰减。若一个 eigenvector 方向的 eigenvalue 为 1，系统沿该线性组合保留永久冲击，即使单个变量图形看起来较平滑。
+
+## VAR($p$) 模型（VAR($p$) Model）
+
+定义 $A(z)=I_m-A_1z-\cdots-A_pz^p$。VAR($p$) 平稳当且仅当 determinantal equation $\det A(z)=0$ 的所有 roots 位于单位圆外。等价地，把 $mp$ 维 companion matrix 的 eigenvalues 检查在单位圆内。
+
+这与第 14 章 AR($p$) 完全平行，只是标量 polynomial 换成 matrix polynomial。稳定后 $\Theta_j$ 绝对衰减，IRF 才回到 0；有 unit root 时必须转入第 16 章的 VECM/cointegration 分析。
+
+## 回归记号（Regression Notation）
+
+令 $X_t=(1,Y_{t-1}',\ldots,Y_{t-p}')'\in\mathbb R^{mp+1}$，$A'\in\mathbb R^{m\times(mp+1)}$，则
+
+::: {#hansen-eq-15-5}
+$$
+Y_t=A'X_t+e_t.
+\tag{15.5}
+$$
+:::
+
+innovation covariance 是
+
+::: {#hansen-eq-15-6}
+$$
+\Sigma=E(e_te_t').
+\tag{15.6}
+$$
+:::
+
+projection orthogonality 为
+
+::: {#hansen-eq-15-7}
+$$
+E(X_te_t')=0.
+\tag{15.7}
+$$
+:::
+
+即使真过程不是有限 VAR($p$)，也可用 $A=\{E(X_tX_t')\}^{-1}E(X_tY_t')$ 定义最佳线性近似。非确定性与 $\Sigma>0$ 保证 $Q=E(X_tX_t')>0$，参数有唯一含义。
+
+## 估计（Estimation）
+
+共同 regressors 下 system OLS 等于逐方程 OLS：
+
+$$
+\widehat A=\left(\sum_tX_tX_t'\right)^{-1}\sum_tX_tY_t'.
+$$
+
+残差协方差估计为
+
+::: {#hansen-eq-15-8}
+$$
+\widehat\Sigma=\frac1n\sum_{t=1}^n\hat e_t\hat e_t'.
+\tag{15.8}
+$$
+:::
+
+平稳遍历、有限二阶矩与 $Q>0$ 使 $\widehat A\to_pA$、$\widehat\Sigma\to_p\Sigma$。VAR 维数膨胀很快：每条方程 $mp+1$ 个系数，全系统 $m(mp+1)$；这就是大 $m,p$ 下过拟合的根源。
+
+## 渐近分布（Asymptotic Distribution）
+
+令 $a=\operatorname{vec}(A)$。若有限 VAR 是正确 conditional mean，$E(e_t\mid\mathcal F_{t-1})=0$，则 $e_t\otimes X_t$ 为 MDS：
+
+$$
+\sqrt n(\hat a-a)\to_dN(0,V),\quad
+V=(I_m\otimes Q^{-1})\Omega(I_m\otimes Q^{-1}),
+$$
+
+$\Omega=E(e_te_t'\otimes X_tX_t')$。条件同方差时 $V=\Sigma\otimes Q^{-1}$。若 VAR 只是近似，则 $\Omega$ 必须替换为 score 的 long-run covariance；多一个滞后不足就会使普通 robust formula 失效。
+
+推导步骤与多元回归一致。先用 vec identity 写
+
+$$
+\sqrt n(\hat a-a)
+=(I_m\otimes\widehat Q^{-1})
+\frac1{\sqrt n}\sum_t(e_t\otimes X_t).
+$$
+
+$\widehat Q\to_pQ$ 来自遍历定理；分子若为 MDS 用 MDS CLT，若只有 mixing 则用相关观测 CLT。由此可以精确定位标准误差异只发生在 score covariance，而不是 OLS coefficient formula。
+
+## 协方差矩阵估计（Covariance Matrix Estimation）
+
+同方差 estimator 是
+
+::: {#hansen-eq-15-9}
+$$
+\widehat V_{\hat a}^{\,0}
+=\widehat\Sigma\otimes(X'X)^{-1}.
+\tag{15.9}
+$$
+:::
+
+正确 MDS、允许异方差时用
+
+::: {#hansen-eq-15-10}
+$$
+\widehat V_{\hat a}
+=(I_m\otimes(X'X)^{-1})
+\left\{\sum_t(\hat e_t\hat e_t'\otimes X_tX_t')\right\}
+(I_m\otimes(X'X)^{-1}).
+\tag{15.10}
+$$
+:::
+
+动态错设时需 multivariate Newey–West：
+
+::: {#hansen-eq-15-11}
+$$
+\widehat V_{\hat a}
+=(I_m\otimes(X'X)^{-1})\widehat\Omega_M
+(I_m\otimes(X'X)^{-1}),
+\tag{15.11}
+$$
+:::
+
+其中对 $\hat e_t\otimes X_t$ 的 lag covariance 做 Bartlett 加权。很多 VAR 软件仅给 [式 (15.9)](#hansen-eq-15-9)，用户必须主动核查。
+
+## VAR 的滞后阶数选择（Selection of Lag Length in a VAR）
+
+多元 AIC 为
+
+$$
+\operatorname{AIC}(p)
+=n\log\det\widehat\Sigma(p)+2K(p),
+\qquad K(p)=m(pm+1).
+$$
+
+所有候选用共同样本。$\log\det\widehat\Sigma$ 衡量系统 generalized variance，penalty 随 $m^2p$ 增长。小样本中 $m=8,p=12$ 可能每方程就近百个参数；在估计前应先做维数—样本量核对。
+
+例如 20 年月度数据约 240 期，扣除 12 个初值后每方程仅 228 个有效观测，却有 $8\times12+1=97$ 个 coefficient；全系统 776 个。此时残差 covariance 和远期 IRF 会非常不稳定。降阶、缩小变量集、Bayesian/shrinkage VAR 或 factor-augmented VAR 都是有实际动机的替代，而非单纯计算便利。
+
+## 例证（Illustration）
+
+原书以 GDP growth、inflation、federal funds rate 的季度 VAR 比较 1–8 阶，AIC 选择 VAR(6)。大量交叉滞后使单个 coefficient 难以概括经济传播，因此应用重点转向 joint tests、IRF 与 FEVD。
+
+估计表仍应报告变量变换、ordering、样本期、lag choice、deterministic terms 与 covariance 口径；只展示漂亮 IRF 图不足以复现模型。
+
+## 预测回归（Predictive Regressions）
+
+$h$ 步 predictive VAR 为
+
+::: {#hansen-eq-15-12}
+$$
+Y_{t+h}=b_0+B_1Y_t+\cdots+B_pY_{t-p+1}+u_t.
+\tag{15.12}
+$$
+:::
+
+若真实过程是 VAR($p$)，则 $u_t$ 为 MA($h-1$)，且 $B_1=\Theta_h$。估计式
+
+::: {#hansen-eq-15-13}
+$$
+Y_{t+h}=\hat b_0+\widehat B_1Y_t+\cdots+
+\widehat B_pY_{t-p+1}+\hat u_t
+\tag{15.13}
+$$
+:::
+
+必须用 HAC；已知重叠 horizon 导致 MA($h-1$)，可用 Hansen–Hodrick 截断 $M=h-1$。把 overlapping forecast errors 当 MDS 会严重低估标准误。
+
+## 脉冲响应估计（Impulse Response Estimation）
+
+标准 plug-in estimator 从 $\widehat A_\ell$ 递推
+
+$$
+\widehat\Theta_h
+=\sum_{\ell=1}^{\min(h,p)}
+\widehat A_\ell\widehat\Theta_{h-\ell}.
+$$
+
+它使各 horizon 内部满足同一 VAR 动态，真 VAR 下效率高；但 $\widehat\Theta_h$ 是 coefficients 的高次非线性函数，远期 normal approximation 常差。recursive bootstrap 应在每次 draw 重估 VAR 和 IRF；percentile interval 还需警惕非线性 bias，宜用 bias-corrected 方法并报告稳定性。
+
+## 局部投影估计量（Local Projection Estimator）
+
+Jordà local projection 对每个 $h$ 单独估 [式 (15.12)](#hansen-eq-15-12)，取 $\widehat B_1$ 作为 $\widehat{\operatorname{IRF}}(h)$。优点是 horizon-specific linear regression、易加入非线性与 state interactions；缺点是长 horizon error 高度重叠，估计更抖且精度低。
+
+LP 并非无模型：$B_1=\Theta_h$ 的严格关系仍依赖足够的 lag controls/VAR approximation。lag order 宜由 one-step VAR 的准则和敏感性决定，并使用 horizon-appropriate HAC。
+
+两种方法的偏差—方差方向可这样理解：VAR 先估一套短期 dynamics 再迭代到所有 horizons，跨 horizon 约束多，因此图形平滑、方差小，但动态错设会被反复传播放大；LP 每个 horizon 单独投影，限制少、对局部错设较灵活，但丢掉跨 horizon 信息，长程响应噪声大。实证中同时报告两者是有意义的 specification sensitivity，而不是挑选更显著的一条曲线。
+
+## 对残差回归（Regression on Residuals）
+
+若 innovations 可观测，可直接回归未来 $Y$ 对 $e_t$。实际以 VAR residual $\hat e_t$ 替代会成为 generated-regressor problem。Chang–Sakata 形式为
+
+::: {#hansen-eq-15-14}
+$$
+Y_{t+h}=\mu+\Theta_h\hat e_t+\hat v_{t+h}.
+\tag{15.14}
+$$
+:::
+
+其特殊正交结构使第一步误差不改变一阶分布，但 error 仍序列相关，应 HAC。一般 Durbin residual regression 则需修正两步协方差，不能直接套普通/robust/NW 后就称完整。
+
+## 正交化冲击（Orthogonalized Shocks）
+
+因为 $\Sigma$ 非对角，令 $\Sigma=BB'$ 并定义 unit-covariance shocks：
+
+::: {#hansen-eq-15-15}
+$$
+e_t=B\varepsilon_t,\qquad E(\varepsilon_t\varepsilon_t')=I_m.
+\tag{15.15}
+$$
+:::
+
+Cholesky 选择
+
+::: {#hansen-eq-15-16}
+$$
+B=\operatorname{chol}(\Sigma)
+\tag{15.16}
+$$
+:::
+
+为 lower triangular；等价写成
+
+::: {#hansen-eq-15-17}
+$$
+Ae_t=\varepsilon_t,\qquad A=B^{-1}.
+\tag{15.17}
+$$
+:::
+
+ordering 决定哪些变量 within-period 不响应后排 shocks，是一组 exclusion restrictions。换顺序通常换 shock，也换因果解释。
+
+二变量时，若 $B$ lower triangular，则 $e_{1t}=b_{11}\varepsilon_{1t}$、$e_{2t}=b_{21}\varepsilon_{1t}+b_{22}\varepsilon_{2t}$。第一 shock 可同期影响两个变量，第二 shock 不能同期影响第一个变量。颠倒 ordering 就颠倒这个 exclusion。Cholesky 总能数值分解正定 $\Sigma$，但“总能算出”与“经济冲击被识别”完全不同。
+
+## 正交化脉冲响应函数（Orthogonalized Impulse Response Function）
+
+OIRF 为
+
+$$
+\operatorname{OIRF}(h)=\Theta_hB.
+$$
+
+第 $j$ 列是第 $j$ 个 orthogonal shock 的 one-standard-deviation effect。cumulative OIRF 是 $\sum_{\ell=0}^h\Theta_\ell B$。必须将估计点、ordering、shock scaling 和变量变换共同写在图注中。
+
+若经济识别只区分某一 shock group，组内 ordering 改变不应影响已识别组外 shock；这可用 ordering sensitivity 作为代数核验。
+
+## 正交化脉冲响应估计（Orthogonalized Impulse Response Estimation）
+
+先估 $\widehat\Sigma$，再取 $\widehat B=\operatorname{chol}(\widehat\Sigma)$，最后 $\widehat\Theta_h\widehat B$。它同时是 $\widehat A_\ell$ 与 $\widehat\Sigma$ 的非线性函数；Delta 可给渐近标准误，但 time dependence、near-unit roots 与长 horizon 会让 normal interval 较差。
+
+bootstrap 必须重新估计 coefficient、covariance 和 Cholesky；只给固定 $\widehat B$ 下的 coefficient uncertainty 会漏掉 orthogonalization uncertainty。
+
+## 例证（Illustration）
+
+原书 ordering 为 GDP growth、inflation、fed funds rate，含义是 policy rate 可同期响应 output/price news，而政策 shock 不在同一季度影响前两者。VAR(6) 得到加息后第二季度起 GDP growth 降低，累计 level GDP 约两年下降。
+
+这只在 ordering restriction 可信时是 monetary policy shock。用较低频季度数据施加“当期不反应”比月度限制更强，应解释决策/传导时滞。
+
+## 预测误差分解（Forecast Error Decomposition）
+
+$h$ 步 forecast error variance 为
+
+::: {#hansen-eq-15-18}
+$$
+\operatorname{var}(Y_{i,t+h}-Y_{i,t+h|t})
+=\sum_{\ell=0}^{h-1}\theta_i(\ell)'BB'\theta_i(\ell).
+\tag{15.18}
+$$
+:::
+
+第 $j$ 个 shock 的贡献为
+
+::: {#hansen-eq-15-19}
+$$
+\sum_{\ell=0}^{h-1}
+\{\theta_i(\ell)'b_j\}^2,
+\tag{15.19}
+$$
+:::
+
+总贡献分解为
+
+::: {#hansen-eq-15-20}
+$$
+\sum_{j=1}^m\sum_{\ell=0}^{h-1}
+\{\theta_i(\ell)'b_j\}^2.
+\tag{15.20}
+$$
+:::
+
+两者比值 FEVD 位于 $[0,1]$ 且对 $j$ 求和为 1。它必须基于 orthogonal/structural shocks，因而与 OIRF 一样依赖识别，不能称为纯描述性分解。
+
+## 递归 VAR 的识别（Identification of Recursive VARs）
+
+Cholesky ordering 是用户给定的当期 causal hierarchy，数据不会自动选择。变量排前意味着它当期不响应排后 shock；排后变量可当期响应前面的所有 shocks。对 GDP–inflation–rate，rate 最后可识别 policy shock，但 GDP 与 inflation 的相对顺序仍需 short-run aggregate supply 假设。
+
+好的报告应写出 triangular equations，而不仅列 ordering；解释每个 zero restriction 的时间单位与制度依据，并展示合理替代 ordering 下目标 IRF 是否稳健。
+
+## 油价冲击（Oil Price Shocks）
+
+Kilian 月度系统按 oil production、global activity、oil price 排序：一个月内 production 不响应 price，activity 不响应 oil-market-specific price shock，而 price 可响应全部 shocks。高频数据使 short-run inelasticity 更可信。
+
+结果区分 production、aggregate demand 与 precautionary oil-demand shocks，说明同一 oil-price movement 的传播依 shock source 而不同。识别论证比“用 24 lags”更核心；lag choice 仍应由 AIC 与敏感性解释。
+
+## 结构 VAR（Structural VARs）
+
+一般 short-run SVAR 写成
+
+::: {#hansen-eq-15-21}
+$$
+Ae_t=B\varepsilon_t,
+\tag{15.21}
+$$
+:::
+
+三变量规范化示意为
+
+::: {#hansen-eq-15-22}
+$$
+A=
+\begin{pmatrix}1&a_{12}&a_{13}\\a_{21}&1&a_{23}\\a_{31}&a_{32}&1\end{pmatrix},
+\quad
+B=(b_{ij}).
+\tag{15.22}
+$$
+:::
+
+由 covariance 得
+
+::: {#hansen-eq-15-23}
+$$
+A\Sigma A'=BB'.
+\tag{15.23}
+$$
+:::
+
+$\Sigma$ 只提供 $m(m+1)/2$ 个独立 moments，故必须规范化并施加足够 exclusion/fixed-elasticity restrictions。structural IRF 为 $\Theta_hA^{-1}B$。Blanchard–Perotti 用制度时滞和外部 micro elasticity 识别 fiscal shocks，是“经济信息进入 reduced-form covariance”的典型。
+
+三变量系统若 $A$ 对角规范为 1、$\varepsilon$ 方差规范为 $I_3$，未限制的 $A,B$ 仍有 15 个 free parameters，而对称 $\Sigma$ 只有 6 个独立元素，所以至少还需 9 条独立限制。限制必须在局部上让从 structural parameters 到 $\Sigma$ 的 Jacobian 满列秩；重复写两条代数等价的零限制不会增加 rank。
+
+## 结构 VAR 的识别（Identification of Structural VARs）
+
+free parameters 不超过 $m(m+1)/2$ 只是 order condition，不是充分条件。可按 IV 隐喻逐方程检查：先识别无 free contemporaneous coefficient 的 equation/shock；再将已识别 shocks 当 instruments，核对其对本方程 endogenous innovations 的 relevance 和对本 shock 的 exogeneity。
+
+若某关键 contemporaneous response 恰为 0，rank condition 会失败，即使 zero restriction 数量够。报告应明确具体非零条件，而非只写“模型恰好识别”。
+
+逐方程检查时应写出三个对象：本方程有哪些 contemporaneous endogenous innovations；前面已经识别出的 shocks 中哪些与本方程 shock 正交；这些候选 instruments 与 endogenous innovations 的 covariance matrix 是否满秩。这个步骤正对应第 12 章“数量条件不替代 rank condition”的本科桥接。
+
+## 长期限制（Long-Run Restrictions）
+
+long-run structural response 为 $C=A(1)^{-1}B$。Blanchard–Quah 令 demand shock 对 long-run GDP effect 为 0：
+
+::: {#hansen-eq-15-24}
+$$
+C=\begin{pmatrix}c_{11}&0\\c_{21}&c_{22}\end{pmatrix}.
+\tag{15.24}
+$$
+:::
+
+由 $BB'=\Sigma$，
+
+::: {#hansen-eq-15-25}
+$$
+CC'=A(1)^{-1}\Sigma A(1)^{-1'}.
+\tag{15.25}
+$$
+:::
+
+若 $C$ lower triangular，可对右侧做 Cholesky，随后 $B=A(1)C$。long-run restriction 对 low-frequency behavior 很强，near-unit roots 会让 $A(1)^{-1}$ 不稳定，因此需报告 lag/deterministic specification 与 bootstrap uncertainty。
+
+## Blanchard 与 Quah（1989）例证
+
+原书用 GDP growth 与负 unemployment rate 的 VAR，规定 demand shock 对 level GDP 长期中性。supply shock 对 GDP 立即、持久；demand effect 有 hump 后衰减。FEVD 估计 GDP 长期波动大部分来自 supply，但区间很宽。
+
+“长期中性”是识别假设而非估计结论；图形最终回零部分由 restriction 构造。实证解释要把被 impose 的性质和数据估出的短中期路径分开。
+
+## 外部工具（External Instruments）
+
+proxy-SVAR 的三方程结构可写为
+
+::: {#hansen-eq-15-26}
+$$
+e_{1t}+a_{12}e_{2t}+a_{13}e_{3t}=\varepsilon_{1t},
+\tag{15.26}
+$$
+:::
+
+::: {#hansen-eq-15-27}
+$$
+a_{21}e_{1t}+e_{2t}=u_{2t},
+\tag{15.27}
+$$
+:::
+
+::: {#hansen-eq-15-28}
+$$
+a_{31}e_{1t}+e_{3t}=u_{3t}.
+\tag{15.28}
+$$
+:::
+
+外部 $Z_t$ 要满足
+
+::: {#hansen-eq-15-29}
+$$
+E(Z_t\varepsilon_{1t})\ne0,
+\tag{15.29}
+$$
+:::
+
+::: {#hansen-eq-15-30}
+$$
+E(Z_t\varepsilon_{2t})=0,
+\tag{15.30}
+$$
+:::
+
+::: {#hansen-eq-15-31}
+$$
+E(Z_t\varepsilon_{3t})=0.
+\tag{15.31}
+$$
+:::
+
+即 proxy 与目标 shock relevant、与其他 shocks exogenous。实际用 estimated VAR residuals，属于两步 generated-regressor IV，标准误需完整修正或 bootstrap。通常只识别目标 shock 及其 impacts，不必识别其余 shocks。
+
+计算可分三步。第一，估 reduced-form VAR 得 $\hat e_t$；第二，用 $Z_t$ 工具化目标 equation innovation，估计目标 shock 对其他 innovations 的 contemporaneous effect；第三，把得到的 shock proxy 放回 Wold response 得目标 structural IRF。weak proxy 会像 weak IV 一样带来重尾和不可靠 normal interval，必须报告 first-stage relevance；exogeneity 则仍依靠事件叙事、制度时间窗或外部测量设计。
+
+## 动态因子模型（Dynamic Factor Models）
+
+measurement equation 为
+
+::: {#hansen-eq-15-32}
+$$
+X_t=\Lambda F_t+u_t,
+\tag{15.32}
+$$
+:::
+
+动态分别写成
+
+::: {#hansen-eq-15-33}
+$$
+A(L)F_t=v_t,
+\tag{15.33}
+$$
+:::
+
+::: {#hansen-eq-15-34}
+$$
+B(L)u_t=e_t.
+\tag{15.34}
+$$
+:::
+
+允许 distributed factor loadings 时
+
+::: {#hansen-eq-15-35}
+$$
+X_t=\Lambda(L)F_t+u_t.
+\tag{15.35}
+$$
+:::
+
+堆叠 factor lags 可转为 static factor；滤除 idiosyncratic dynamics 后得到
+
+::: {#hansen-eq-15-36}
+$$
+C(L)X_t=HV_t+e_t.
+\tag{15.36}
+$$
+:::
+
+可交替 multivariate regression 与 factor extraction，或用 state-space/Kalman 方法。因子与 loadings 仍有 rotation ambiguity；“动态”没有自动解决第 11 章的识别问题。
+
+static-form 估计通常先标准化大量 $X_t$，给定 dynamics 对 filtered series 做 PCA/factor extraction，再给定 factors 更新 VAR 与 idiosyncratic equations，迭代到 objective 稳定。因子数、AR 阶数和 idiosyncratic restrictions 都会影响 forecast。若研究 structural shocks，还要在 latent factor innovations 上另加识别；PCA 的正交 normalization 不是经济结构识别。
+
+## 技术证明（Technical Proofs*）
+
+VAR(1) stability proof 用 Jordan decomposition $A=PJP^{-1}$，把系统转为各 Jordan block。单根 block 是 AR(1)；重根 block 的 $J^\ell$ 出现 $\ell^s\lambda^\ell$，但 $|\lambda|<1$ 仍使 polynomial-times-geometric series 绝对可和。
+
+predictive regression proof 对 VAR 反复向前替代：每替代一步，forecast error 的 MA order 增一；FWL 再把 $Y_t$ residualize 成 innovation $e_t$，leading coefficient 就是 $\partial P_tY_{t+h}/\partial e_t'=\Theta_h$。这两步分别解释 error 为什么重叠、coefficient 为什么是 IRF。
+
+## 习题阅读指南（Exercises）
+
+15.1–15.10练习 eigenvalues、VAR($p$) companion、IRF recursion 与参数维数；15.11–15.13手算 Cholesky 并比较 ordering；15.14–15.20使用 FRED/Kilian 数据估计 recursive、short-run 与 long-run SVAR。
+
+每道实证题至少报告：变量 transformation 与频率；共同样本和 lag selection；reduced-form covariance；写成 equation/matrix 的 identifying restrictions；shock scaling；IRF/FEVD point estimates 与 interval method。不得用“standard ordering”替代经济论证。
+
+做图后还要进行数值回查：$h=0$ 时 reduced-form IRF 应为 $I_m$，OIRF 应为 $\widehat B$；每个 variable/horizon 的 FEVD shares 应加总为 1；stable VAR 的 IRF 应衰减；difference variable 的 cumulative response 与 level interpretation 一致。任何一项失败都优先排查变量顺序、matrix orientation 和累积起点。
+
+::: {.book-map}
+**章末自检**
+
+1. VAR($p$) 每个矩阵元素的经济和维数含义是什么？
+2. reduced-form innovation、orthogonal shock 与 structural shock 有何区别？
+3. 为什么 system OLS 等于逐方程 OLS，但跨方程推断仍需联合 covariance？
+4. true VAR 与 approximating VAR 分别用 [式 (15.10)](#hansen-eq-15-10) 还是 [式 (15.11)](#hansen-eq-15-11)？
+5. standard VAR IRF 与 local projection 的 bias–variance tradeoff 是什么？
+6. Cholesky ordering 施加了哪些 contemporaneous exclusion restrictions？
+7. FEVD 为何不存在有意义的 non-orthogonalized 版本？
+8. structural VAR 的 order condition 为何不保证 rank identification？
+9. short-run、long-run 与 proxy-SVAR 各依赖哪类外部经济信息？
+10. 差分变量的 IRF 为什么常要累积后才解释为 level response？
+:::
