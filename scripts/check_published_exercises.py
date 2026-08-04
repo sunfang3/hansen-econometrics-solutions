@@ -186,6 +186,16 @@ def check_special_revisions(chapters: list[int]) -> list[str]:
             for old_label in ("12.23 AJR", "12.25 Card", "12.27 AK"):
                 if old_label in notebook_text:
                     errors.append(f"Ch.12 notebook 仍含旧稿标签：{old_label}")
+    if 15 in chapters:
+        text = solution_path(15, "md").read_text(encoding="utf-8")
+        for fragment in ("Exercise 15.17　短约束 SVAR（参照出版版 §15.23）",
+                         "Exercise 15.18　Kilian 短约束 SVAR（参照出版版 §15.24）"):
+            if fragment not in text:
+                errors.append(f"Ch.15 缺少出版版定位说明：{fragment}")
+    if 17 in chapters:
+        text = solution_path(17, "md").read_text(encoding="utf-8")
+        if "Exercise 17.6　$T=2$ 时差分估计量 (17.30) = FE" not in text:
+            errors.append("Ch.17 Exercise 17.6 缺少出版版式 (17.30) 引用")
     if 21 in chapters:
         text = solution_path(21, "md").read_text(encoding="utf-8")
         for fragment in ("59.1984", "19.6", "9.8", "29.4"):

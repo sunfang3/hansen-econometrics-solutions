@@ -1,7 +1,7 @@
 # Hansen《Econometrics》第 26 章习题完整解答
 
 **章节：** Chapter 26 Multiple Choice  
-**书稿：** PDF 第 860–861 页（印刷页约 840–841），§26.14 Exercises（**26.1–26.18 全部**）
+**出版版：** `hansen/manuscripts/Econometrics_Fullbook.pdf`，PDF 第 905–906 页（印刷页 870–871），§26.14 Exercises（**26.1–26.18 全部**）
 
 **阅读提示（`AGENTS.md`）：** 默认读者熟悉二元 logit，但不默认掌握 MNL / conditional logit / IIA / nested–mixed logit 的识别与边际效应。下文逐步补齐。
 

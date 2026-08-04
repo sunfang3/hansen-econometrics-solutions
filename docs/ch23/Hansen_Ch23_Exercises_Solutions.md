@@ -1,7 +1,7 @@
 # Hansen《Econometrics》第 23 章习题完整解答
 
 **章节：** Chapter 23 Nonlinear Least Squares  
-**书稿：** PDF 第 798–799 页（印刷页 778–779），§23.11 Exercises（**23.1–23.10 全部**）  
+**出版版：** `hansen/manuscripts/Econometrics_Fullbook.pdf`，PDF 第 840–841 页（印刷页 805–806），§23.11 Exercises（**23.1–23.10 全部**）
 
 **阅读提示（`AGENTS.md`）：** 默认读者熟悉 OLS 与“条件均值 + 误差”，但不默认掌握 NLLS、集中（concentrated）最小化、线性化回归元 $m_\theta$。下文逐步补齐。
 

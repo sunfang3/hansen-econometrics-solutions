@@ -60,7 +60,7 @@ options(stringsAsFactors = FALSE)
 # 理论解答
 
 **章节：** Chapter 15 Multivariate Time Series
-**书稿：** PDF 第 563–566 页（印刷页 543–546），§15.32 Exercises（**15.1–15.20 全部**）
+**出版版：** `hansen/manuscripts/Econometrics_Fullbook.pdf`，PDF 第 592–595 页（印刷页 557–560），§15.32 Exercises（**15.1–15.20 全部**）
 **数值验证：** `Hansen_Ch15_Exercises_Solutions.ipynb`（实证 + 理论结论的蒙特卡洛验证）
 
 > **写给谁看：** 假设你学过李子奈/陈强的入门计量，会一元 AR 和 OLS，对"**VAR（向量自回归）**""**脉冲响应**""**Granger 因果**"有印象但算不清楚。
@@ -372,7 +372,7 @@ $$\mathrm{OIRF}=\Theta_hL=\begin{bmatrix}1&0\\1&1\end{bmatrix}\begin{bmatrix}1&0
 
 ---
 
-## Exercise 15.17　短约束 SVAR（投资、价格、GDP、联邦基金）
+## Exercise 15.17　短约束 SVAR（参照出版版 §15.23）
 
 **(a) 矩阵 $A$（$Ae_t=\varepsilon_t$）。** 变量序 $(I,P,Y,r)$。约束：
 - 前三变量（$I,P,Y$）不响应 $r$ 冲击 ⇒ $A$ 的 $r$ 列前三行为 0。
@@ -385,7 +385,7 @@ $$A=\begin{pmatrix}a_{II}&0&-1&0\\0&a_{PP}&a_{PY}&0\\a_{YI}&a_{YP}&a_{YY}&0\\a_{
 
 ---
 
-## Exercise 15.18　Kilian 短约束 SVAR
+## Exercise 15.18　Kilian 短约束 SVAR（参照出版版 §15.24）
 
 **(a)** $(\mathrm{oil},\mathrm{output},\mathrm{price})$，$Ae=\varepsilon$：油生产不响应产出与价格；产出不响应油（一月延迟）。
 $$A=\begin{pmatrix}a_{11}&0&0\\0&a_{22}&a_{23}\\a_{31}&a_{32}&a_{33}\end{pmatrix}.$$

@@ -60,7 +60,7 @@ options(stringsAsFactors = FALSE)
 # 理论解答
 
 **章节：** Chapter 19 Nonparametric Regression  
-**书稿：** PDF 第 718–719 页（印刷页 698–699），§19.27 Exercises（**19.1–19.11 全部**）  
+**出版版：** `hansen/manuscripts/Econometrics_Fullbook.pdf`，PDF 第 755–757 页（印刷页 720–722），§19.27 Exercises（**19.1–19.11 全部**）
 
 **阅读提示（对应 `AGENTS.md`）：** 默认读者熟悉本科 OLS / 条件均值直觉，但未必熟悉核回归、AIMSE、带宽权衡。下文每步尽量写清“在算什么、为什么这一步合法”。
 

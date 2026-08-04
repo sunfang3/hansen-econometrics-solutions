@@ -1,7 +1,7 @@
 # Hansen《Econometrics》第 25 章习题完整解答
 
 **章节：** Chapter 25 Binary Choice  
-**书稿：** PDF 第 836–838 页（印刷页 816–818），§25.15 Exercises（**25.1–25.19 全部**）  
+**出版版：** `hansen/manuscripts/Econometrics_Fullbook.pdf`，PDF 第 880–881 页（印刷页 845–846），§25.15 Exercises（**25.1–25.19 全部**）
 
 **阅读提示（`AGENTS.md`）：** 默认读者熟悉 LPM / logit 入门，但不默认掌握潜变量尺度、Mills 比、Hessian 全局凹、异方差二元选择识别。下文逐步补齐。
 

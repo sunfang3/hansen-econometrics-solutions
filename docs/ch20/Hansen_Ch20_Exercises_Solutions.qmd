@@ -60,7 +60,7 @@ options(stringsAsFactors = FALSE)
 # 理论解答
 
 **章节：** Chapter 20 Series Regression  
-**书稿：** PDF 第 755–758 页（印刷页 735–738），§20.32 Exercises（**20.1–20.18 全部**）  
+**出版版：** `hansen/manuscripts/Econometrics_Fullbook.pdf`，PDF 第 794–797 页（印刷页 759–762），§20.32 Exercises（**20.1–20.18 全部**）
 
 **阅读提示（`AGENTS.md`）：** 默认读者熟悉 OLS / 多项式回归入门，但不默认掌握样条基、级数逼近误差 $r_K$、Theorem 20.8 的渐近、NPIV。每步尽量写清“在算什么、为什么合法”。
 

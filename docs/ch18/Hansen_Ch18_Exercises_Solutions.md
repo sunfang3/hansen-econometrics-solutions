@@ -1,7 +1,7 @@
 # Bruce Hansen《Econometrics》第 18 章习题解答（详细注释版）
 
 **章节：** Chapter 18 Difference in Differences  
-**书稿：** PDF 第 682–684 页（印刷页 662–664），§18.10 Exercises（**18.1–18.8 全部**）
+**出版版：** `hansen/manuscripts/Econometrics_Fullbook.pdf`，PDF 第 717–721 页（印刷页 682–686），§18.10 Exercises（**18.1–18.8 全部**）
 
 ---
 

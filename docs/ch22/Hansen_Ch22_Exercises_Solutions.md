@@ -1,7 +1,7 @@
 # Bruce Hansen《Econometrics》第 22 章习题解答（详细注释版）
 
 **章节：** Chapter 22 M-Estimators
-**书稿：** PDF 第 782 页（印刷页 762），§22.10 Exercises（**22.1–22.4**）
+**出版版：** `hansen/manuscripts/Econometrics_Fullbook.pdf`，PDF 第 823–824 页（印刷页 788–789），§22.10 Exercises（**22.1–22.4 全部**）
 **数值验证：** `Hansen_Ch22_Exercises_Solutions.ipynb`
 
 > **写给谁看：** 假设你学过李子奈/陈强，会 OLS 和 MLE，但对"**m-估计量**是什么""$\rho$、$\psi$、$Q$、$\Omega$ 怎么算"不清楚。

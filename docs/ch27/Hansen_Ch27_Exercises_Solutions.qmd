@@ -60,7 +60,7 @@ options(stringsAsFactors = FALSE)
 # 理论解答
 
 **章节：** Chapter 27 Censoring and Selection  
-**书稿：** PDF 第 876–878 页（印刷页约 856–858），§27.13 Exercises（**27.1–27.11 全部**）
+**出版版：** `hansen/manuscripts/Econometrics_Fullbook.pdf`，PDF 第 921–923 页（印刷页 886–888），§27.13 Exercises（**27.1–27.11 全部**）
 
 **阅读提示（`AGENTS.md`）：** 默认读者熟悉 OLS 与截断/删失的口头说法，但不默认掌握 Tobit 似然、Mills 比、CLAD、Heckman 两步法。下文逐步补齐。
 

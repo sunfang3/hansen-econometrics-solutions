@@ -60,7 +60,7 @@ options(stringsAsFactors = FALSE)
 # 理论解答
 
 **章节：** Chapter 16 Non-Stationary Time Series
-**书稿：** PDF 第 615–616 页（印刷页 595–596），§16.23 Exercises（**16.1–16.14 全部**）
+**出版版：** `hansen/manuscripts/Econometrics_Fullbook.pdf`，PDF 第 645–647 页（印刷页 610–612），§16.23 Exercises（**16.1–16.14 全部**）
 **数值验证：** `Hansen_Ch16_Exercises_Solutions.ipynb`（ADF/KPSS/Johansen 实证 + 理论结论的蒙特卡洛验证）
 
 > **写给谁看：** 假设你学过李子奈/陈强的入门计量，知道"单位根""协整""ADF 检验"，但对"**为什么单位根下 OLS 不行**""**Dickey–Fuller 临界值为什么不是 $-1.96$**""**协整到底什么意思**"说不清。

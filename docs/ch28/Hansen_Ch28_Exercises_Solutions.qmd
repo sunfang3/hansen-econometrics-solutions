@@ -60,7 +60,7 @@ options(stringsAsFactors = FALSE)
 # 理论解答
 
 **章节：** Chapter 28 Model Selection, Stein Shrinkage, and Model Averaging  
-**书稿：** PDF 第 927–929 页（印刷页约 907–909），§28.33 Exercises（**28.1–28.12 全部**）
+**出版版：** `hansen/manuscripts/Econometrics_Fullbook.pdf`，PDF 第 974–975 页（印刷页 939–940），§28.33 Exercises（**28.1–28.12 全部**）
 
 **阅读提示（`AGENTS.md`）：** 默认读者会用 $t$/$F$ 做“逐步回归”，但不默认掌握 AIC/BIC/CV/FIC 的目标函数差异、选择后推断扭曲、James–Stein 可容许性、以及模型平均。下文逐步补齐。
 

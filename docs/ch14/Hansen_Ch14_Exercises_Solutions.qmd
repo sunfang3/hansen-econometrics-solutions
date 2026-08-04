@@ -60,7 +60,7 @@ options(stringsAsFactors = FALSE)
 # 理论解答
 
 **章节：** Chapter 14 Time Series
-**书稿：** PDF 第 525–528 页（印刷页 505–508），§14.48 Exercises（**14.1–14.22 全部**）
+**出版版：** `hansen/manuscripts/Econometrics_Fullbook.pdf`，PDF 第 554–558 页（印刷页 519–523），§14.48 Exercises（**14.1–14.22 全部**）
 **数值验证：** `Hansen_Ch14_Exercises_Solutions.ipynb`（14.18–14.22 实证 + 理论结论的蒙特卡洛验证）
 
 > **写给谁看：** 假设你学过李子奈/陈强的入门计量，会用 OLS、知道"自相关""平稳"，但对"**时间序列为什么不能直接套 i.i.d. 的理论**""**遍历到底什么意思**""**MA/AR/ARMA 的自协方差怎么算**""**Newey–West 为什么必要**"理不清。

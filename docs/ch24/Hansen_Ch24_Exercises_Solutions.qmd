@@ -60,7 +60,7 @@ options(stringsAsFactors = FALSE)
 # 理论解答
 
 **章节：** Chapter 24 Quantile Regression
-**书稿：** PDF 第 819–820 页（印刷页 799–800），§24.17 Exercises（**24.1–24.16 全部**）
+**出版版：** `hansen/manuscripts/Econometrics_Fullbook.pdf`，PDF 第 862–863 页（印刷页 827–828），§24.17 Exercises（**24.1–24.16 全部**）
 
 > **写给谁看：** 假设你学过李子奈/陈强，会 OLS，知道"中位数"和"分位数"，但对"**分位数回归**""**check 函数**""**为什么 LAD 比 OLS 抗异常值**"不清楚。
 > 分位数回归是 m-估计量（第 22 章）的一个特例：目标函数是 **check 函数** $\rho_\tau(u)=u(\tau-1\{u<0\})$（不对称绝对值损失），得分 $\psi_\tau(u)=\tau-1\{u<0\}$。它估计的是**条件分位数** $q_\tau(x)=Q_\tau[Y|X=x]$，而非条件均值——从而刻画分布的**全貌**（不只是中心）。

@@ -1,7 +1,7 @@
 # Bruce Hansen《Econometrics》第 17 章习题解答（详细注释版）
 
 **章节：** Chapter 17 Panel Data  
-**书稿：** PDF 第 667–669 页（印刷页 647–649），§17.45 Exercises（**17.1–17.18 全部**）
+**出版版：** `hansen/manuscripts/Econometrics_Fullbook.pdf`，PDF 第 701–703 页（印刷页 666–668），§17.45 Exercises（**17.1–17.18 全部**）
 
 ---
 
@@ -164,7 +164,7 @@ $$
 
 ---
 
-## Exercise 17.6　$T=2$ 时差分估计 = FE
+## Exercise 17.6　$T=2$ 时差分估计量 (17.30) = FE
 
 $T=2$ 时，个体 $i$ 仅一对观测。  
 Within：$\dot Y_{i1}=Y_{i1}-\bar Y_i=\tfrac12(Y_{i1}-Y_{i2})$，$\dot Y_{i2}=\tfrac12(Y_{i2}-Y_{i1})$（$X$ 同理）。  

@@ -60,7 +60,7 @@ options(stringsAsFactors = FALSE)
 # 理论解答
 
 **章节：** Chapter 29 Machine Learning  
-**习题：** Exercises 29.1–29.10（PDF 最后一页）  
+**出版版：** `hansen/manuscripts/Econometrics_Fullbook.pdf`，PDF 第 1009 页（印刷页 974），§29.24 Exercises（**29.1–29.10 全部**）
 **体系统一：** 记号与推导均按 Hansen 教材体系（惩罚估计、Mallows \(C_p\)、leave-one-out、投影模型等）
 
 ---

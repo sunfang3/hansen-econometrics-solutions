@@ -60,7 +60,7 @@ options(stringsAsFactors = FALSE)
 # 理论解答
 
 **章节：** Chapter 21 Regression Discontinuity  
-**书稿：** PDF 第 771 页（印刷页 751），§21.12 Exercises（**21.1–21.9 全部**）  
+**出版版：** `hansen/manuscripts/Econometrics_Fullbook.pdf`，PDF 第 810–813 页（印刷页 775–778），§21.12 Exercises（**21.1–21.9 全部**）
 
 **阅读提示（`AGENTS.md`）：** 默认读者熟悉 OLS 与“处理效应”直觉，但不默认掌握 sharp/fuzzy RDD、局部线性边界估计、cutoff 局部 ATE。下文补齐每一步“为什么”。
 
@@ -220,21 +220,39 @@ $$
 | 运行变量 $X$ | `povrate60`（1960 贫困率 %） | 决定谁获得写申请资助 |
 | Cutoff $c$ | $59.1984$（文中约 59.2%） | 约 300 个最穷县的门槛 |
 | 基线结果 $Y$ | `mort_age59_related_postHS` | 5–9 岁、与 HS 相关死因、1973–83 |
-| 矩形核 (21.5) | 子样本 $|X-c|\le h$，回归 (21.4) | 与正文一致 |
-| 基线 LL (Table 21.1) | **标准化三角核** + $h=8$ | 正文 Figure 21.1 / Table 21.1 |
+| 矩形窗口 (21.5) | $X\in[c-h,c+h]$，回归 (21.4) | 出版版直接用端点区间表述 |
+| 基线 LL (Table 21.1) | **标准化三角核** + $h=8$ | 未标准化三角核等价带宽为 $19.6$ |
 | SE | HC（矩形）；两侧边界 LL 的 sandwich 再合成 | 稳健于异方差 |
 
 **实现细节：** 标准化三角核（Table 19.1）支撑 $|u|<\sqrt{6}$，权  
 $K(u)=\frac{1}{\sqrt{6}}\big(1-\frac{|u|}{\sqrt{6}}\big)_+$。  
 $h=8$ 时复现 Table 21.1：$\hat\theta\approx-1.51$，se$\approx0.71$。
 
+许多软件（出版版特别举 Stata 为例）使用未标准化三角核 $K_0(v)=(1-|v|)_+$。令两种核使用同一批正权重观测，需要
+$$
+\left|\frac{X-c}{h_{\mathrm{norm}}}\right|<\sqrt6
+\quad\Longleftrightarrow\quad
+\left|\frac{X-c}{h_{\mathrm{unnorm}}}\right|<1,
+$$
+故带宽换算为
+$$
+\boxed{h_{\mathrm{unnorm}}=\sqrt6\,h_{\mathrm{norm}}}.
+$$
+因此标准化带宽 $h=8,4,12$ 分别对应未标准化带宽约 $19.6,9.8,29.4$。核权重共同乘一个常数不会改变加权最小二乘系数，所以换算后两种约定给出相同的局部线性点估计。
+
 ---
 
-## Exercise 21.5　矩形核回归 (21.5)，$h\in\{13.8,7,20\}$
+## Exercise 21.5　出版版矩形窗口：$59.1984\pm\{13.8,7,20\}$
 
 ### 设定
 
-$Y=$ `mort_age59_related_postHS`，$X=$ `povrate60`，回归 (21.4)，HC se。
+$Y=$ `mort_age59_related_postHS`，$X=$ `povrate60`，门槛 $c=59.1984$。出版版要求的三组样本筛选是
+$$
+X\in[45.3984,72.9984],\qquad
+X\in[52.1984,66.1984],\qquad
+X\in[39.1984,79.1984].
+$$
+它们依次等价于 $|X-c|\le13.8,7,20$ 的矩形核。每个子样本内估计式 (21.4)，标准误采用 HC1。
 
 ### 结果
 
@@ -260,7 +278,7 @@ $Y=$ `mort_age59_related_postHS`，$X=$ `povrate60`，回归 (21.4)，HC se。
 
 ---
 
-## Exercise 21.6　基线 RDD（Table 21.1），$h\in\{8,4,12\}$
+## Exercise 21.6　基线 RDD：标准化 $h=8,4,12$（未标准化 $19.6,9.8,29.4$）
 
 ### 方法
 
@@ -268,13 +286,15 @@ $Y=$ `mort_age59_related_postHS`，$X=$ `povrate60`，回归 (21.4)，HC se。
 $\hat\theta=\hat m(c+)-\hat m(c-)$，  
 $\mathrm{se}=\sqrt{\mathrm{se}_+^2+\mathrm{se}_-^2}$。
 
+本解答与 notebook 均采用出版版的**标准化**约定。若使用 Stata 式未标准化三角核，应把下面的 $8,4,12$ 改输为 $19.6,9.8,29.4$；不能在未标准化核中直接输入 8 后仍把结果称为出版版基线。
+
 ### 结果（$Y=$ 同 21.5）
 
-| $h$ | $\hat\theta$ | se | 备注 |
-|----:|-------------:|---:|------|
-| **8** | **−1.51** | **0.71** | **复现 Table 21.1 基线** |
-| 4 | −2.10 | 1.01 | 更噪、更负 |
-| 12 | −1.25 | 0.57 | 更平滑、效应略小 |
+| 标准化 $h$ | 等价未标准化 $h$ | $\hat\theta$ | se | 备注 |
+|----:|----:|-------------:|---:|------|
+| **8** | **19.6** | **−1.51** | **0.71** | **复现 Table 21.1 基线** |
+| 4 | 9.8 | −2.10 | 1.01 | 更噪、更负 |
+| 12 | 29.4 | −1.25 | 0.57 | 更平滑、效应略小 |
 
 ### 解释
 
@@ -354,7 +374,7 @@ Head Start 目标不是降低意外伤害死亡；若 RDD 只抓住 **目标死�
 ```{r}
 #| label: companion
 # helpers: see setup chunk (source _common.R)
-## Ch.21 RDD — local linear with triangular kernel (base R)
+## Ch.21 RDD — local linear with explicit kernel convention (base R)
 ## bootstrap common helpers
 local({
   for (cand in c("../..", "..", ".", "../../..")) {
@@ -362,10 +382,23 @@ local({
     if (file.exists(f)) { source(f, local = FALSE); break }
   }
 })
-local_linear_rdd <- function(y, x, c = 0, h, kernel = c("triangular", "rectangular")) {
+local_linear_rdd <- function(
+    y, x, c = 0, h,
+    kernel = c("triangular_normalized", "triangular_unnormalized", "rectangular")) {
   kernel <- match.arg(kernel)
   u <- (x - c) / h
-  w <- if (kernel == "triangular") pmax(1 - abs(u), 0) else as.numeric(abs(u) <= 1)
+  if (kernel == "triangular_normalized") {
+    ## Hansen Table 19.1: support |u| < sqrt(6).
+    ## Published Ex.21.6 uses h = 8, 4, 12 under this convention.
+    a <- sqrt(6)
+    w <- pmax((1 - abs(u) / a) / a, 0)
+  } else if (kernel == "triangular_unnormalized") {
+    ## Common software/Stata convention: support |u| < 1.
+    ## Equivalent h = sqrt(6) * h_normalized: 19.6, 9.8, 29.4.
+    w <- pmax(1 - abs(u), 0)
+  } else {
+    w <- as.numeric(abs(u) <= 1)
+  }
   d <- as.numeric(x >= c)
   X <- cbind(1, x - c, d, d * (x - c))
   sw <- sqrt(w)
@@ -373,6 +406,7 @@ local_linear_rdd <- function(y, x, c = 0, h, kernel = c("triangular", "rectangul
   ## treatment effect = coef on d
   list(tau = b[3], beta = b, n_eff = sum(w > 0))
 }
+normalized_to_unnormalized_bandwidth <- function(h) sqrt(6) * h
 cat("Ch.21 local_linear_rdd() loaded\n")
 ```
 
@@ -381,11 +415,11 @@ cat("Ch.21 local_linear_rdd() loaded\n")
 
 ### 载入数据
 
-### 21.5 矩形核 (21.4)，h = 13.8, 7, 20
+### 21.5 出版版矩形窗口：59.1984 ± 13.8, 7, 20
 
 ### 21.6 基线 LL（标准化三角核），h = 8, 4, 12
 
-$h=8$ 应接近 Table 21.1 的 $-1.51\ (0.71)$。
+$h=8$ 应接近 Table 21.1 的 $-1.51\ (0.71)$。若软件采用未标准化三角核，等价带宽依次为 $19.6,9.8,29.4$。
 
 ### 21.7–21.9 安慰剂结果变量
 
