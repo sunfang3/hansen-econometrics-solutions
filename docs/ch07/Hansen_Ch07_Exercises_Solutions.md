@@ -1,7 +1,7 @@
 # Bruce Hansen《Econometrics》第 7 章习题解答（详细注释版）
 
 **章节：** Chapter 7 Asymptotic Theory for Least Squares
-**书稿页码：** PDF 第 209–215 页（印刷页 189–195），§7.22 Exercises
+**出版版：** `hansen/manuscripts/Econometrics_Fullbook.pdf`，PDF 第 227–233 页（印刷页 192–198），§7.22 Exercises（**7.1–7.28 全部**）
 **数值验证：** `Hansen_Ch07_Exercises_Solutions.ipynb`（Exercise 7.4、7.28 有可运行代码）
 
 > **写给谁看：** 假设你学过李子奈/陈强，知道"大样本下 OLS 一致、渐近正态"，但说不清**为什么**、**需要什么条件**、和第 5 章的精确分布**差在哪**。

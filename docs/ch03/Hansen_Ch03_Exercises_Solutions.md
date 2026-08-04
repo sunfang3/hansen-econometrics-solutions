@@ -1,7 +1,7 @@
 # Bruce Hansen《Econometrics》第 3 章习题解答（详细注释版）
 
 **章节：** Chapter 3 The Algebra of Least Squares
-**对应书稿：** PDF 第 112–116 页（印刷页 92–96），§3.26 Exercises
+**出版版：** `hansen/manuscripts/Econometrics_Fullbook.pdf`，PDF 第 129–132 页（印刷页 94–97），§3.26 Exercises（**3.1–3.26 全部**）
 **体系统一：** 投影矩阵、残差代数、FWL、leave-one-out、$R^2$、CPS 实证
 **数值验证：** `Hansen_Ch03_Exercises_Solutions.ipynb`（Exercise 3.24–3.26 有可运行代码）
 **数据：** `hansen/econometrics/data/cps09mar/`（需自行下载，见 README）

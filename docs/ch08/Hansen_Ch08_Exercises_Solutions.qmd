@@ -60,7 +60,7 @@ options(stringsAsFactors = FALSE)
 # 理论解答
 
 **章节：** Chapter 8 Restricted Estimation
-**书稿：** PDF p238–240（印刷页 218–220），§8.17 Exercises
+**出版版：** `hansen/manuscripts/Econometrics_Fullbook.pdf`，PDF 第 256–259 页（印刷页 221–224），§8.17 Exercises（**8.1–8.22 全部**）
 **数值验证：** `Hansen_Ch08_Exercises_Solutions.ipynb`（Exercise 8.19 有可运行代码）
 
 > **写给谁看：** 假设你学过李子奈/陈强，知道"可以做约束回归（Stata `cnsreg`）"，但说不清**为什么施加约束能提高效率**、**CLS 和"最小距离（MD）"是什么关系**、**约束错了会怎样**。

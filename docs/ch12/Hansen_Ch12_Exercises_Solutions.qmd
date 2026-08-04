@@ -60,9 +60,9 @@ options(stringsAsFactors = FALSE)
 # 理论解答
 
 **章节：** Chapter 12 Instrumental Variables
-**书稿：** PDF 第 425–431 页（印刷页 405–411），§12.43 Exercises（**12.1–12.28 全部**）
+**出版版：** `hansen/manuscripts/Econometrics_Fullbook.pdf`，PDF 第 453–458 页（印刷页 418–423），§12.43 Exercises（**12.1–12.27 全部**）
 **记号：** 结构式 $Y=X'\beta+e$，$E[Ze]=0$；约简式 $X=\Gamma'Z+u$；2SLS / IV / ILS / LIML
-**数值验证：** `Hansen_Ch12_Exercises_Solutions.ipynb`（12.23 AJR、12.25 Card、12.27 AK + 理论结论的蒙特卡洛验证）
+**数值验证：** `Hansen_Ch12_Exercises_Solutions.ipynb`（12.22 AJR、12.24 Card、12.26 AK + 理论结论的蒙特卡洛验证）
 
 > **写给谁看：** 假设你学过李子奈/陈强，知道"内生性时用工具变量""2SLS 两阶段"，但说不清"**IV/2SLS/ILS/控制函数为什么等价**""**弱工具变量到底坏在哪**""**过度识别检验检验什么**"。
 > Hansen 第 12 章是计量经济学的**核心难点**：当 $E[Xe]\ne0$（内生性）破坏 OLS 一致性时，用**外生工具变量** $Z$（$E[Ze]=0$ 且与 $X$ 相关）恢复一致性。本章把 IV/2SLS/ILS/控制函数统一在一个框架里，并严肃讨论**识别、弱工具、过度识别**这些实战关键。
@@ -227,7 +227,7 @@ $$\hat\beta=\frac{\sum_{D_i=1}Y_i}{\sum_{D_i=1}Z_i}=\frac{n_1\bar Y_1}{n_1\bar Z
 
 **(b)** $\hat\beta_{IV}=\beta+(Z'X)^{-1}Z'e$，$\mathrm{var}(\hat\beta|X,Z)=(Z'X)^{-1}(Z'DZ)(X'Z)^{-1}$，$D=\mathrm{diag}(\sigma^2(Z_i,X_i))$。同方差：$\sigma^2(Z'X)^{-1}(Z'Z)(X'Z)^{-1}$。
 
-> **要点：** IV 是**一致但有偏**的（小样本偏，大样本一致）。这正是 bootstrap 在 IV 上不稳的原因（12.24）。
+> **要点：** IV 是**一致但有偏**的（小样本偏，大样本一致）。这正是 bootstrap 在 IV 上不稳的原因（出版版 12.23）。
 
 ---
 
@@ -342,19 +342,34 @@ $$\hat\beta=\frac{\sum_{D_i=1}Y_i}{\sum_{D_i=1}Z_i}=\frac{n_1\bar Y_1}{n_1\bar Z
 
 ---
 
-## Exercise 12.21　恰好识别：$\hat\beta_1=\hat\lambda_1$
+## Exercise 12.21　已知条件方差时 GLS=IV（同 12.2）
 
-**解答：** 恰好识别时，Frisch–Waugh：对 $Z_1$ 残差化后，结构与约简式对 $Z_1$ 的系数一致 ⇒ $\hat\beta_1=\hat\lambda_1$（OLS $Y$ 对 $X_1,Z_2$ 中 $X_1$ 的系数）。
+**题意翻译：** 标量回归 $Y_i=X_i\beta+e_i$ 中，$X_i\in\mathbb R$，且条件方差 $\sigma^2(x)=E[e_i^2\mid X_i=x]$ 已知。目标是找一个工具 $Z_i$，使恰好识别的 IV 估计量与 GLS 完全相同。
+
+**第 1 步：写出 GLS。** 观测 $i$ 的最优权重是条件方差的倒数 $w_i=1/\sigma^2(X_i)$，所以
+$$
+\hat\beta_{\mathrm{gls}}
+=\frac{\sum_{i=1}^n w_iX_iY_i}{\sum_{i=1}^n w_iX_i^2}
+=\frac{\sum_i X_iY_i/\sigma^2(X_i)}{\sum_i X_i^2/\sigma^2(X_i)}.
+$$
+
+**第 2 步：写出标量、恰好识别 IV。** 对任意标量工具 $Z_i$，样本矩条件 $\sum_i Z_i(Y_i-X_i\beta)=0$ 给出
+$$
+\hat\beta_{\mathrm{iv}}=\frac{\sum_i Z_iY_i}{\sum_i Z_iX_i}.
+$$
+
+**第 3 步：逐项匹配分子与分母。** 取
+$$
+\boxed{Z_i=\frac{X_i}{\sigma^2(X_i)}}
+$$
+便有 $\sum_iZ_iY_i=\sum_iX_iY_i/\sigma^2(X_i)$，且 $\sum_iZ_iX_i=\sum_iX_i^2/\sigma^2(X_i)$。因此
+$$\boxed{\hat\beta_{\mathrm{iv}}=\hat\beta_{\mathrm{gls}}}.$$
+
+**为什么这个工具有效？** 若原模型满足 $E[e_i\mid X_i]=0$，则 $Z_i$ 是 $X_i$ 的已知函数，故迭代期望给出 $E[Z_ie_i]=E[Z_iE(e_i\mid X_i)]=0$；只要 $E[X_i^2/\sigma^2(X_i)]>0$，相关性（秩条件）也成立。本科里的“按标准差加权”在 Hansen 的矩条件语言下，正好就是选择了一个有效率的工具。
 
 ---
 
-## Exercise 12.22　GLS=IV（同 12.2）
-
-$Z_i=X_i/\sigma^2(X_i)$ 使 GLS=IV。
-
----
-
-## Exercise 12.23（AJR2001）　制度与GDP：经典 IV 实证
+## Exercise 12.22（AJR2001）　制度与GDP：经典 IV 实证
 
 数据 $n=64$（`loggdp, risk, logmort0`）。
 
@@ -376,7 +391,7 @@ $Z_i=X_i/\sigma^2(X_i)$ 使 GLS=IV。
 
 ---
 
-## Exercise 12.24　IV 的 bootstrap SE 不稳
+## Exercise 12.23　IV 的 bootstrap SE 不稳
 
 对 AJR 2SLS 做 bootstrap SE。IV 有限样本偏倚重、矩可能薄弱 ⇒ **bootstrap SE 不稳定/不可靠**（重复运行波动大）。宜报告渐近稳健 SE 与弱工具稳健推断，而非盲信 bootstrap SE。
 
@@ -384,7 +399,7 @@ $Z_i=X_i/\sigma^2(X_i)$ 使 GLS=IV。
 
 ---
 
-## Exercise 12.25（Card1995）　教育回报：就近上大学作工具
+## Exercise 12.24（Card1995）　教育回报：就近上大学作工具
 
 **2SLS(a)：** `nearc4a, nearc4b` 作 `ed76` 工具；控制 exper, exp²/100, black, smsa, region 等。完整样本 $n\approx3010$：$\hat\beta_{\mathrm{edu}}\approx\mathbf{0.161}$（稳健 SE≈0.040），一阶段 $F\approx\mathbf{13.5}$（偏强）。
 **(b)** 加 `nearc2`：$F$ 约降到 9.6 量级，增益有限。
@@ -397,13 +412,13 @@ $Z_i=X_i/\sigma^2(X_i)$ 使 GLS=IV。
 
 ---
 
-## Exercise 12.26　Card IV 的 BC 区间
+## Exercise 12.25　Card IV 的 BC 区间
 
-IV 基线：BC percentile 区间适合有偏估计量。IV bootstrap SE 往往**不宜单独强调**（见 12.24）；应报 BC 区间。
+IV 基线：BC percentile 区间适合有偏估计量。IV bootstrap SE 往往**不宜单独强调**（见出版版 12.23）；应报 BC 区间。
 
 ---
 
-## Exercise 12.27（AK1991）　黑人子样本（3 QOB）
+## Exercise 12.26（AK1991）　黑人子样本（3 QOB）
 
 **(a)** 黑人子样本中 `black` 虚拟被省略（无变异）。
 **(b)(c)** 180/30 工具时一阶段 $F$ 往往**很小**（弱工具）。
@@ -414,7 +429,7 @@ IV 基线：BC percentile 区间适合有偏估计量。IV bootstrap SE 往往**
 
 ---
 
-## Exercise 12.28　弱工具下的推断
+## Exercise 12.27　弱工具下的推断
 
 同黑人 3-qob 设定：渐近 SE + bootstrap SE + BC 区间。弱工具 + 2SLS 时 **bootstrap SE 不可靠**；优先弱工具稳健方法（Anderson-Rubin CI）；BC 区间可作补充。
 
@@ -449,9 +464,9 @@ IV 基线：BC percentile 区间适合有偏估计量。IV bootstrap SE 往往**
 
 | 习题 | notebook 内容 |
 |------|----------------|
-| 12.23 | AJR2001 OLS/RF/2SLS/ILS/控制函数 + 一阶段 F + Sargan code cell |
-| 12.25 | Card1995 2SLS + 一阶段 F code cell |
-| 12.27 | AK1991 黑人子样本 3-QOB 2SLS + 一阶段 F code cell |
+| 12.22 | AJR2001 OLS/RF/2SLS/ILS/控制函数 + 一阶段 F + Sargan code cell |
+| 12.24 | Card1995 2SLS + 一阶段 F code cell |
+| 12.26 | AK1991 黑人子样本 3-QOB 2SLS + 一阶段 F code cell |
 | 理论验证 | 蒙特卡洛：2SLS 一致性 vs OLS 偏差、IV=2SLS=ILS、控制函数、弱工具偏差 code cell |
 
 
@@ -502,11 +517,11 @@ cat("Data root:", hansen_data_root(), "\n")
 
 ## Notebook 导读
 
-### Exercise 12.23 AJR2001
+### Exercise 12.22 AJR2001
 
-### Exercise 12.25 Card1995 (2SLS with nearc4a, nearc4b)
+### Exercise 12.24 Card1995 (2SLS with nearc4a, nearc4b)
 
-### Exercise 12.27 AK1991 Black men, 3 QOB instruments
+### Exercise 12.26 AK1991 Black men, 3 QOB instruments
 
 ### 理论结论的蒙特卡洛验证（无需外部数据）
 

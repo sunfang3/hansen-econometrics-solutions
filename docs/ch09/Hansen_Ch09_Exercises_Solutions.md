@@ -1,7 +1,7 @@
 # Bruce Hansen《Econometrics》第 9 章习题解答（详细注释版）
 
 **章节：** Chapter 9 Hypothesis Testing
-**书稿：** PDF p270–276（印刷页 250–256），§9.24 Exercises
+**出版版：** `hansen/manuscripts/Econometrics_Fullbook.pdf`，PDF 第 290–296 页（印刷页 255–261），§9.25 Exercises（**9.1–9.29 全部**）
 **数值验证：** `Hansen_Ch09_Exercises_Solutions.ipynb`（Exercise 9.25–9.29 有可运行代码）
 
 > **写给谁看：** 假设你学过李子奈/陈强，会做 $t$ 检验、$F$ 检验、看 $p$ 值，但对"**Wald/LR/LM 三大检验是什么关系**""**$p$ 值到底什么意思**""**为什么大样本下什么都能拒绝**"理得不够清。

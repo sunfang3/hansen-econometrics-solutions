@@ -60,7 +60,7 @@ options(stringsAsFactors = FALSE)
 # 理论解答
 
 **章节：** Chapter 4 Least Squares Regression
-**书稿页码：** PDF 第 152–156 页（印刷页 132–136），§4.27 Exercises
+**出版版：** `hansen/manuscripts/Econometrics_Fullbook.pdf`，PDF 第 169–173 页（印刷页 134–138），§4.25 Exercises（**4.1–4.26 全部**）
 **记号：** $Y=X\beta+e$，$E[e\mid X]=0$，$\Omega=E[ee'\mid X]$，$\hat\beta=(X'X)^{-1}X'Y$
 **数值验证：** `Hansen_Ch04_Exercises_Solutions.ipynb`（Exercise 4.24–4.26 有可运行代码）
 
@@ -89,7 +89,7 @@ $$\boxed{\ \hat\beta-\beta=(X'X)^{-1}X'e\ \Rightarrow\ \mathrm{var}(\hat\beta\mi
 
 | 估计器 | 肉里第 $i$ 项的权重 | 性质 |
 |---|---|---|
-| 同方差 (4.30) | 用 $s^2$ 统一替代 | 简单；异方差下**错** |
+| 同方差 (4.32) | 用 $s^2$ 统一替代 | 简单；异方差下**错** |
 | HC0 (White) | $\hat e_i^2$（直接套残差平方） | 一致；小样本略偏小 |
 | HC1 | HC0 $\times\frac{n}{n-k}$ | 自由度修正（Stata 默认 robust） |
 | HC2 | $\hat e_i^2/(1-h_{ii})$ | 同方差下**无偏** |
@@ -107,12 +107,12 @@ $$\boxed{\ \hat\beta-\beta=(X'X)^{-1}X'e\ \Rightarrow\ \mathrm{var}(\hat\beta\mi
 | $\Omega=E[ee'\mid X]$ | 条件协方差矩阵 | $n\times n$；决定 $\hat\beta$ 精度 |
 | $D=\mathrm{diag}(\sigma_1^2,\dots,\sigma_n^2)$ | 异方差矩阵（i.i.d. 下） | $\Omega$ 的对角特例（观测间不相关） |
 | $\sigma_i^2=E[e_i^2\mid X_i]$ | 条件方差函数 | 随 $X_i$ 变即"异方差" |
-| $\mathrm{var}(\hat\beta\mid X)$ | OLS 的条件方差 | 夹心公式 (4.16) |
+| $\mathrm{var}(\hat\beta\mid X)$ | OLS 的条件方差 | 夹心公式 (4.18) |
 | $s^2(X'X)^{-1}$ | 经典/同方差方差估计 | 李子奈默认；异方差下有偏 |
 | HC0–HC3 | 稳健/异方差一致方差估计 | 陈强 `robust`；只换"肉"的估计 |
 | GLS $\tilde\beta=(X'\Omega^{-1}X)^{-1}X'\Omega^{-1}Y$ | 广义最小二乘 | $\Omega$ 已知时的 BLUE |
 | WLS | 加权最小二乘 | 可行 GLS：用估计的 $\sigma_i^2$ 作权重 |
-| 聚类方差 (4.47) | cluster-robust SE | 组内相关时用（Liang–Zeger） |
+| 聚类方差估计 (4.52) | cluster-robust SE | 组内相关时用（Arellano） |
 
 **三个最常用的"计算工具"：**
 
@@ -126,7 +126,7 @@ $$\boxed{\ \hat\beta-\beta=(X'X)^{-1}X'e\ \Rightarrow\ \mathrm{var}(\hat\beta\mi
 
 模型 $Y=X\beta+e$，$E[e\mid X]=0$，$\Omega=E[ee'\mid X]$。OLS：$\hat\beta=(X'X)^{-1}X'Y$。
 基本分解：$\hat\beta-\beta=(X'X)^{-1}X'e$。
-夹心方差：$\mathrm{var}(\hat\beta\mid X)=(X'X)^{-1}X'\Omega X(X'X)^{-1}$（(4.16)）。
+夹心方差：$\mathrm{var}(\hat\beta\mid X)=(X'X)^{-1}X'\Omega X(X'X)^{-1}$（出版版式 (4.18)）。
 
 ---
 
@@ -188,62 +188,81 @@ $$\boxed{\ \hat\beta-\beta=(X'X)^{-1}X'e\ \Rightarrow\ \mathrm{var}(\hat\beta\mi
 
 ---
 
-## Exercise 4.5　证明夹心公式 (4.15)(4.16)
+## Exercise 4.5　证明无偏性与夹心公式 (4.17)(4.18)
 
 **考点：** **本章最重要的推导**。一切关于 $\hat\beta$ 的统计性质都从基本分解出发。
+
+**出版版设定：** 式 (4.15)–(4.16) 假定 $E[e\mid X]=0$、$\operatorname{var}(e\mid X)=\Sigma_1\sigma^2$。若记 $\Omega=\operatorname{var}(e\mid X)$，则 $\Omega=\Sigma_1\sigma^2$；下面先用一般的 $\Omega$ 推导，再代回出版版记号。
 
 **证明：**
 
 **第 1 步：基本分解。** 代入 $Y=X\beta+e$：
 $$\hat\beta=(X'X)^{-1}X'Y=(X'X)^{-1}X'(X\beta+e)=\underbrace{(X'X)^{-1}X'X}_{=I}\beta+(X'X)^{-1}X'e=\beta+(X'X)^{-1}X'e.$$
 
-**第 2 步：无偏 (4.15)。** 条件期望下 $(X'X)^{-1}X'$ 是"已知矩阵"（条件于 $X$）：
+**第 2 步：无偏（出版版式 (4.17)）。** 条件期望下 $(X'X)^{-1}X'$ 是"已知矩阵"（条件于 $X$）：
 $$E[\hat\beta\mid X]=\beta+(X'X)^{-1}X'\underbrace{E[e\mid X]}_{=0}=\beta.\qquad\checkmark$$
 
-**第 3 步：夹心方差 (4.16)。** 用"线性估计量方差"工具（$\hat\beta-\beta=(X'X)^{-1}X'e$，系数矩阵 $A'=(X'X)^{-1}X'$）：
+**第 3 步：夹心方差（出版版式 (4.18)）。** 用"线性估计量方差"工具（$\hat\beta-\beta=(X'X)^{-1}X'e$，系数矩阵 $A'=(X'X)^{-1}X'$）：
 $$\mathrm{var}(\hat\beta\mid X)=A'E[ee'\mid X]A=(X'X)^{-1}X'\Omega X(X'X)^{-1}.\qquad\checkmark$$
+把 $\Omega=\Sigma_1\sigma^2$ 代入，就得到出版版的原式：
+$$
+\boxed{\operatorname{var}(\hat\beta\mid X)
+=\sigma^2(X'X)^{-1}(X'\Sigma_1X)(X'X)^{-1}.}
+$$
 
 > **和本科对照：** 李子奈直接给"同方差下 $\mathrm{var}(\hat\beta)=\sigma^2(X'X)^{-1}$"。这里先推出**一般**的夹心形式，同方差只是 $\Omega=\sigma^2 I$ 的特例（肉 $=\sigma^2X'X$，消掉一个面包）。**理解夹心 = 理解稳健标准误为什么长那样。**
 
 ---
 
-## Exercise 4.6　证明广义 Gauss–Markov 定理（Theorem 4.6）
+## Exercise 4.6　在线性估计量类中证明 Theorem 4.5 的方差下界
+
+**题意翻译：** 出版版 Theorem 4.5 给出的是对**所有无偏估计量**的方差下界；本题只要求在**线性估计量** $\tilde\beta=AY$ 这一子类中证明。所以下面的 $A=B+D$ 证明恰好完成题目要求，但并不是正文更强定理的完整证明。
 
 **考点：** 在 $\Omega$ 已知（可能非球形）时，GLS 是**最佳线性无偏**（BLUE）。证明用的是经典的"$A=B+D$、交叉项消失、剩余半正定"手法（和 Ch3 Ex 3.10 同构）。
 
-**设定：** 线性估计量 $\tilde\beta=AY$，无偏 $\Rightarrow E[AY|X]=AX\beta=\beta$ 对所有 $\beta$ 成立 $\Rightarrow AX=I_k$。方差 $\mathrm{var}(\tilde\beta|X)=A\Omega A'$。
+**设定：** 沿用出版版式 (4.14)–(4.16)：$Y=X\beta+e$、$E[e\mid X]=0$、$\operatorname{var}(e\mid X)=\Sigma_1\sigma^2$，其中 $\Sigma_1$ 是已知的 $n\times n$ 正定矩阵。线性估计量 $\tilde\beta=AY$ 中 $A$ 是 $k\times n$；无偏要求 $E[AY\mid X]=AX\beta=\beta$ 对所有 $\beta$ 成立，故 $AX=I_k$。其条件方差为 $\operatorname{var}(\tilde\beta\mid X)=\sigma^2A\Sigma_1A'$。
 
-**证明：** 定义 GLS 矩阵 $B=(X'\Omega^{-1}X)^{-1}X'\Omega^{-1}$（注意 $BX=I_k$）。把 $A$ 拆成 $A=B+D$，则 $DX=AX-BX=I_k-I_k=0$。于是
-$$A\Omega A'=(B+D)\Omega(B+D)'=\underbrace{B\Omega B'}_{\text{GLS 方差}}+\underbrace{B\Omega D'}_{=0}+\underbrace{D\Omega B'}_{=0}+D\Omega D'.$$
-**交叉项为 0**：$B\Omega D'=(X'\Omega^{-1}X)^{-1}X'\underbrace{\Omega^{-1}\Omega}_{=I}D'=(X'\Omega^{-1}X)^{-1}\underbrace{X'D'}_{=(DX)'=0}=0$。
-又 $D\Omega D'\ge0$（$\Omega$ 半正定），故
-$$A\Omega A'=B\Omega B'+D\Omega D'\ge B\Omega B'.$$
-而 $B\Omega B'=(X'\Omega^{-1}X)^{-1}X'\Omega^{-1}\Omega\Omega^{-1}X(X'\Omega^{-1}X)^{-1}=(X'\Omega^{-1}X)^{-1}$。故任何线性无偏估计量的方差 $\ge(X'\Omega^{-1}X)^{-1}$。□
+**证明：** 定义出版版式 (4.19) 的 GLS 系数矩阵
+$$B=(X'\Sigma_1^{-1}X)^{-1}X'\Sigma_1^{-1},$$
+它是 $k\times n$，且 $BX=I_k$。把 $A$ 写成 $A=B+D$，则 $DX=AX-BX=I_k-I_k=0$。于是
+$$A\Sigma_1A'=(B+D)\Sigma_1(B+D)'=\underbrace{B\Sigma_1B'}_{\text{GLS 方差除以 }\sigma^2}+\underbrace{B\Sigma_1D'}_{=0}+\underbrace{D\Sigma_1B'}_{=0}+D\Sigma_1D'.$$
+**交叉项为 0**，因为
+$$B\Sigma_1D'=(X'\Sigma_1^{-1}X)^{-1}X'\underbrace{\Sigma_1^{-1}\Sigma_1}_{I_n}D'=(X'\Sigma_1^{-1}X)^{-1}\underbrace{X'D'}_{(DX)'=0}=0.$$
+又因 $\Sigma_1$ 正定，$D\Sigma_1D'$ 半正定，所以
+$$\sigma^2A\Sigma_1A'=\sigma^2B\Sigma_1B'+\sigma^2D\Sigma_1D'\ \ge\ \sigma^2B\Sigma_1B'.$$
+最后直接约去相邻逆矩阵：
+$$B\Sigma_1B'=(X'\Sigma_1^{-1}X)^{-1}.$$
+因此在线性无偏估计量类中
+$$\operatorname{var}(\tilde\beta\mid X)\ge \sigma^2(X'\Sigma_1^{-1}X)^{-1},$$
+右端正是 Theorem 4.5 的方差下界。□
 
 > **和本科对照：** 这就是高斯-马尔可夫定理的**广义版**。$\Omega=\sigma^2I$（同方差、不相关）时，下界 $=\sigma^2(X'X)^{-1}$ 恰为 OLS 方差，故 **OLS 是 BLUE**（经典 GM）；$\Omega$ 非球形时，达到下界的是 **GLS**。要点："效率"是相对的——取决于你对 $\Omega$ 知道多少。
 
 ---
 
-## Exercise 4.7　GLS 估计量的性质（$\Omega=c^2\Sigma$）
+## Exercise 4.7　GLS 估计量的性质（出版版式 (4.15)–(4.21)）
 
-**题：** GLS $\tilde\beta=(X'\Sigma^{-1}X)^{-1}X'\Sigma^{-1}Y$，残差 $\tilde e=Y-X\tilde\beta$，$\tilde c^2=\frac1{n-k}\tilde e'\Sigma^{-1}\tilde e$。
+**题意与记号：** 已知 $n\times n$ 矩阵 $\Sigma_1$、未知标量 $\sigma^2$，且 $E[e\mid X]=0$、$\operatorname{var}(e\mid X)=\Sigma_1\sigma^2$。出版版式 (4.19) 定义
+$$\tilde\beta=(X'\Sigma_1^{-1}X)^{-1}X'\Sigma_1^{-1}Y,$$
+并令 $\tilde e=Y-X\tilde\beta$、$\tilde\sigma^2=(n-k)^{-1}\tilde e'\Sigma_1^{-1}\tilde e$。
 
 **考点：** 把 GLS 的无偏、方差、残差、尺度估计完整走一遍（平行于 OLS 的 $s^2$）。关键是 GLS = "把模型用 $\Sigma^{-1/2}$ 预乘后做 OLS"。
 
-**(a)(b)** 代入 $Y=X\beta+e$：$\tilde\beta-\beta=(X'\Sigma^{-1}X)^{-1}X'\Sigma^{-1}e$。故
-$$E[\tilde\beta|X]=\beta\quad\checkmark,\qquad \mathrm{var}(\tilde\beta|X)=c^2(X'\Sigma^{-1}X)^{-1}\quad\checkmark$$
-（用了 $E[ee'|X]=c^2\Sigma$；方差推导同 Ex 4.5，"面包"$=(X'\Sigma^{-1}X)^{-1}$，"肉"$=X'\Sigma^{-1}(c^2\Sigma)\Sigma^{-1}X=c^2X'\Sigma^{-1}X$，相消。）
+**(a)(b)** 代入 $Y=X\beta+e$：$\tilde\beta-\beta=(X'\Sigma_1^{-1}X)^{-1}X'\Sigma_1^{-1}e$。故
+$$E[\tilde\beta\mid X]=\beta\quad\text{（出版版式 (4.20)）},$$
+$$\operatorname{var}(\tilde\beta\mid X)=\sigma^2(X'\Sigma_1^{-1}X)^{-1}\quad\text{（出版版式 (4.21)）}.$$
+第二式用了 $E[ee'\mid X]=\sigma^2\Sigma_1$；夹心中间的“肉”为 $X'\Sigma_1^{-1}(\sigma^2\Sigma_1)\Sigma_1^{-1}X=\sigma^2X'\Sigma_1^{-1}X$，恰好约去一个“面包”。
 
-**(c)** $\tilde e=M_1e$，其中 $M_1=I-X(X'\Sigma^{-1}X)^{-1}X'\Sigma^{-1}$。证：$\tilde e=Y-X\tilde\beta=e-X(\tilde\beta-\beta)=e-X(X'\Sigma^{-1}X)^{-1}X'\Sigma^{-1}e=M_1e$。
+**(c)** $\tilde e=M_1e$，其中 $M_1=I-X(X'\Sigma_1^{-1}X)^{-1}X'\Sigma_1^{-1}$。证：$\tilde e=Y-X\tilde\beta=e-X(\tilde\beta-\beta)=M_1e$。
 
 **(d)** 矩阵代数（展开 $M_1'\Sigma^{-1}M_1$）：
-$$M_1'\Sigma^{-1}M_1=\Sigma^{-1}-\Sigma^{-1}X(X'\Sigma^{-1}X)^{-1}X'\Sigma^{-1}.$$
+$$M_1'\Sigma_1^{-1}M_1=\Sigma_1^{-1}-\Sigma_1^{-1}X(X'\Sigma_1^{-1}X)^{-1}X'\Sigma_1^{-1}.$$
 
-**(e)** 用二次型期望 $E[e'Qe|X]=\mathrm{tr}(Q\,c^2\Sigma)$，其中 $Q=M_1'\Sigma^{-1}M_1$：
-$$E[\tilde e'\Sigma^{-1}\tilde e|X]=c^2\,\mathrm{tr}(M_1'\Sigma^{-1}M_1\Sigma)=c^2\,\mathrm{tr}\big(I-X(X'\Sigma^{-1}X)^{-1}X'\Sigma^{-1}\big)=c^2\big(n-\underbrace{\mathrm{tr}(I_k)}_{=k}\big)=c^2(n-k).$$
-故 $E[\tilde c^2|X]=\frac1{n-k}\cdot c^2(n-k)=c^2$。无偏。
+**(e)** 用二次型期望 $E[e'Qe\mid X]=\operatorname{tr}(Q\sigma^2\Sigma_1)$，其中 $Q=M_1'\Sigma_1^{-1}M_1$：
+$$E[\tilde e'\Sigma_1^{-1}\tilde e\mid X]=\sigma^2\operatorname{tr}\!\left(I-X(X'\Sigma_1^{-1}X)^{-1}X'\Sigma_1^{-1}\right)=\sigma^2(n-k).$$
+最后一步用迹的循环性质把第二项化成 $\operatorname{tr}(I_k)=k$。故 $E[\tilde\sigma^2\mid X]=\sigma^2$，即该尺度估计量条件无偏。
 
-**(f)** 合理——它是 GLS 残差尺度的无偏估计，平行于 OLS 的 $s^2=\frac1{n-k}\sum\hat e_i^2$。
+**(f)** 合理——它是 GLS 残差尺度的无偏估计，平行于 OLS 的 $s^2=(n-k)^{-1}\sum\hat e_i^2$。
 
 > **和本科对照：** GLS 的几何直观——预乘 $\Sigma^{-1/2}$ 把"椭圆"误差（异方差/相关）拉成"圆球"（同方差、独立），然后做普通 OLS。$n-k$ 自由度再次出现（GLS 零化矩阵的迹）。
 
@@ -263,7 +282,7 @@ $$E[\tilde e'\Sigma^{-1}\tilde e|X]=c^2\,\mathrm{tr}(M_1'\Sigma^{-1}M_1\Sigma)=c
 
 ---
 
-## Exercise 4.9　证明 (4.27)：杠杆修正的 $\bar\sigma^2$ 同方差下无偏
+## Exercise 4.9　证明 (4.29)：杠杆修正的 $\bar\sigma^2$ 同方差下无偏
 
 **考点：** $\hat\sigma^2=\frac1n\sum\hat e_i^2$ 在同方差下**偏小**（偏 $(n-k)/n$ 倍）；用杠杆值修正后无偏。
 
@@ -276,7 +295,7 @@ $$\bar\sigma^2=\frac1n\sum_{i=1}^n\frac{\hat e_i^2}{1-h_{ii}}\quad\Rightarrow\qu
 
 ---
 
-## Exercise 4.10　证明 (4.35)：$\hat V_{\mathrm{HC0}}\le\hat V_{\mathrm{HC2}}\le\hat V_{\mathrm{HC3}}$
+## Exercise 4.10　证明 (4.37)：$\hat V_{\mathrm{HC0}}\le\hat V_{\mathrm{HC2}}\le\hat V_{\mathrm{HC3}}$
 
 **考点：** 四个稳健方差估计器的**大小排序**——来自肉里权重的单调性。
 
@@ -297,7 +316,7 @@ $$\hat V_{\mathrm{HC0}}\ \le\ \hat V_{\mathrm{HC2}}\ \le\ \hat V_{\mathrm{HC3}}.
 
 ---
 
-## Exercise 4.11　证明 (4.36)：HC2 同方差下无偏
+## Exercise 4.11　证明 (4.38)：HC2 同方差下无偏
 
 **考点：** 为什么单独挑出 HC2——它在同方差下**条件无偏**。
 
@@ -370,7 +389,7 @@ $$E[\hat\theta|X]=E[\hat\beta^2|X]=\beta^2+V_{\hat\beta}=\theta+V_{\hat\beta}.$$
 
 ---
 
-## Exercise 4.16　因变量的测量误差
+## Exercise 4.16　因变量的测量误差（出版版式 (4.60)）
 
 **题：** 真实 $Y^*=X'\beta+e$（同方差），观察到 $Y=Y^*+u$，$E[u|X]=0$，$E[u^2|X]=\sigma_u^2(X)$，$e\perp u$。
 
@@ -384,11 +403,11 @@ $$E[\hat\theta|X]=E[\hat\beta^2|X]=\beta^2+V_{\hat\beta}=\theta+V_{\hat\beta}.$$
 
 ---
 
-## Exercise 4.17　$E[Y|X]=\sqrt{\gamma+\theta X}$，朋友建议回归 $Y^2$ 于 $X$
+## Exercise 4.17　非线性 CEF (4.61) 与线性化建议 (4.62)
 
 **考点：** 变换因变量（$Y\to Y^2$）会改变误差结构、引入异方差，可能无法识别参数。这是个"看似聪明实则出错"的反例。
 
-**(a)** 设 $u=Y-\sqrt{\gamma+\theta X}$，则 $E[u|X]=0$（由 (4.62) 的 CEF 定义直接得到）。
+**(a)** 设 $u=Y-\sqrt{\gamma+\theta X}$，则 $E[u|X]=0$（由出版版式 (4.61) 的 CEF 定义直接得到）。
 
 **(b)** 用 $Y=\sqrt{\gamma+\theta X}+u$ 算 $E[Y^2|X]$：
 $$Y^2=(\gamma+\theta X)+2u\sqrt{\gamma+\theta X}+u^2\ \Rightarrow\ E[Y^2|X]=\gamma+\theta X+E[u^2|X].$$
@@ -492,7 +511,7 @@ $$E[\hat\beta|X]=\beta-\lambda(X'X+\lambda I)^{-1}\beta\ne\beta.$$
 
 ---
 
-## Exercise 4.24（续 3.24）　多种标准误比较
+## Exercise 4.24（续 3.24；出版版 §4.14）　多种标准误比较
 
 **样本：** 亚裔单身男性、experience$<45$，$n=267$。
 
@@ -519,7 +538,7 @@ $$E[\hat\beta|X]=\beta-\lambda(X'X+\lambda I)^{-1}\beta\ne\beta.$$
 
 ---
 
-## Exercise 4.26（DDK2011）　聚类标准误
+## Exercise 4.26（出版版 §4.21，DDK2011）　聚类标准误
 
 **设定：** $Y=$ 标准化 `totalscore`；回归 tracking, age, girl, etpteacher, percentile；学校聚类（schoolid）。
 
@@ -533,7 +552,7 @@ $$E[\hat\beta|X]=\beta-\lambda(X'X+\lambda I)^{-1}\beta\ne\beta.$$
 
 **(a)** **tracking** 的 SE 聚类后膨胀最多（3.16 倍），**girl** 相对最少（1.18 倍）。原因：tracking 是**学校层面（聚类层面）**的干预，同校学生处理状态相同、成绩相关，普通稳健 SE 严重低估其方差；girl 是个体层面变量，组内相关性弱。
 
-**(b)** 仅 tracking 回归：$\hat\gamma\approx0.138$（书 (4.41)/(4.55)）；加入个体控制后 $\approx0.173$（略升）。
+**(b)** 仅 tracking 回归：$\hat\gamma\approx0.138$（出版版式 (4.57)）；加入个体控制后 $\approx0.173$（略升）。
 
 > **和本科对照（重要）：** 这就是**聚类稳健标准误**（cluster-robust SE, Liang–Zeger 1986；陈强 `reg y x, cluster(schoolid)`）。当干预在组层面、组内有相关（如同一学校的学生成绩相关）时，普通稳健 SE 会**严重低估**真实方差（本题 tracking 高估了 ~10 倍方差、~3 倍 SE），导致 $t$ 值虚高、假阳性。聚类 SE 把每个聚类当成一个"超级观测"来算 meat，纠正这种低估。
 > **判定口诀：** 干预变量在哪个层面（个体 vs 组），那个变量的 SE 就最需要聚类修正。
@@ -546,7 +565,7 @@ $$E[\hat\beta|X]=\beta-\lambda(X'X+\lambda I)^{-1}\beta\ne\beta.$$
 
 | 估计器 | 肉的估计 | 同方差下 | 异方差下 |
 |---|---|---|---|
-| 同方差 (4.30) | $s^2X'X$，$s^2=\frac{\sum\hat e_i^2}{n-k}$ | 无偏 | **有偏（错）** |
+| 同方差 (4.32) | $s^2X'X$，$s^2=\frac{\sum\hat e_i^2}{n-k}$ | 无偏 | **有偏（错）** |
 | HC0 | $\sum X_iX_i'\hat e_i^2$ | 略偏小 | 一致 |
 | HC1 | $\frac{n}{n-k}\sum X_iX_i'\hat e_i^2$ | 近似无偏 | 一致（Stata 默认） |
 | HC2 | $\sum X_iX_i'\hat e_i^2/(1-h_{ii})$ | **无偏** | 一致 |
@@ -560,7 +579,7 @@ $$E[\hat\beta|X]=\beta-\lambda(X'X+\lambda I)^{-1}\beta\ne\beta.$$
 
 模型在聚类 $g=1,\dots,G$ 内允许误差相关、聚类间独立。方差公式
 $$\mathrm{var}(\hat\beta|X)=(X'X)^{-1}\Big(\sum_{g=1}^G X_g'e_ge_g'X_g\Big)(X'X)^{-1},$$
-即把每个聚类 $g$ 的 $X_g'e_g$（$k\times1$）做外积再相加，作为"肉"。直观：每个聚类贡献一个"秩-1"块，反映组内相关。当干预在聚类层面、组内正相关 $\rho>0$、组大小 $N$ 时，方差比常规公式大约膨胀 $\rho N$ 倍（书 (4.48)）。
+即把每个聚类 $g$ 的 $X_g'e_g$（$k\times1$）做外积再相加，作为"肉"。直观：每个聚类贡献一个"秩-1"块，反映组内相关。当干预在聚类层面、组内正相关 $\rho>0$、组大小 $N$ 时，方差比常规公式大约膨胀 $\rho N$ 倍（出版版式 (4.50)）。
 
 ---
 

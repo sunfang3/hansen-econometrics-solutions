@@ -1,7 +1,7 @@
 # Bruce Hansen《Econometrics》第 10 章习题解答（详细注释版）
 
 **章节：** Chapter 10 Resampling Methods
-**书稿：** PDF 第 321–325 页（印刷页 301–305），§10.32 Exercises（**10.1–10.31 全部**）
+**出版版：** `hansen/manuscripts/Econometrics_Fullbook.pdf`，PDF 第 342–349 页（印刷页 307–314），§10.32 Exercises（**10.1–10.31 全部**）
 **记号：** 与 Hansen 一致——jackknife 方差 (10.1)、非参数 bootstrap、percentile / BC / BCa / percentile-$t$
 **数值验证：** `Hansen_Ch10_Exercises_Solutions.ipynb`（10.1、10.28–10.31 有可运行代码）
 

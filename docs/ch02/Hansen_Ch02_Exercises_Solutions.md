@@ -1,7 +1,7 @@
 # Bruce Hansen《Econometrics》第 2 章习题解答（详细注释版）
 
 **章节：** Chapter 2 Conditional Expectation and Projection
-**对应书稿：** PDF 第 80–81 页（印刷页 60–61），§2.34 Exercises
+**出版版：** `hansen/manuscripts/Econometrics_Fullbook.pdf`，PDF 第 94–96 页（印刷页 59–61），§2.34 Exercises（**2.1–2.22 全部**）
 **体系统一：** CEF、迭代期望、投影、条件方差（Hansen 记号）
 **数值验证：** `Hansen_Ch02_Exercises_Solutions.ipynb`（Exercise 2.4、2.16 有可运行代码）
 

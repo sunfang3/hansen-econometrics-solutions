@@ -1,7 +1,7 @@
 # Bruce Hansen《Econometrics》第 5 章习题解答（详细注释版）
 
 **章节：** Chapter 5 Normal Regression
-**书稿页码：** PDF 第 172–173 页（印刷页 152–153），§5.15 Exercises
+**出版版：** `hansen/manuscripts/Econometrics_Fullbook.pdf`，PDF 第 189–193 页（印刷页 154–158），§5.15 Exercises（**5.1–5.12 全部**）
 **数值验证：** `Hansen_Ch05_Exercises_Solutions.ipynb`（Exercise 5.1 有可运行模拟）
 
 > **写给谁看：** 假设你学过李子奈/陈强，知道"在经典假定（含正态性）下，$t$ 统计量服从 $t$ 分布、$F$ 统计量服从 $F$ 分布"，但对**为什么是这些分布**、**正态性到底扮演什么角色**理得不够清。

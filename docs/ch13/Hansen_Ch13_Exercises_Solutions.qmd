@@ -60,7 +60,7 @@ options(stringsAsFactors = FALSE)
 # 理论解答
 
 **章节：** Chapter 13 Generalized Method of Moments
-**书稿：** PDF 第 455–460 页（印刷页 435–440），§13.29 Exercises（**13.1–13.28 全部**）
+**出版版：** `hansen/manuscripts/Econometrics_Fullbook.pdf`，PDF 第 482–489 页（印刷页 447–454），§13.29 Exercises（**13.1–13.28 全部**）
 **记号：** $g_n(\beta)=n^{-1}\sum Z_i(Y_i-X_i'\beta)$，$J_n(\beta)=n\,g_n'W g_n$；最优权 $W=\Omega^{-1}$，$\Omega=E[ZZ'e^2]$
 **数值验证：** `Hansen_Ch13_Exercises_Solutions.ipynb`（13.27 AJR、13.28 Card + 理论结论的蒙特卡洛验证）
 

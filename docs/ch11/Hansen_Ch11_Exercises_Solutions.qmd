@@ -60,7 +60,7 @@ options(stringsAsFactors = FALSE)
 # 理论解答
 
 **章节：** Chapter 11 Multivariate Regression
-**书稿：** PDF 第 350–351 页（印刷页 330–331），§11.18 Exercises（**11.1–11.15 全部**）
+**出版版：** `hansen/manuscripts/Econometrics_Fullbook.pdf`，PDF 第 374–375 页（印刷页 339–340），§11.18 Exercises（**11.1–11.15 全部**）
 **记号：** 系统回归 $Y=\mathbf{X}\beta+e$；方程 $j$：$Y_j=X_j'\beta_j+e_j$；$\Sigma=E[ee']$；SUR/GLS
 **数值验证：** `Hansen_Ch11_Exercises_Solutions.ipynb`（Exercise 11.15 有可运行代码）
 
