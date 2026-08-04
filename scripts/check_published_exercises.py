@@ -186,6 +186,10 @@ def check_special_revisions(chapters: list[int]) -> list[str]:
             for old_label in ("12.23 AJR", "12.25 Card", "12.27 AK"):
                 if old_label in notebook_text:
                     errors.append(f"Ch.12 notebook 仍含旧稿标签：{old_label}")
+    if 13 in chapters:
+        text = solution_path(13, "md").read_text(encoding="utf-8")
+        if "Exercise 13.27（AJR）　有效 GMM（续出版版 12.22）" not in text:
+            errors.append("Ch.13 Exercise 13.27 未指向出版版 Exercise 12.22")
     if 15 in chapters:
         text = solution_path(15, "md").read_text(encoding="utf-8")
         for fragment in ("Exercise 15.17　短约束 SVAR（参照出版版 §15.23）",
@@ -201,6 +205,30 @@ def check_special_revisions(chapters: list[int]) -> list[str]:
         for fragment in ("59.1984", "19.6", "9.8", "29.4"):
             if fragment not in text:
                 errors.append(f"Ch.21 缺少出版版带宽/阈值说明：{fragment}")
+    return errors
+
+
+def check_readme(chapters: list[int]) -> list[str]:
+    path = ROOT / "README.md"
+    if not path.is_file():
+        return ["缺少根 README.md"]
+    text = path.read_text(encoding="utf-8")
+    errors: list[str] = []
+    for chapter in chapters:
+        meta = CHAPTERS[chapter]
+        row = next(
+            (line for line in text.splitlines() if line.startswith(f"| Ch.{chapter} |")),
+            None,
+        )
+        if row is None:
+            errors.append(f"README 进度表缺少 Ch.{chapter}")
+            continue
+        for fragment in (
+            f"{chapter}.1–{chapter}.{meta.last_exercise}",
+            f"| {meta.pdf_pages} |",
+        ):
+            if fragment not in row:
+                errors.append(f"README Ch.{chapter} 行缺少出版版信息：{fragment}")
     return errors
 
 
@@ -228,6 +256,7 @@ def main() -> int:
         if args.include_generated:
             errors.extend(check_solution_file(chapter, CHAPTERS[chapter], "qmd"))
     errors.extend(check_special_revisions(chapters))
+    errors.extend(check_readme(chapters))
     pdf_found: dict[int, set[int]] = {}
     if args.check_pdf:
         pdf_found, pdf_errors = extract_pdf_exercises(chapters)

@@ -508,7 +508,7 @@ $$\boxed{\ N\big((Q'WQ)^{-1}Q'W\delta,\;V_\beta\big)\ }$$
 
 ---
 
-## Exercise 13.27（AJR）　有效 GMM（续 12.23）
+## Exercise 13.27（AJR）　有效 GMM（续出版版 12.22）
 
 工具 $Z=(1,\log\mathrm{mort},(\log\mathrm{mort})^2)$；内生 risk。
 

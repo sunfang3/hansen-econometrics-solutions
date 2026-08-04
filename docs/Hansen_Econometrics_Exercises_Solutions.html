@@ -5,7 +5,7 @@
   <meta name="generator" content="pandoc" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
   <meta name="author" content="按 Hansen 计量经济学体系整理" />
-  <meta name="dcterms.date" content="2026-07-28" />
+  <meta name="dcterms.date" content="2026-08-04" />
   <title>Bruce Hansen《Econometrics》习题解答合集</title>
   <style>
     html {
@@ -377,7 +377,7 @@
 <p class="subtitle">Conditional Expectation → Machine Learning（各章
 Exercises 逐步解答）</p>
 <p class="author">按 Hansen 计量经济学体系整理</p>
-<p class="date">2026-07-28</p>
+<p class="date">2026-08-04</p>
 </header>
 <nav id="TOC" role="doc-toc">
 <h2 id="toc-title">目录</h2>
@@ -471,9 +471,11 @@ id="toc-第-29-章-machine-learning">第 29 章　Machine Learning</a></li>
 <small>来源：<code>docs/ch02/Hansen_Ch02_Exercises_Solutions.md</code></small>
 </p>
 <p><strong>章节：</strong> Chapter 2 Conditional Expectation and
-Projection <strong>对应书稿：</strong> PDF 第 80–81 页（印刷页
-60–61），§2.34 Exercises <strong>体系统一：</strong>
-CEF、迭代期望、投影、条件方差（Hansen 记号） <strong>数值验证：</strong>
+Projection <strong>出版版：</strong>
+<code>hansen/manuscripts/Econometrics_Fullbook.pdf</code>，PDF 第 94–96
+页（印刷页 59–61），§2.34 Exercises（<strong>2.1–2.22 全部</strong>）
+<strong>体系统一：</strong> CEF、迭代期望、投影、条件方差（Hansen 记号）
+<strong>数值验证：</strong>
 <code>Hansen_Ch02_Exercises_Solutions.ipynb</code>（Exercise 2.4、2.16
 有可运行代码）</p>
 <blockquote>
@@ -1627,8 +1629,10 @@ Least Squares</h1>
 <small>来源：<code>docs/ch03/Hansen_Ch03_Exercises_Solutions.md</code></small>
 </p>
 <p><strong>章节：</strong> Chapter 3 The Algebra of Least Squares
-<strong>对应书稿：</strong> PDF 第 112–116 页（印刷页 92–96），§3.26
-Exercises <strong>体系统一：</strong>
+<strong>出版版：</strong>
+<code>hansen/manuscripts/Econometrics_Fullbook.pdf</code>，PDF 第
+129–132 页（印刷页 94–97），§3.26 Exercises（<strong>3.1–3.26
+全部</strong>） <strong>体系统一：</strong>
 投影矩阵、残差代数、FWL、leave-one-out、<span
 class="math inline">\(R^2\)</span>、CPS 实证 <strong>数值验证：</strong>
 <code>Hansen_Ch03_Exercises_Solutions.ipynb</code>（Exercise 3.24–3.26
@@ -2863,8 +2867,10 @@ Regression</h1>
 <small>来源：<code>docs/ch04/Hansen_Ch04_Exercises_Solutions.md</code></small>
 </p>
 <p><strong>章节：</strong> Chapter 4 Least Squares Regression
-<strong>书稿页码：</strong> PDF 第 152–156 页（印刷页 132–136），§4.27
-Exercises <strong>记号：</strong> <span
+<strong>出版版：</strong>
+<code>hansen/manuscripts/Econometrics_Fullbook.pdf</code>，PDF 第
+169–173 页（印刷页 134–138），§4.25 Exercises（<strong>4.1–4.26
+全部</strong>） <strong>记号：</strong> <span
 class="math inline">\(Y=X\beta+e\)</span>，<span
 class="math inline">\(E[e\mid X]=0\)</span>，<span
 class="math inline">\(\Omega=E[ee&#39;\mid X]\)</span>，<span
@@ -2939,7 +2945,7 @@ X_iX_i&#39;\sigma_i^2\)</span>——这就是稳健标准误（HC0–HC3）的�
 </thead>
 <tbody>
 <tr class="odd">
-<td>同方差 (4.30)</td>
+<td>同方差 (4.32)</td>
 <td>用 <span class="math inline">\(s^2\)</span> 统一替代</td>
 <td>简单；异方差下<strong>错</strong></td>
 </tr>
@@ -3018,7 +3024,7 @@ X_i]\)</span></td>
 <td><span class="math inline">\(\mathrm{var}(\hat\beta\mid
 X)\)</span></td>
 <td>OLS 的条件方差</td>
-<td>夹心公式 (4.16)</td>
+<td>夹心公式 (4.18)</td>
 </tr>
 <tr class="even">
 <td><span class="math inline">\(s^2(X&#39;X)^{-1}\)</span></td>
@@ -3043,9 +3049,9 @@ class="math inline">\(\tilde\beta=(X&#39;\Omega^{-1}X)^{-1}X&#39;\Omega^{-1}Y\)<
 作权重</td>
 </tr>
 <tr class="even">
-<td>聚类方差 (4.47)</td>
+<td>聚类方差估计 (4.52)</td>
 <td>cluster-robust SE</td>
-<td>组内相关时用（Liang–Zeger）</td>
+<td>组内相关时用（Arellano）</td>
 </tr>
 </tbody>
 </table>
@@ -3077,7 +3083,8 @@ class="math inline">\(\hat\beta=(X&#39;X)^{-1}X&#39;Y\)</span>。
 基本分解：<span
 class="math inline">\(\hat\beta-\beta=(X&#39;X)^{-1}X&#39;e\)</span>。
 夹心方差：<span class="math inline">\(\mathrm{var}(\hat\beta\mid
-X)=(X&#39;X)^{-1}X&#39;\Omega X(X&#39;X)^{-1}\)</span>（(4.16)）。</p>
+X)=(X&#39;X)^{-1}X&#39;\Omega X(X&#39;X)^{-1}\)</span>（出版版式
+(4.18)）。</p>
 <hr />
 <h3 id="exercise-4.1-k-阶矩的估计无偏方差">Exercise 4.1　<span
 class="math inline">\(k\)</span> 阶矩的估计、无偏、方差</h3>
@@ -3189,28 +3196,41 @@ e_i\ne0\)</span>（Ex 3.25 数值验证）； - 本章重申：OLS
 设定检验的出发点。</p>
 </blockquote>
 <hr />
-<h3 id="exercise-4.5-证明夹心公式-4.154.16">Exercise 4.5　证明夹心公式
-(4.15)(4.16)</h3>
+<h3 id="exercise-4.5-证明无偏性与夹心公式-4.174.18">Exercise
+4.5　证明无偏性与夹心公式 (4.17)(4.18)</h3>
 <p><strong>考点：</strong> <strong>本章最重要的推导</strong>。一切关于
 <span class="math inline">\(\hat\beta\)</span>
 的统计性质都从基本分解出发。</p>
+<p><strong>出版版设定：</strong> 式 (4.15)–(4.16) 假定 <span
+class="math inline">\(E[e\mid X]=0\)</span>、<span
+class="math inline">\(\operatorname{var}(e\mid
+X)=\Sigma_1\sigma^2\)</span>。若记 <span
+class="math inline">\(\Omega=\operatorname{var}(e\mid X)\)</span>，则
+<span
+class="math inline">\(\Omega=\Sigma_1\sigma^2\)</span>；下面先用一般的
+<span class="math inline">\(\Omega\)</span> 推导，再代回出版版记号。</p>
 <p><strong>证明：</strong></p>
 <p><strong>第 1 步：基本分解。</strong> 代入 <span
 class="math inline">\(Y=X\beta+e\)</span>： <span
 class="math display">\[\hat\beta=(X&#39;X)^{-1}X&#39;Y=(X&#39;X)^{-1}X&#39;(X\beta+e)=\underbrace{(X&#39;X)^{-1}X&#39;X}_{=I}\beta+(X&#39;X)^{-1}X&#39;e=\beta+(X&#39;X)^{-1}X&#39;e.\]</span></p>
-<p><strong>第 2 步：无偏 (4.15)。</strong> 条件期望下 <span
+<p><strong>第 2 步：无偏（出版版式 (4.17)）。</strong> 条件期望下 <span
 class="math inline">\((X&#39;X)^{-1}X&#39;\)</span> 是”已知矩阵”（条件于
 <span class="math inline">\(X\)</span>）： <span
 class="math display">\[E[\hat\beta\mid
 X]=\beta+(X&#39;X)^{-1}X&#39;\underbrace{E[e\mid
 X]}_{=0}=\beta.\qquad\checkmark\]</span></p>
-<p><strong>第 3 步：夹心方差 (4.16)。</strong>
+<p><strong>第 3 步：夹心方差（出版版式 (4.18)）。</strong>
 用”线性估计量方差”工具（<span
 class="math inline">\(\hat\beta-\beta=(X&#39;X)^{-1}X&#39;e\)</span>，系数矩阵
 <span class="math inline">\(A&#39;=(X&#39;X)^{-1}X&#39;\)</span>）：
 <span class="math display">\[\mathrm{var}(\hat\beta\mid
 X)=A&#39;E[ee&#39;\mid X]A=(X&#39;X)^{-1}X&#39;\Omega
-X(X&#39;X)^{-1}.\qquad\checkmark\]</span></p>
+X(X&#39;X)^{-1}.\qquad\checkmark\]</span> 把 <span
+class="math inline">\(\Omega=\Sigma_1\sigma^2\)</span>
+代入，就得到出版版的原式： <span class="math display">\[
+\boxed{\operatorname{var}(\hat\beta\mid X)
+=\sigma^2(X&#39;X)^{-1}(X&#39;\Sigma_1X)(X&#39;X)^{-1}.}
+\]</span></p>
 <blockquote>
 <p><strong>和本科对照：</strong> 李子奈直接给”同方差下 <span
 class="math inline">\(\mathrm{var}(\hat\beta)=\sigma^2(X&#39;X)^{-1}\)</span>“。这里先推出<strong>一般</strong>的夹心形式，同方差只是
@@ -3219,38 +3239,55 @@ class="math inline">\(=\sigma^2X&#39;X\)</span>，消掉一个面包）。<stron
 = 理解稳健标准误为什么长那样。</strong></p>
 </blockquote>
 <hr />
-<h3 id="exercise-4.6-证明广义-gaussmarkov-定理theorem-4.6">Exercise
-4.6　证明广义 Gauss–Markov 定理（Theorem 4.6）</h3>
+<h3
+id="exercise-4.6-在线性估计量类中证明-theorem-4.5-的方差下界">Exercise
+4.6　在线性估计量类中证明 Theorem 4.5 的方差下界</h3>
+<p><strong>题意翻译：</strong> 出版版 Theorem 4.5
+给出的是对<strong>所有无偏估计量</strong>的方差下界；本题只要求在<strong>线性估计量</strong>
+<span class="math inline">\(\tilde\beta=AY\)</span>
+这一子类中证明。所以下面的 <span class="math inline">\(A=B+D\)</span>
+证明恰好完成题目要求，但并不是正文更强定理的完整证明。</p>
 <p><strong>考点：</strong> 在 <span
 class="math inline">\(\Omega\)</span> 已知（可能非球形）时，GLS
 是<strong>最佳线性无偏</strong>（BLUE）。证明用的是经典的”<span
 class="math inline">\(A=B+D\)</span>、交叉项消失、剩余半正定”手法（和
 Ch3 Ex 3.10 同构）。</p>
-<p><strong>设定：</strong> 线性估计量 <span
-class="math inline">\(\tilde\beta=AY\)</span>，无偏 <span
-class="math inline">\(\Rightarrow E[AY|X]=AX\beta=\beta\)</span> 对所有
-<span class="math inline">\(\beta\)</span> 成立 <span
-class="math inline">\(\Rightarrow AX=I_k\)</span>。方差 <span
-class="math inline">\(\mathrm{var}(\tilde\beta|X)=A\Omega
-A&#39;\)</span>。</p>
-<p><strong>证明：</strong> 定义 GLS 矩阵 <span
-class="math inline">\(B=(X&#39;\Omega^{-1}X)^{-1}X&#39;\Omega^{-1}\)</span>（注意
-<span class="math inline">\(BX=I_k\)</span>）。把 <span
-class="math inline">\(A\)</span> 拆成 <span
+<p><strong>设定：</strong> 沿用出版版式 (4.14)–(4.16)：<span
+class="math inline">\(Y=X\beta+e\)</span>、<span
+class="math inline">\(E[e\mid X]=0\)</span>、<span
+class="math inline">\(\operatorname{var}(e\mid
+X)=\Sigma_1\sigma^2\)</span>，其中 <span
+class="math inline">\(\Sigma_1\)</span> 是已知的 <span
+class="math inline">\(n\times n\)</span> 正定矩阵。线性估计量 <span
+class="math inline">\(\tilde\beta=AY\)</span> 中 <span
+class="math inline">\(A\)</span> 是 <span class="math inline">\(k\times
+n\)</span>；无偏要求 <span class="math inline">\(E[AY\mid
+X]=AX\beta=\beta\)</span> 对所有 <span
+class="math inline">\(\beta\)</span> 成立，故 <span
+class="math inline">\(AX=I_k\)</span>。其条件方差为 <span
+class="math inline">\(\operatorname{var}(\tilde\beta\mid
+X)=\sigma^2A\Sigma_1A&#39;\)</span>。</p>
+<p><strong>证明：</strong> 定义出版版式 (4.19) 的 GLS 系数矩阵 <span
+class="math display">\[B=(X&#39;\Sigma_1^{-1}X)^{-1}X&#39;\Sigma_1^{-1},\]</span>
+它是 <span class="math inline">\(k\times n\)</span>，且 <span
+class="math inline">\(BX=I_k\)</span>。把 <span
+class="math inline">\(A\)</span> 写成 <span
 class="math inline">\(A=B+D\)</span>，则 <span
 class="math inline">\(DX=AX-BX=I_k-I_k=0\)</span>。于是 <span
-class="math display">\[A\Omega
-A&#39;=(B+D)\Omega(B+D)&#39;=\underbrace{B\Omega B&#39;}_{\text{GLS
-方差}}+\underbrace{B\Omega D&#39;}_{=0}+\underbrace{D\Omega
-B&#39;}_{=0}+D\Omega D&#39;.\]</span> <strong>交叉项为 0</strong>：<span
-class="math inline">\(B\Omega
-D&#39;=(X&#39;\Omega^{-1}X)^{-1}X&#39;\underbrace{\Omega^{-1}\Omega}_{=I}D&#39;=(X&#39;\Omega^{-1}X)^{-1}\underbrace{X&#39;D&#39;}_{=(DX)&#39;=0}=0\)</span>。
-又 <span class="math inline">\(D\Omega D&#39;\ge0\)</span>（<span
-class="math inline">\(\Omega\)</span> 半正定），故 <span
-class="math display">\[A\Omega A&#39;=B\Omega B&#39;+D\Omega D&#39;\ge
-B\Omega B&#39;.\]</span> 而 <span class="math inline">\(B\Omega
-B&#39;=(X&#39;\Omega^{-1}X)^{-1}X&#39;\Omega^{-1}\Omega\Omega^{-1}X(X&#39;\Omega^{-1}X)^{-1}=(X&#39;\Omega^{-1}X)^{-1}\)</span>。故任何线性无偏估计量的方差
-<span class="math inline">\(\ge(X&#39;\Omega^{-1}X)^{-1}\)</span>。□</p>
+class="math display">\[A\Sigma_1A&#39;=(B+D)\Sigma_1(B+D)&#39;=\underbrace{B\Sigma_1B&#39;}_{\text{GLS
+方差除以
+}\sigma^2}+\underbrace{B\Sigma_1D&#39;}_{=0}+\underbrace{D\Sigma_1B&#39;}_{=0}+D\Sigma_1D&#39;.\]</span>
+<strong>交叉项为 0</strong>，因为 <span
+class="math display">\[B\Sigma_1D&#39;=(X&#39;\Sigma_1^{-1}X)^{-1}X&#39;\underbrace{\Sigma_1^{-1}\Sigma_1}_{I_n}D&#39;=(X&#39;\Sigma_1^{-1}X)^{-1}\underbrace{X&#39;D&#39;}_{(DX)&#39;=0}=0.\]</span>
+又因 <span class="math inline">\(\Sigma_1\)</span> 正定，<span
+class="math inline">\(D\Sigma_1D&#39;\)</span> 半正定，所以 <span
+class="math display">\[\sigma^2A\Sigma_1A&#39;=\sigma^2B\Sigma_1B&#39;+\sigma^2D\Sigma_1D&#39;\
+\ge\ \sigma^2B\Sigma_1B&#39;.\]</span> 最后直接约去相邻逆矩阵： <span
+class="math display">\[B\Sigma_1B&#39;=(X&#39;\Sigma_1^{-1}X)^{-1}.\]</span>
+因此在线性无偏估计量类中 <span
+class="math display">\[\operatorname{var}(\tilde\beta\mid X)\ge
+\sigma^2(X&#39;\Sigma_1^{-1}X)^{-1},\]</span> 右端正是 Theorem 4.5
+的方差下界。□</p>
 <blockquote>
 <p><strong>和本科对照：</strong>
 这就是高斯-马尔可夫定理的<strong>广义版</strong>。<span
@@ -3262,46 +3299,53 @@ class="math inline">\(\Omega\)</span> 非球形时，达到下界的是
 class="math inline">\(\Omega\)</span> 知道多少。</p>
 </blockquote>
 <hr />
-<h3 id="exercise-4.7-gls-估计量的性质omegac2sigma">Exercise 4.7　GLS
-估计量的性质（<span
-class="math inline">\(\Omega=c^2\Sigma\)</span>）</h3>
-<p><strong>题：</strong> GLS <span
-class="math inline">\(\tilde\beta=(X&#39;\Sigma^{-1}X)^{-1}X&#39;\Sigma^{-1}Y\)</span>，残差
-<span class="math inline">\(\tilde e=Y-X\tilde\beta\)</span>，<span
-class="math inline">\(\tilde c^2=\frac1{n-k}\tilde
-e&#39;\Sigma^{-1}\tilde e\)</span>。</p>
+<h3 id="exercise-4.7-gls-估计量的性质出版版式-4.154.21">Exercise
+4.7　GLS 估计量的性质（出版版式 (4.15)–(4.21)）</h3>
+<p><strong>题意与记号：</strong> 已知 <span
+class="math inline">\(n\times n\)</span> 矩阵 <span
+class="math inline">\(\Sigma_1\)</span>、未知标量 <span
+class="math inline">\(\sigma^2\)</span>，且 <span
+class="math inline">\(E[e\mid X]=0\)</span>、<span
+class="math inline">\(\operatorname{var}(e\mid
+X)=\Sigma_1\sigma^2\)</span>。出版版式 (4.19) 定义 <span
+class="math display">\[\tilde\beta=(X&#39;\Sigma_1^{-1}X)^{-1}X&#39;\Sigma_1^{-1}Y,\]</span>
+并令 <span class="math inline">\(\tilde e=Y-X\tilde\beta\)</span>、<span
+class="math inline">\(\tilde\sigma^2=(n-k)^{-1}\tilde
+e&#39;\Sigma_1^{-1}\tilde e\)</span>。</p>
 <p><strong>考点：</strong> 把 GLS
 的无偏、方差、残差、尺度估计完整走一遍（平行于 OLS 的 <span
 class="math inline">\(s^2\)</span>）。关键是 GLS = “把模型用 <span
 class="math inline">\(\Sigma^{-1/2}\)</span> 预乘后做 OLS”。</p>
 <p><strong>(a)(b)</strong> 代入 <span
 class="math inline">\(Y=X\beta+e\)</span>：<span
-class="math inline">\(\tilde\beta-\beta=(X&#39;\Sigma^{-1}X)^{-1}X&#39;\Sigma^{-1}e\)</span>。故
-<span
-class="math display">\[E[\tilde\beta|X]=\beta\quad\checkmark,\qquad
-\mathrm{var}(\tilde\beta|X)=c^2(X&#39;\Sigma^{-1}X)^{-1}\quad\checkmark\]</span>
-（用了 <span
-class="math inline">\(E[ee&#39;|X]=c^2\Sigma\)</span>；方差推导同 Ex
-4.5，“面包”<span
-class="math inline">\(=(X&#39;\Sigma^{-1}X)^{-1}\)</span>，“肉”<span
-class="math inline">\(=X&#39;\Sigma^{-1}(c^2\Sigma)\Sigma^{-1}X=c^2X&#39;\Sigma^{-1}X\)</span>，相消。）</p>
+class="math inline">\(\tilde\beta-\beta=(X&#39;\Sigma_1^{-1}X)^{-1}X&#39;\Sigma_1^{-1}e\)</span>。故
+<span class="math display">\[E[\tilde\beta\mid
+X]=\beta\quad\text{（出版版式 (4.20)）},\]</span> <span
+class="math display">\[\operatorname{var}(\tilde\beta\mid
+X)=\sigma^2(X&#39;\Sigma_1^{-1}X)^{-1}\quad\text{（出版版式
+(4.21)）}.\]</span> 第二式用了 <span class="math inline">\(E[ee&#39;\mid
+X]=\sigma^2\Sigma_1\)</span>；夹心中间的“肉”为 <span
+class="math inline">\(X&#39;\Sigma_1^{-1}(\sigma^2\Sigma_1)\Sigma_1^{-1}X=\sigma^2X&#39;\Sigma_1^{-1}X\)</span>，恰好约去一个“面包”。</p>
 <p><strong>(c)</strong> <span class="math inline">\(\tilde
 e=M_1e\)</span>，其中 <span
-class="math inline">\(M_1=I-X(X&#39;\Sigma^{-1}X)^{-1}X&#39;\Sigma^{-1}\)</span>。证：<span
+class="math inline">\(M_1=I-X(X&#39;\Sigma_1^{-1}X)^{-1}X&#39;\Sigma_1^{-1}\)</span>。证：<span
 class="math inline">\(\tilde
-e=Y-X\tilde\beta=e-X(\tilde\beta-\beta)=e-X(X&#39;\Sigma^{-1}X)^{-1}X&#39;\Sigma^{-1}e=M_1e\)</span>。</p>
+e=Y-X\tilde\beta=e-X(\tilde\beta-\beta)=M_1e\)</span>。</p>
 <p><strong>(d)</strong> 矩阵代数（展开 <span
 class="math inline">\(M_1&#39;\Sigma^{-1}M_1\)</span>）： <span
-class="math display">\[M_1&#39;\Sigma^{-1}M_1=\Sigma^{-1}-\Sigma^{-1}X(X&#39;\Sigma^{-1}X)^{-1}X&#39;\Sigma^{-1}.\]</span></p>
+class="math display">\[M_1&#39;\Sigma_1^{-1}M_1=\Sigma_1^{-1}-\Sigma_1^{-1}X(X&#39;\Sigma_1^{-1}X)^{-1}X&#39;\Sigma_1^{-1}.\]</span></p>
 <p><strong>(e)</strong> 用二次型期望 <span
-class="math inline">\(E[e&#39;Qe|X]=\mathrm{tr}(Q\,c^2\Sigma)\)</span>，其中
-<span class="math inline">\(Q=M_1&#39;\Sigma^{-1}M_1\)</span>： <span
-class="math display">\[E[\tilde e&#39;\Sigma^{-1}\tilde
-e|X]=c^2\,\mathrm{tr}(M_1&#39;\Sigma^{-1}M_1\Sigma)=c^2\,\mathrm{tr}\big(I-X(X&#39;\Sigma^{-1}X)^{-1}X&#39;\Sigma^{-1}\big)=c^2\big(n-\underbrace{\mathrm{tr}(I_k)}_{=k}\big)=c^2(n-k).\]</span>
-故 <span class="math inline">\(E[\tilde c^2|X]=\frac1{n-k}\cdot
-c^2(n-k)=c^2\)</span>。无偏。</p>
+class="math inline">\(E[e&#39;Qe\mid
+X]=\operatorname{tr}(Q\sigma^2\Sigma_1)\)</span>，其中 <span
+class="math inline">\(Q=M_1&#39;\Sigma_1^{-1}M_1\)</span>： <span
+class="math display">\[E[\tilde e&#39;\Sigma_1^{-1}\tilde e\mid
+X]=\sigma^2\operatorname{tr}\!\left(I-X(X&#39;\Sigma_1^{-1}X)^{-1}X&#39;\Sigma_1^{-1}\right)=\sigma^2(n-k).\]</span>
+最后一步用迹的循环性质把第二项化成 <span
+class="math inline">\(\operatorname{tr}(I_k)=k\)</span>。故 <span
+class="math inline">\(E[\tilde\sigma^2\mid
+X]=\sigma^2\)</span>，即该尺度估计量条件无偏。</p>
 <p><strong>(f)</strong> 合理——它是 GLS 残差尺度的无偏估计，平行于 OLS 的
-<span class="math inline">\(s^2=\frac1{n-k}\sum\hat e_i^2\)</span>。</p>
+<span class="math inline">\(s^2=(n-k)^{-1}\sum\hat e_i^2\)</span>。</p>
 <blockquote>
 <p><strong>和本科对照：</strong> GLS 的几何直观——预乘 <span
 class="math inline">\(\Sigma^{-1/2}\)</span>
@@ -3341,8 +3385,8 @@ class="math inline">\(\sigma_i\propto|X_{ji}|\)</span>。</p>
 </blockquote>
 <hr />
 <h3
-id="exercise-4.9-证明-4.27杠杆修正的-barsigma2-同方差下无偏">Exercise
-4.9　证明 (4.27)：杠杆修正的 <span
+id="exercise-4.9-证明-4.29杠杆修正的-barsigma2-同方差下无偏">Exercise
+4.9　证明 (4.29)：杠杆修正的 <span
 class="math inline">\(\bar\sigma^2\)</span> 同方差下无偏</h3>
 <p><strong>考点：</strong> <span
 class="math inline">\(\hat\sigma^2=\frac1n\sum\hat e_i^2\)</span>
@@ -3370,8 +3414,8 @@ class="math inline">\(\bar\sigma^2\)</span>
 </blockquote>
 <hr />
 <h3
-id="exercise-4.10-证明-4.35hat-v_mathrmhc0lehat-v_mathrmhc2lehat-v_mathrmhc3">Exercise
-4.10　证明 (4.35)：<span class="math inline">\(\hat
+id="exercise-4.10-证明-4.37hat-v_mathrmhc0lehat-v_mathrmhc2lehat-v_mathrmhc3">Exercise
+4.10　证明 (4.37)：<span class="math inline">\(\hat
 V_{\mathrm{HC0}}\le\hat V_{\mathrm{HC2}}\le\hat
 V_{\mathrm{HC3}}\)</span></h3>
 <p><strong>考点：</strong>
@@ -3421,8 +3465,8 @@ V_{\mathrm{HC3}}.\qquad\checkmark\]</span></p>
 HC1（介于 HC0 和 HC2 之间）。</p>
 </blockquote>
 <hr />
-<h3 id="exercise-4.11-证明-4.36hc2-同方差下无偏">Exercise 4.11　证明
-(4.36)：HC2 同方差下无偏</h3>
+<h3 id="exercise-4.11-证明-4.38hc2-同方差下无偏">Exercise 4.11　证明
+(4.38)：HC2 同方差下无偏</h3>
 <p><strong>考点：</strong> 为什么单独挑出
 HC2——它在同方差下<strong>条件无偏</strong>。</p>
 <p><strong>证明：</strong> 同方差下 <span class="math inline">\(E[\hat
@@ -3565,8 +3609,8 @@ class="math inline">\(\Omega\)</span> 非对角）。正交设计 +
 互不相关。</p>
 </blockquote>
 <hr />
-<h3 id="exercise-4.16-因变量的测量误差">Exercise
-4.16　因变量的测量误差</h3>
+<h3 id="exercise-4.16-因变量的测量误差出版版式-4.60">Exercise
+4.16　因变量的测量误差（出版版式 (4.60)）</h3>
 <p><strong>题：</strong> 真实 <span
 class="math inline">\(Y^*=X&#39;\beta+e\)</span>（同方差），观察到 <span
 class="math inline">\(Y=Y^*+u\)</span>，<span
@@ -3596,15 +3640,13 @@ class="math inline">\(X\)</span>
 偏，性质严重得多。本题正是”好”的那一种。</p>
 </blockquote>
 <hr />
-<h3 id="exercise-4.17-eyxsqrtgammatheta-x朋友建议回归-y2-于-x">Exercise
-4.17　<span class="math inline">\(E[Y|X]=\sqrt{\gamma+\theta
-X}\)</span>，朋友建议回归 <span class="math inline">\(Y^2\)</span> 于
-<span class="math inline">\(X\)</span></h3>
+<h3 id="exercise-4.17-非线性-cef-4.61-与线性化建议-4.62">Exercise
+4.17　非线性 CEF (4.61) 与线性化建议 (4.62)</h3>
 <p><strong>考点：</strong> 变换因变量（<span class="math inline">\(Y\to
 Y^2\)</span>）会改变误差结构、引入异方差，可能无法识别参数。这是个”看似聪明实则出错”的反例。</p>
 <p><strong>(a)</strong> 设 <span
 class="math inline">\(u=Y-\sqrt{\gamma+\theta X}\)</span>，则 <span
-class="math inline">\(E[u|X]=0\)</span>（由 (4.62) 的 CEF
+class="math inline">\(E[u|X]=0\)</span>（由出版版式 (4.61) 的 CEF
 定义直接得到）。</p>
 <p><strong>(b)</strong> 用 <span
 class="math inline">\(Y=\sqrt{\gamma+\theta X}+u\)</span> 算 <span
@@ -3820,8 +3862,8 @@ I)^{-1}\beta\ne\beta.\]</span> <strong>有偏</strong>（向 0
 tradeoff）。</p>
 </blockquote>
 <hr />
-<h3 id="exercise-4.24续-3.24-多种标准误比较">Exercise 4.24（续
-3.24）　多种标准误比较</h3>
+<h3 id="exercise-4.24续-3.24出版版-4.14-多种标准误比较">Exercise
+4.24（续 3.24；出版版 §4.14）　多种标准误比较</h3>
 <p><strong>样本：</strong> 亚裔单身男性、experience<span
 class="math inline">\(&lt;45\)</span>，<span
 class="math inline">\(n=267\)</span>。</p>
@@ -3900,8 +3942,8 @@ class="math inline">\(n=4230\)</span>。HC3 SE（节选）：education
 <p>大样本下各 HC 方法差别很小；HC3 给出略保守的推断。</p>
 </blockquote>
 <hr />
-<h3 id="exercise-4.26ddk2011-聚类标准误">Exercise
-4.26（DDK2011）　聚类标准误</h3>
+<h3 id="exercise-4.26出版版-4.21ddk2011-聚类标准误">Exercise
+4.26（出版版 §4.21，DDK2011）　聚类标准误</h3>
 <p><strong>设定：</strong> <span class="math inline">\(Y=\)</span>
 标准化 <code>totalscore</code>；回归 tracking, age, girl, etpteacher,
 percentile；学校聚类（schoolid）。</p>
@@ -3960,8 +4002,8 @@ class="math inline">\(\hat\beta\)</span></th>
 是<strong>学校层面（聚类层面）</strong>的干预，同校学生处理状态相同、成绩相关，普通稳健
 SE 严重低估其方差；girl 是个体层面变量，组内相关性弱。</p>
 <p><strong>(b)</strong> 仅 tracking 回归：<span
-class="math inline">\(\hat\gamma\approx0.138\)</span>（书
-(4.41)/(4.55)）；加入个体控制后 <span
+class="math inline">\(\hat\gamma\approx0.138\)</span>（出版版式
+(4.57)）；加入个体控制后 <span
 class="math inline">\(\approx0.173\)</span>（略升）。</p>
 <blockquote>
 <p><strong>和本科对照（重要）：</strong>
@@ -3998,7 +4040,7 @@ class="math inline">\(=\sum_i X_iX_i&#39;\sigma_i^2\)</span>。</p>
 </thead>
 <tbody>
 <tr class="odd">
-<td>同方差 (4.30)</td>
+<td>同方差 (4.32)</td>
 <td><span class="math inline">\(s^2X&#39;X\)</span>，<span
 class="math inline">\(s^2=\frac{\sum\hat e_i^2}{n-k}\)</span></td>
 <td>无偏</td>
@@ -4049,7 +4091,7 @@ class="math inline">\(X_g&#39;e_g\)</span>（<span
 class="math inline">\(k\times1\)</span>）做外积再相加，作为”肉”。直观：每个聚类贡献一个”秩-1”块，反映组内相关。当干预在聚类层面、组内正相关
 <span class="math inline">\(\rho&gt;0\)</span>、组大小 <span
 class="math inline">\(N\)</span> 时，方差比常规公式大约膨胀 <span
-class="math inline">\(\rho N\)</span> 倍（书 (4.48)）。</p>
+class="math inline">\(\rho N\)</span> 倍（出版版式 (4.50)）。</p>
 <hr />
 <h3 id="附录-cnotebook-单元对应-1">附录 C：notebook 单元对应</h3>
 <table>
@@ -4084,8 +4126,10 @@ class="math inline">\(\rho N\)</span> 倍（书 (4.48)）。</p>
 <small>来源：<code>docs/ch05/Hansen_Ch05_Exercises_Solutions.md</code></small>
 </p>
 <p><strong>章节：</strong> Chapter 5 Normal Regression
-<strong>书稿页码：</strong> PDF 第 172–173 页（印刷页 152–153），§5.15
-Exercises <strong>数值验证：</strong>
+<strong>出版版：</strong>
+<code>hansen/manuscripts/Econometrics_Fullbook.pdf</code>，PDF 第
+189–193 页（印刷页 154–158），§5.15 Exercises（<strong>5.1–5.12
+全部</strong>） <strong>数值验证：</strong>
 <code>Hansen_Ch05_Exercises_Solutions.ipynb</code>（Exercise 5.1
 有可运行模拟）</p>
 <blockquote>
@@ -4779,8 +4823,10 @@ Theory for Least Squares</h1>
 <small>来源：<code>docs/ch07/Hansen_Ch07_Exercises_Solutions.md</code></small>
 </p>
 <p><strong>章节：</strong> Chapter 7 Asymptotic Theory for Least Squares
-<strong>书稿页码：</strong> PDF 第 209–215 页（印刷页 189–195），§7.22
-Exercises <strong>数值验证：</strong>
+<strong>出版版：</strong>
+<code>hansen/manuscripts/Econometrics_Fullbook.pdf</code>，PDF 第
+227–233 页（印刷页 192–198），§7.22 Exercises（<strong>7.1–7.28
+全部</strong>） <strong>数值验证：</strong>
 <code>Hansen_Ch07_Exercises_Solutions.ipynb</code>（Exercise 7.4、7.28
 有可运行代码）</p>
 <blockquote>
@@ -5860,8 +5906,10 @@ Estimation</h1>
 <small>来源：<code>docs/ch08/Hansen_Ch08_Exercises_Solutions.md</code></small>
 </p>
 <p><strong>章节：</strong> Chapter 8 Restricted Estimation
-<strong>书稿：</strong> PDF p238–240（印刷页 218–220），§8.17 Exercises
-<strong>数值验证：</strong>
+<strong>出版版：</strong>
+<code>hansen/manuscripts/Econometrics_Fullbook.pdf</code>，PDF 第
+256–259 页（印刷页 221–224），§8.17 Exercises（<strong>8.1–8.22
+全部</strong>） <strong>数值验证：</strong>
 <code>Hansen_Ch08_Exercises_Solutions.ipynb</code>（Exercise 8.19
 有可运行代码）</p>
 <blockquote>
@@ -6588,8 +6636,10 @@ SSE（或似然）差距。 - <strong>LM/距离：</strong> 看约束估计的 L
 <small>来源：<code>docs/ch09/Hansen_Ch09_Exercises_Solutions.md</code></small>
 </p>
 <p><strong>章节：</strong> Chapter 9 Hypothesis Testing
-<strong>书稿：</strong> PDF p270–276（印刷页 250–256），§9.24 Exercises
-<strong>数值验证：</strong>
+<strong>出版版：</strong>
+<code>hansen/manuscripts/Econometrics_Fullbook.pdf</code>，PDF 第
+290–296 页（印刷页 255–261），§9.25 Exercises（<strong>9.1–9.29
+全部</strong>） <strong>数值验证：</strong>
 <code>Hansen_Ch09_Exercises_Solutions.ipynb</code>（Exercise 9.25–9.29
 有可运行代码）</p>
 <blockquote>
@@ -7501,11 +7551,12 @@ CI。</li>
 <small>来源：<code>docs/ch10/Hansen_Ch10_Exercises_Solutions.md</code></small>
 </p>
 <p><strong>章节：</strong> Chapter 10 Resampling Methods
-<strong>书稿：</strong> PDF 第 321–325 页（印刷页 301–305），§10.32
-Exercises（<strong>10.1–10.31 全部</strong>） <strong>记号：</strong> 与
-Hansen 一致——jackknife 方差 (10.1)、非参数 bootstrap、percentile / BC /
-BCa / percentile-<span class="math inline">\(t\)</span>
-<strong>数值验证：</strong>
+<strong>出版版：</strong>
+<code>hansen/manuscripts/Econometrics_Fullbook.pdf</code>，PDF 第
+342–349 页（印刷页 307–314），§10.32 Exercises（<strong>10.1–10.31
+全部</strong>） <strong>记号：</strong> 与 Hansen 一致——jackknife 方差
+(10.1)、非参数 bootstrap、percentile / BC / BCa / percentile-<span
+class="math inline">\(t\)</span> <strong>数值验证：</strong>
 <code>Hansen_Ch10_Exercises_Solutions.ipynb</code>（10.1、10.28–10.31
 有可运行代码）</p>
 <blockquote>
@@ -8460,10 +8511,12 @@ Regression</h1>
 <small>来源：<code>docs/ch11/Hansen_Ch11_Exercises_Solutions.md</code></small>
 </p>
 <p><strong>章节：</strong> Chapter 11 Multivariate Regression
-<strong>书稿：</strong> PDF 第 350–351 页（印刷页 330–331），§11.18
-Exercises（<strong>11.1–11.15 全部</strong>） <strong>记号：</strong>
-系统回归 <span class="math inline">\(Y=\mathbf{X}\beta+e\)</span>；方程
-<span class="math inline">\(j\)</span>：<span
+<strong>出版版：</strong>
+<code>hansen/manuscripts/Econometrics_Fullbook.pdf</code>，PDF 第
+374–375 页（印刷页 339–340），§11.18 Exercises（<strong>11.1–11.15
+全部</strong>） <strong>记号：</strong> 系统回归 <span
+class="math inline">\(Y=\mathbf{X}\beta+e\)</span>；方程 <span
+class="math inline">\(j\)</span>：<span
 class="math inline">\(Y_j=X_j&#39;\beta_j+e_j\)</span>；<span
 class="math inline">\(\Sigma=E[ee&#39;]\)</span>；SUR/GLS
 <strong>数值验证：</strong>
@@ -9065,14 +9118,16 @@ Variables</h1>
 <small>来源：<code>docs/ch12/Hansen_Ch12_Exercises_Solutions.md</code></small>
 </p>
 <p><strong>章节：</strong> Chapter 12 Instrumental Variables
-<strong>书稿：</strong> PDF 第 425–431 页（印刷页 405–411），§12.43
-Exercises（<strong>12.1–12.28 全部</strong>） <strong>记号：</strong>
-结构式 <span class="math inline">\(Y=X&#39;\beta+e\)</span>，<span
+<strong>出版版：</strong>
+<code>hansen/manuscripts/Econometrics_Fullbook.pdf</code>，PDF 第
+453–458 页（印刷页 418–423），§12.43 Exercises（<strong>12.1–12.27
+全部</strong>） <strong>记号：</strong> 结构式 <span
+class="math inline">\(Y=X&#39;\beta+e\)</span>，<span
 class="math inline">\(E[Ze]=0\)</span>；约简式 <span
 class="math inline">\(X=\Gamma&#39;Z+u\)</span>；2SLS / IV / ILS / LIML
 <strong>数值验证：</strong>
-<code>Hansen_Ch12_Exercises_Solutions.ipynb</code>（12.23 AJR、12.25
-Card、12.27 AK + 理论结论的蒙特卡洛验证）</p>
+<code>Hansen_Ch12_Exercises_Solutions.ipynb</code>（12.22 AJR、12.24
+Card、12.26 AK + 理论结论的蒙特卡洛验证）</p>
 <blockquote>
 <p><strong>写给谁看：</strong>
 假设你学过李子奈/陈强，知道”内生性时用工具变量”“2SLS
@@ -9461,7 +9516,7 @@ class="math inline">\(\sigma^2(Z&#39;X)^{-1}(Z&#39;Z)(X&#39;Z)^{-1}\)</span>。<
 <blockquote>
 <p><strong>要点：</strong> IV
 是<strong>一致但有偏</strong>的（小样本偏，大样本一致）。这正是
-bootstrap 在 IV 上不稳的原因（12.24）。</p>
+bootstrap 在 IV 上不稳的原因（出版版 12.23）。</p>
 </blockquote>
 <hr />
 <h3 id="exercise-12.10-控制函数">Exercise 12.10　控制函数</h3>
@@ -9679,24 +9734,49 @@ class="math inline">\(\hat X\)</span>，再
 <code>ivregress</code>/<code>ivreg</code> 专用命令。</p>
 </blockquote>
 <hr />
-<h3 id="exercise-12.21-恰好识别hatbeta_1hatlambda_1">Exercise
-12.21　恰好识别：<span
-class="math inline">\(\hat\beta_1=\hat\lambda_1\)</span></h3>
-<p><strong>解答：</strong> 恰好识别时，Frisch–Waugh：对 <span
-class="math inline">\(Z_1\)</span> 残差化后，结构与约简式对 <span
-class="math inline">\(Z_1\)</span> 的系数一致 ⇒ <span
-class="math inline">\(\hat\beta_1=\hat\lambda_1\)</span>（OLS <span
-class="math inline">\(Y\)</span> 对 <span
-class="math inline">\(X_1,Z_2\)</span> 中 <span
-class="math inline">\(X_1\)</span> 的系数）。</p>
+<h3 id="exercise-12.21-已知条件方差时-glsiv同-12.2">Exercise
+12.21　已知条件方差时 GLS=IV（同 12.2）</h3>
+<p><strong>题意翻译：</strong> 标量回归 <span
+class="math inline">\(Y_i=X_i\beta+e_i\)</span> 中，<span
+class="math inline">\(X_i\in\mathbb R\)</span>，且条件方差 <span
+class="math inline">\(\sigma^2(x)=E[e_i^2\mid X_i=x]\)</span>
+已知。目标是找一个工具 <span
+class="math inline">\(Z_i\)</span>，使恰好识别的 IV 估计量与 GLS
+完全相同。</p>
+<p><strong>第 1 步：写出 GLS。</strong> 观测 <span
+class="math inline">\(i\)</span> 的最优权重是条件方差的倒数 <span
+class="math inline">\(w_i=1/\sigma^2(X_i)\)</span>，所以 <span
+class="math display">\[
+\hat\beta_{\mathrm{gls}}
+=\frac{\sum_{i=1}^n w_iX_iY_i}{\sum_{i=1}^n w_iX_i^2}
+=\frac{\sum_i X_iY_i/\sigma^2(X_i)}{\sum_i X_i^2/\sigma^2(X_i)}.
+\]</span></p>
+<p><strong>第 2 步：写出标量、恰好识别 IV。</strong> 对任意标量工具
+<span class="math inline">\(Z_i\)</span>，样本矩条件 <span
+class="math inline">\(\sum_i Z_i(Y_i-X_i\beta)=0\)</span> 给出 <span
+class="math display">\[
+\hat\beta_{\mathrm{iv}}=\frac{\sum_i Z_iY_i}{\sum_i Z_iX_i}.
+\]</span></p>
+<p><strong>第 3 步：逐项匹配分子与分母。</strong> 取 <span
+class="math display">\[
+\boxed{Z_i=\frac{X_i}{\sigma^2(X_i)}}
+\]</span> 便有 <span
+class="math inline">\(\sum_iZ_iY_i=\sum_iX_iY_i/\sigma^2(X_i)\)</span>，且
+<span
+class="math inline">\(\sum_iZ_iX_i=\sum_iX_i^2/\sigma^2(X_i)\)</span>。因此
+<span
+class="math display">\[\boxed{\hat\beta_{\mathrm{iv}}=\hat\beta_{\mathrm{gls}}}.\]</span></p>
+<p><strong>为什么这个工具有效？</strong> 若原模型满足 <span
+class="math inline">\(E[e_i\mid X_i]=0\)</span>，则 <span
+class="math inline">\(Z_i\)</span> 是 <span
+class="math inline">\(X_i\)</span> 的已知函数，故迭代期望给出 <span
+class="math inline">\(E[Z_ie_i]=E[Z_iE(e_i\mid X_i)]=0\)</span>；只要
+<span
+class="math inline">\(E[X_i^2/\sigma^2(X_i)]&gt;0\)</span>，相关性（秩条件）也成立。本科里的“按标准差加权”在
+Hansen 的矩条件语言下，正好就是选择了一个有效率的工具。</p>
 <hr />
-<h3 id="exercise-12.22-glsiv同-12.2">Exercise 12.22　GLS=IV（同
-12.2）</h3>
-<p><span class="math inline">\(Z_i=X_i/\sigma^2(X_i)\)</span> 使
-GLS=IV。</p>
-<hr />
-<h3 id="exercise-12.23ajr2001-制度与gdp经典-iv-实证">Exercise
-12.23（AJR2001）　制度与GDP：经典 IV 实证</h3>
+<h3 id="exercise-12.22ajr2001-制度与gdp经典-iv-实证">Exercise
+12.22（AJR2001）　制度与GDP：经典 IV 实证</h3>
 <p>数据 <span
 class="math inline">\(n=64\)</span>（<code>loggdp, risk, logmort0</code>）。</p>
 <table>
@@ -9753,7 +9833,7 @@ class="math inline">\(p\approx0.023\)</span> ⇒
 Sargan 边缘拒绝提示外生性争议。</p>
 </blockquote>
 <hr />
-<h3 id="exercise-12.24-iv-的-bootstrap-se-不稳">Exercise 12.24　IV 的
+<h3 id="exercise-12.23-iv-的-bootstrap-se-不稳">Exercise 12.23　IV 的
 bootstrap SE 不稳</h3>
 <p>对 AJR 2SLS 做 bootstrap SE。IV 有限样本偏倚重、矩可能薄弱 ⇒
 <strong>bootstrap SE
@@ -9764,8 +9844,8 @@ bootstrap SE 不稳</h3>
 可靠——IV 是有偏非线性估计量，小样本矩薄弱。弱工具时尤其不稳。</p>
 </blockquote>
 <hr />
-<h3 id="exercise-12.25card1995-教育回报就近上大学作工具">Exercise
-12.25（Card1995）　教育回报：就近上大学作工具</h3>
+<h3 id="exercise-12.24card1995-教育回报就近上大学作工具">Exercise
+12.24（Card1995）　教育回报：就近上大学作工具</h3>
 <p><strong>2SLS(a)：</strong> <code>nearc4a, nearc4b</code> 作
 <code>ed76</code> 工具；控制 exper, exp²/100, black, smsa, region
 等。完整样本 <span class="math inline">\(n\approx3010\)</span>：<span
@@ -9785,13 +9865,13 @@ Hausman/C 检验：2SLS vs OLS。 <strong>(g)</strong> LIML 与 2SLS
 OLS，修正了 OLS 的向下偏误。</p>
 </blockquote>
 <hr />
-<h3 id="exercise-12.26-card-iv-的-bc-区间">Exercise 12.26　Card IV 的 BC
+<h3 id="exercise-12.25-card-iv-的-bc-区间">Exercise 12.25　Card IV 的 BC
 区间</h3>
 <p>IV 基线：BC percentile 区间适合有偏估计量。IV bootstrap SE
-往往<strong>不宜单独强调</strong>（见 12.24）；应报 BC 区间。</p>
+往往<strong>不宜单独强调</strong>（见出版版 12.23）；应报 BC 区间。</p>
 <hr />
-<h3 id="exercise-12.27ak1991-黑人子样本3-qob">Exercise
-12.27（AK1991）　黑人子样本（3 QOB）</h3>
+<h3 id="exercise-12.26ak1991-黑人子样本3-qob">Exercise
+12.26（AK1991）　黑人子样本（3 QOB）</h3>
 <p><strong>(a)</strong> 黑人子样本中 <code>black</code>
 虚拟被省略（无变异）。 <strong>(b)(c)</strong> 180/30 工具时一阶段 <span
 class="math inline">\(F\)</span> 往往<strong>很小</strong>（弱工具）。
@@ -9808,8 +9888,8 @@ class="math inline">\(F\approx4.85&lt;10\)</span>，2SLS
 不可靠（已验证：弱工具时 2SLS 偏向 OLS）。</p>
 </blockquote>
 <hr />
-<h3 id="exercise-12.28-弱工具下的推断">Exercise
-12.28　弱工具下的推断</h3>
+<h3 id="exercise-12.27-弱工具下的推断">Exercise
+12.27　弱工具下的推断</h3>
 <p>同黑人 3-qob 设定：渐近 SE + bootstrap SE + BC 区间。弱工具 + 2SLS 时
 <strong>bootstrap SE 不可靠</strong>；优先弱工具稳健方法（Anderson-Rubin
 CI）；BC 区间可作补充。</p>
@@ -9918,15 +9998,15 @@ F\approx0.4\)</span>（弱, 2SLS≈3.5，偏向 OLS plim）。</p>
 </thead>
 <tbody>
 <tr class="odd">
-<td>12.23</td>
+<td>12.22</td>
 <td>AJR2001 OLS/RF/2SLS/ILS/控制函数 + 一阶段 F + Sargan code cell</td>
 </tr>
 <tr class="even">
-<td>12.25</td>
+<td>12.24</td>
 <td>Card1995 2SLS + 一阶段 F code cell</td>
 </tr>
 <tr class="odd">
-<td>12.27</td>
+<td>12.26</td>
 <td>AK1991 黑人子样本 3-QOB 2SLS + 一阶段 F code cell</td>
 </tr>
 <tr class="even">
@@ -9943,9 +10023,11 @@ Method of Moments</h1>
 <small>来源：<code>docs/ch13/Hansen_Ch13_Exercises_Solutions.md</code></small>
 </p>
 <p><strong>章节：</strong> Chapter 13 Generalized Method of Moments
-<strong>书稿：</strong> PDF 第 455–460 页（印刷页 435–440），§13.29
-Exercises（<strong>13.1–13.28 全部</strong>） <strong>记号：</strong>
-<span class="math inline">\(g_n(\beta)=n^{-1}\sum
+<strong>出版版：</strong>
+<code>hansen/manuscripts/Econometrics_Fullbook.pdf</code>，PDF 第
+482–489 页（印刷页 447–454），§13.29 Exercises（<strong>13.1–13.28
+全部</strong>） <strong>记号：</strong> <span
+class="math inline">\(g_n(\beta)=n^{-1}\sum
 Z_i(Y_i-X_i&#39;\beta)\)</span>，<span
 class="math inline">\(J_n(\beta)=n\,g_n&#39;W g_n\)</span>；最优权 <span
 class="math inline">\(W=\Omega^{-1}\)</span>，<span
@@ -10958,8 +11040,8 @@ class="math inline">\(\ell\)</span> 固定（不随 <span
 class="math inline">\(n\)</span> 增）。</p>
 </blockquote>
 <hr />
-<h3 id="exercise-13.27ajr-有效-gmm续-12.23">Exercise 13.27（AJR）　有效
-GMM（续 12.23）</h3>
+<h3 id="exercise-13.27ajr-有效-gmm续出版版-12.22">Exercise
+13.27（AJR）　有效 GMM（续出版版 12.22）</h3>
 <p>工具 <span
 class="math inline">\(Z=(1,\log\mathrm{mort},(\log\mathrm{mort})^2)\)</span>；内生
 risk。</p>
@@ -11148,9 +11230,10 @@ size 与功效、同方差等价 code cell</td>
 <small>来源：<code>docs/ch14/Hansen_Ch14_Exercises_Solutions.md</code></small>
 </p>
 <p><strong>章节：</strong> Chapter 14 Time Series
-<strong>书稿：</strong> PDF 第 525–528 页（印刷页 505–508），§14.48
-Exercises（<strong>14.1–14.22 全部</strong>）
-<strong>数值验证：</strong>
+<strong>出版版：</strong>
+<code>hansen/manuscripts/Econometrics_Fullbook.pdf</code>，PDF 第
+554–558 页（印刷页 519–523），§14.48 Exercises（<strong>14.1–14.22
+全部</strong>） <strong>数值验证：</strong>
 <code>Hansen_Ch14_Exercises_Solutions.ipynb</code>（14.18–14.22 实证 +
 理论结论的蒙特卡洛验证）</p>
 <blockquote>
@@ -12240,9 +12323,10 @@ Series</h1>
 <small>来源：<code>docs/ch15/Hansen_Ch15_Exercises_Solutions.md</code></small>
 </p>
 <p><strong>章节：</strong> Chapter 15 Multivariate Time Series
-<strong>书稿：</strong> PDF 第 563–566 页（印刷页 543–546），§15.32
-Exercises（<strong>15.1–15.20 全部</strong>）
-<strong>数值验证：</strong>
+<strong>出版版：</strong>
+<code>hansen/manuscripts/Econometrics_Fullbook.pdf</code>，PDF 第
+592–595 页（印刷页 557–560），§15.32 Exercises（<strong>15.1–15.20
+全部</strong>） <strong>数值验证：</strong>
 <code>Hansen_Ch15_Exercises_Solutions.ipynb</code>（实证 +
 理论结论的蒙特卡洛验证）</p>
 <blockquote>
@@ -12871,8 +12955,8 @@ class="math inline">\(\Delta\log(\mathrm{realln})\)</span>。
 <strong>(c)(d)</strong>
 住房开工对许可冲击正向持久；对自身冲击瞬时最大；贷款冲击下开工响应偏弱/延迟——符合”许可→开工→贷款”时序。</p>
 <hr />
-<h3 id="exercise-15.17-短约束-svar投资价格gdp联邦基金">Exercise
-15.17　短约束 SVAR（投资、价格、GDP、联邦基金）</h3>
+<h3 id="exercise-15.17-短约束-svar参照出版版-15.23">Exercise
+15.17　短约束 SVAR（参照出版版 §15.23）</h3>
 <p><strong>(a) 矩阵 <span class="math inline">\(A\)</span>（<span
 class="math inline">\(Ae_t=\varepsilon_t\)</span>）。</strong> 变量序
 <span class="math inline">\((I,P,Y,r)\)</span>。约束： - 前三变量（<span
@@ -12899,8 +12983,8 @@ VAR(6)+趋势，解 <span class="math inline">\(\hat A\)</span>；报告
 FF→GDP、GDP→GDP、GDP→<span class="math inline">\(P\)</span> 的结构
 IRF。</p>
 <hr />
-<h3 id="exercise-15.18-kilian-短约束-svar">Exercise 15.18　Kilian 短约束
-SVAR</h3>
+<h3 id="exercise-15.18-kilian-短约束-svar参照出版版-15.24">Exercise
+15.18　Kilian 短约束 SVAR（参照出版版 §15.24）</h3>
 <p><strong>(a)</strong> <span
 class="math inline">\((\mathrm{oil},\mathrm{output},\mathrm{price})\)</span>，<span
 class="math inline">\(Ae=\varepsilon\)</span>：油生产不响应产出与价格；产出不响应油（一月延迟）。
@@ -13082,9 +13166,10 @@ Time Series</h1>
 <small>来源：<code>docs/ch16/Hansen_Ch16_Exercises_Solutions.md</code></small>
 </p>
 <p><strong>章节：</strong> Chapter 16 Non-Stationary Time Series
-<strong>书稿：</strong> PDF 第 615–616 页（印刷页 595–596），§16.23
-Exercises（<strong>16.1–16.14 全部</strong>）
-<strong>数值验证：</strong>
+<strong>出版版：</strong>
+<code>hansen/manuscripts/Econometrics_Fullbook.pdf</code>，PDF 第
+645–647 页（印刷页 610–612），§16.23 Exercises（<strong>16.1–16.14
+全部</strong>） <strong>数值验证：</strong>
 <code>Hansen_Ch16_Exercises_Solutions.ipynb</code>（ADF/KPSS/Johansen
 实证 + 理论结论的蒙特卡洛验证）</p>
 <blockquote>
@@ -13878,8 +13963,10 @@ cell</td>
 <small>来源：<code>docs/ch17/Hansen_Ch17_Exercises_Solutions.md</code></small>
 </p>
 <p><strong>章节：</strong> Chapter 17 Panel Data<br />
-<strong>书稿：</strong> PDF 第 667–669 页（印刷页 647–649），§17.45
-Exercises（<strong>17.1–17.18 全部</strong>）</p>
+<strong>出版版：</strong>
+<code>hansen/manuscripts/Econometrics_Fullbook.pdf</code>，PDF 第
+701–703 页（印刷页 666–668），§17.45 Exercises（<strong>17.1–17.18
+全部</strong>）</p>
 <hr />
 <h3 id="读题前必看本章到底在讲什么-14">0.
 读题前必看：本章到底在讲什么</h3>
@@ -14228,8 +14315,8 @@ class="math inline">\(V_{\mathrm{fe}}^0\ge
 V_{\mathrm{pool}}\)</span>。<br />
 直觉：去个体均值损失组间变异，效率下降是对个体效应稳健性的代价。</p>
 <hr />
-<h3 id="exercise-17.6-t2-时差分估计-fe">Exercise 17.6　<span
-class="math inline">\(T=2\)</span> 时差分估计 = FE</h3>
+<h3 id="exercise-17.6-t2-时差分估计量-17.30-fe">Exercise 17.6　<span
+class="math inline">\(T=2\)</span> 时差分估计量 (17.30) = FE</h3>
 <p><span class="math inline">\(T=2\)</span> 时，个体 <span
 class="math inline">\(i\)</span> 仅一对观测。<br />
 Within：<span class="math inline">\(\dot Y_{i1}=Y_{i1}-\bar
@@ -14815,8 +14902,10 @@ Differences</h1>
 <small>来源：<code>docs/ch18/Hansen_Ch18_Exercises_Solutions.md</code></small>
 </p>
 <p><strong>章节：</strong> Chapter 18 Difference in Differences<br />
-<strong>书稿：</strong> PDF 第 682–684 页（印刷页 662–664），§18.10
-Exercises（<strong>18.1–18.8 全部</strong>）</p>
+<strong>出版版：</strong>
+<code>hansen/manuscripts/Econometrics_Fullbook.pdf</code>，PDF 第
+717–721 页（印刷页 682–686），§18.10 Exercises（<strong>18.1–18.8
+全部</strong>）</p>
 <hr />
 <h3 id="读题前必看本章到底在讲什么-15">0.
 读题前必看：本章到底在讲什么</h3>
@@ -15476,8 +15565,10 @@ Regression</h1>
 <small>来源：<code>docs/ch19/Hansen_Ch19_Exercises_Solutions.md</code></small>
 </p>
 <p><strong>章节：</strong> Chapter 19 Nonparametric Regression<br />
-<strong>书稿：</strong> PDF 第 718–719 页（印刷页 698–699），§19.27
-Exercises（<strong>19.1–19.11 全部</strong>）</p>
+<strong>出版版：</strong>
+<code>hansen/manuscripts/Econometrics_Fullbook.pdf</code>，PDF 第
+755–757 页（印刷页 720–722），§19.27 Exercises（<strong>19.1–19.11
+全部</strong>）</p>
 <p><strong>阅读提示（对应 <code>AGENTS.md</code>）：</strong>
 默认读者熟悉本科 OLS /
 条件均值直觉，但未必熟悉核回归、AIMSE、带宽权衡。下文每步尽量写清“在算什么、为什么这一步合法”。</p>
@@ -16172,8 +16263,10 @@ class="math inline">\(\sim n^{-4/(4+d)}\)</span></td>
 <small>来源：<code>docs/ch20/Hansen_Ch20_Exercises_Solutions.md</code></small>
 </p>
 <p><strong>章节：</strong> Chapter 20 Series Regression<br />
-<strong>书稿：</strong> PDF 第 755–758 页（印刷页 735–738），§20.32
-Exercises（<strong>20.1–20.18 全部</strong>）</p>
+<strong>出版版：</strong>
+<code>hansen/manuscripts/Econometrics_Fullbook.pdf</code>，PDF 第
+794–797 页（印刷页 759–762），§20.32 Exercises（<strong>20.1–20.18
+全部</strong>）</p>
 <p><strong>阅读提示（<code>AGENTS.md</code>）：</strong> 默认读者熟悉
 OLS / 多项式回归入门，但不默认掌握样条基、级数逼近误差 <span
 class="math inline">\(r_K\)</span>、Theorem 20.8
@@ -16949,8 +17042,10 @@ Discontinuity</h1>
 <small>来源：<code>docs/ch21/Hansen_Ch21_Exercises_Solutions.md</code></small>
 </p>
 <p><strong>章节：</strong> Chapter 21 Regression Discontinuity<br />
-<strong>书稿：</strong> PDF 第 771 页（印刷页 751），§21.12
-Exercises（<strong>21.1–21.9 全部</strong>）</p>
+<strong>出版版：</strong>
+<code>hansen/manuscripts/Econometrics_Fullbook.pdf</code>，PDF 第
+810–813 页（印刷页 775–778），§21.12 Exercises（<strong>21.1–21.9
+全部</strong>）</p>
 <p><strong>阅读提示（<code>AGENTS.md</code>）：</strong> 默认读者熟悉
 OLS 与“处理效应”直觉，但不默认掌握 sharp/fuzzy
 RDD、局部线性边界估计、cutoff 局部 ATE。下文补齐每一步“为什么”。</p>
@@ -17190,16 +17285,16 @@ class="math inline">\(h\)</span> 的矩形核 RDD-LL
 <td>5–9 岁、与 HS 相关死因、1973–83</td>
 </tr>
 <tr class="odd">
-<td>矩形核 (21.5)</td>
-<td>子样本 <span class="math inline">\(|X-c|\le h\)</span>，回归
-(21.4)</td>
-<td>与正文一致</td>
+<td>矩形窗口 (21.5)</td>
+<td><span class="math inline">\(X\in[c-h,c+h]\)</span>，回归 (21.4)</td>
+<td>出版版直接用端点区间表述</td>
 </tr>
 <tr class="even">
 <td>基线 LL (Table 21.1)</td>
 <td><strong>标准化三角核</strong> + <span
 class="math inline">\(h=8\)</span></td>
-<td>正文 Figure 21.1 / Table 21.1</td>
+<td>未标准化三角核等价带宽为 <span
+class="math inline">\(19.6\)</span></td>
 </tr>
 <tr class="odd">
 <td>SE</td>
@@ -17215,15 +17310,33 @@ class="math inline">\(K(u)=\frac{1}{\sqrt{6}}\big(1-\frac{|u|}{\sqrt{6}}\big)_+\
 <span class="math inline">\(h=8\)</span> 时复现 Table 21.1：<span
 class="math inline">\(\hat\theta\approx-1.51\)</span>，se<span
 class="math inline">\(\approx0.71\)</span>。</p>
+<p>许多软件（出版版特别举 Stata 为例）使用未标准化三角核 <span
+class="math inline">\(K_0(v)=(1-|v|)_+\)</span>。令两种核使用同一批正权重观测，需要
+<span class="math display">\[
+\left|\frac{X-c}{h_{\mathrm{norm}}}\right|&lt;\sqrt6
+\quad\Longleftrightarrow\quad
+\left|\frac{X-c}{h_{\mathrm{unnorm}}}\right|&lt;1,
+\]</span> 故带宽换算为 <span class="math display">\[
+\boxed{h_{\mathrm{unnorm}}=\sqrt6\,h_{\mathrm{norm}}}.
+\]</span> 因此标准化带宽 <span class="math inline">\(h=8,4,12\)</span>
+分别对应未标准化带宽约 <span
+class="math inline">\(19.6,9.8,29.4\)</span>。核权重共同乘一个常数不会改变加权最小二乘系数，所以换算后两种约定给出相同的局部线性点估计。</p>
 <hr />
-<h3 id="exercise-21.5-矩形核回归-21.5hin13.8720">Exercise
-21.5　矩形核回归 (21.5)，<span
-class="math inline">\(h\in\{13.8,7,20\}\)</span></h3>
+<h3 id="exercise-21.5-出版版矩形窗口59.1984pm13.8720">Exercise
+21.5　出版版矩形窗口：<span
+class="math inline">\(59.1984\pm\{13.8,7,20\}\)</span></h3>
 <h4 id="设定-7">设定</h4>
 <p><span class="math inline">\(Y=\)</span>
 <code>mort_age59_related_postHS</code>，<span
-class="math inline">\(X=\)</span> <code>povrate60</code>，回归
-(21.4)，HC se。</p>
+class="math inline">\(X=\)</span> <code>povrate60</code>，门槛 <span
+class="math inline">\(c=59.1984\)</span>。出版版要求的三组样本筛选是
+<span class="math display">\[
+X\in[45.3984,72.9984],\qquad
+X\in[52.1984,66.1984],\qquad
+X\in[39.1984,79.1984].
+\]</span> 它们依次等价于 <span
+class="math inline">\(|X-c|\le13.8,7,20\)</span>
+的矩形核。每个子样本内估计式 (21.4)，标准误采用 HC1。</p>
 <h4 id="结果-1">结果</h4>
 <table>
 <thead>
@@ -17285,9 +17398,10 @@ Head Start 扩张）。<br />
 <strong>门槛附近</strong> 的局部对比。</li>
 </ul>
 <hr />
-<h3 id="exercise-21.6-基线-rddtable-21.1hin8412">Exercise 21.6　基线
-RDD（Table 21.1），<span
-class="math inline">\(h\in\{8,4,12\}\)</span></h3>
+<h3 id="exercise-21.6-基线-rdd标准化-h8412未标准化-19.69.829.4">Exercise
+21.6　基线 RDD：标准化 <span
+class="math inline">\(h=8,4,12\)</span>（未标准化 <span
+class="math inline">\(19.6,9.8,29.4\)</span>）</h3>
 <h4 id="方法">方法</h4>
 <p>标准化三角核局部线性，左右分别估 <span
 class="math inline">\(m(c\pm)\)</span>，<br />
@@ -17295,12 +17409,19 @@ class="math inline">\(m(c\pm)\)</span>，<br />
 m(c-)\)</span>，<br />
 <span
 class="math inline">\(\mathrm{se}=\sqrt{\mathrm{se}_+^2+\mathrm{se}_-^2}\)</span>。</p>
+<p>本解答与 notebook 均采用出版版的<strong>标准化</strong>约定。若使用
+Stata 式未标准化三角核，应把下面的 <span
+class="math inline">\(8,4,12\)</span> 改输为 <span
+class="math inline">\(19.6,9.8,29.4\)</span>；不能在未标准化核中直接输入
+8 后仍把结果称为出版版基线。</p>
 <h4 id="结果y-同-21.5">结果（<span class="math inline">\(Y=\)</span> 同
 21.5）</h4>
 <table>
 <thead>
 <tr class="header">
-<th style="text-align: right;"><span
+<th style="text-align: right;">标准化 <span
+class="math inline">\(h\)</span></th>
+<th style="text-align: right;">等价未标准化 <span
 class="math inline">\(h\)</span></th>
 <th style="text-align: right;"><span
 class="math inline">\(\hat\theta\)</span></th>
@@ -17311,18 +17432,21 @@ class="math inline">\(\hat\theta\)</span></th>
 <tbody>
 <tr class="odd">
 <td style="text-align: right;"><strong>8</strong></td>
+<td style="text-align: right;"><strong>19.6</strong></td>
 <td style="text-align: right;"><strong>−1.51</strong></td>
 <td style="text-align: right;"><strong>0.71</strong></td>
 <td><strong>复现 Table 21.1 基线</strong></td>
 </tr>
 <tr class="even">
 <td style="text-align: right;">4</td>
+<td style="text-align: right;">9.8</td>
 <td style="text-align: right;">−2.10</td>
 <td style="text-align: right;">1.01</td>
 <td>更噪、更负</td>
 </tr>
 <tr class="odd">
 <td style="text-align: right;">12</td>
+<td style="text-align: right;">29.4</td>
 <td style="text-align: right;">−1.25</td>
 <td style="text-align: right;">0.57</td>
 <td>更平滑、效应略小</td>
@@ -17510,8 +17634,10 @@ X]\)</span> 得 (21.1)</td>
 <small>来源：<code>docs/ch22/Hansen_Ch22_Exercises_Solutions.md</code></small>
 </p>
 <p><strong>章节：</strong> Chapter 22 M-Estimators
-<strong>书稿：</strong> PDF 第 782 页（印刷页 762），§22.10
-Exercises（<strong>22.1–22.4</strong>） <strong>数值验证：</strong>
+<strong>出版版：</strong>
+<code>hansen/manuscripts/Econometrics_Fullbook.pdf</code>，PDF 第
+823–824 页（印刷页 788–789），§22.10 Exercises（<strong>22.1–22.4
+全部</strong>） <strong>数值验证：</strong>
 <code>Hansen_Ch22_Exercises_Solutions.ipynb</code></p>
 <blockquote>
 <p><strong>写给谁看：</strong> 假设你学过李子奈/陈强，会 OLS 和
@@ -17879,8 +18005,10 @@ Squares</h1>
 <small>来源：<code>docs/ch23/Hansen_Ch23_Exercises_Solutions.md</code></small>
 </p>
 <p><strong>章节：</strong> Chapter 23 Nonlinear Least Squares<br />
-<strong>书稿：</strong> PDF 第 798–799 页（印刷页 778–779），§23.11
-Exercises（<strong>23.1–23.10 全部</strong>）</p>
+<strong>出版版：</strong>
+<code>hansen/manuscripts/Econometrics_Fullbook.pdf</code>，PDF 第
+840–841 页（印刷页 805–806），§23.11 Exercises（<strong>23.1–23.10
+全部</strong>）</p>
 <p><strong>阅读提示（<code>AGENTS.md</code>）：</strong> 默认读者熟悉
 OLS 与“条件均值 + 误差”，但不默认掌握
 NLLS、集中（concentrated）最小化、线性化回归元 <span
@@ -18401,8 +18529,10 @@ class="math inline">\(V\)</span></td>
 <small>来源：<code>docs/ch24/Hansen_Ch24_Exercises_Solutions.md</code></small>
 </p>
 <p><strong>章节：</strong> Chapter 24 Quantile Regression
-<strong>书稿：</strong> PDF 第 819–820 页（印刷页 799–800），§24.17
-Exercises（<strong>24.1–24.16 全部</strong>）</p>
+<strong>出版版：</strong>
+<code>hansen/manuscripts/Econometrics_Fullbook.pdf</code>，PDF 第
+862–863 页（印刷页 827–828），§24.17 Exercises（<strong>24.1–24.16
+全部</strong>）</p>
 <blockquote>
 <p><strong>写给谁看：</strong> 假设你学过李子奈/陈强，会
 OLS，知道”中位数”和”分位数”，但对”<strong>分位数回归</strong>”“<strong>check
@@ -18784,8 +18914,10 @@ class="math inline">\(\tau\)</span>）</td>
 <small>来源：<code>docs/ch25/Hansen_Ch25_Exercises_Solutions.md</code></small>
 </p>
 <p><strong>章节：</strong> Chapter 25 Binary Choice<br />
-<strong>书稿：</strong> PDF 第 836–838 页（印刷页 816–818），§25.15
-Exercises（<strong>25.1–25.19 全部</strong>）</p>
+<strong>出版版：</strong>
+<code>hansen/manuscripts/Econometrics_Fullbook.pdf</code>，PDF 第
+880–881 页（印刷页 845–846），§25.15 Exercises（<strong>25.1–25.19
+全部</strong>）</p>
 <p><strong>阅读提示（<code>AGENTS.md</code>）：</strong> 默认读者熟悉
 LPM / logit 入门，但不默认掌握潜变量尺度、Mills 比、Hessian
 全局凹、异方差二元选择识别。下文逐步补齐。</p>
@@ -19466,8 +19598,10 @@ class="math inline">\(m/\sigma\)</span> 识别</td>
 <small>来源：<code>docs/ch26/Hansen_Ch26_Exercises_Solutions.md</code></small>
 </p>
 <p><strong>章节：</strong> Chapter 26 Multiple Choice<br />
-<strong>书稿：</strong> PDF 第 860–861 页（印刷页约 840–841），§26.14
-Exercises（<strong>26.1–26.18 全部</strong>）</p>
+<strong>出版版：</strong>
+<code>hansen/manuscripts/Econometrics_Fullbook.pdf</code>，PDF 第
+905–906 页（印刷页 870–871），§26.14 Exercises（<strong>26.1–26.18
+全部</strong>）</p>
 <p><strong>阅读提示（<code>AGENTS.md</code>）：</strong>
 默认读者熟悉二元 logit，但不默认掌握 MNL / conditional logit / IIA /
 nested–mixed logit 的识别与边际效应。下文逐步补齐。</p>
@@ -20262,8 +20396,10 @@ Selection</h1>
 <small>来源：<code>docs/ch27/Hansen_Ch27_Exercises_Solutions.md</code></small>
 </p>
 <p><strong>章节：</strong> Chapter 27 Censoring and Selection<br />
-<strong>书稿：</strong> PDF 第 876–878 页（印刷页约 856–858），§27.13
-Exercises（<strong>27.1–27.11 全部</strong>）</p>
+<strong>出版版：</strong>
+<code>hansen/manuscripts/Econometrics_Fullbook.pdf</code>，PDF 第
+921–923 页（印刷页 886–888），§27.13 Exercises（<strong>27.1–27.11
+全部</strong>）</p>
 <p><strong>阅读提示（<code>AGENTS.md</code>）：</strong> 默认读者熟悉
 OLS 与截断/删失的口头说法，但不默认掌握 Tobit 似然、Mills
 比、CLAD、Heckman 两步法。下文逐步补齐。</p>
@@ -20747,8 +20883,10 @@ class="math inline">\(ctest=\max(ts,0)\)</span></td>
 </p>
 <p><strong>章节：</strong> Chapter 28 Model Selection, Stein Shrinkage,
 and Model Averaging<br />
-<strong>书稿：</strong> PDF 第 927–929 页（印刷页约 907–909），§28.33
-Exercises（<strong>28.1–28.12 全部</strong>）</p>
+<strong>出版版：</strong>
+<code>hansen/manuscripts/Econometrics_Fullbook.pdf</code>，PDF 第
+974–975 页（印刷页 939–940），§28.33 Exercises（<strong>28.1–28.12
+全部</strong>）</p>
 <p><strong>阅读提示（<code>AGENTS.md</code>）：</strong> 默认读者会用
 <span class="math inline">\(t\)</span>/<span
 class="math inline">\(F\)</span> 做“逐步回归”，但不默认掌握
@@ -21426,7 +21564,9 @@ AIC=CV=FIC）可信度高；若像亚洲女性样本 CV
 <small>来源：<code>docs/ch29/Hansen_Ch29_Exercises_Solutions.md</code></small>
 </p>
 <p><strong>章节：</strong> Chapter 29 Machine Learning<br />
-<strong>习题：</strong> Exercises 29.1–29.10（PDF 最后一页）<br />
+<strong>出版版：</strong>
+<code>hansen/manuscripts/Econometrics_Fullbook.pdf</code>，PDF 第 1009
+页（印刷页 974），§29.24 Exercises（<strong>29.1–29.10 全部</strong>）
 <strong>体系统一：</strong> 记号与推导均按 Hansen
 教材体系（惩罚估计、Mallows <span
 class="math inline">\(C_p\)</span>、leave-one-out、投影模型等）</p>

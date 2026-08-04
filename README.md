@@ -1,40 +1,46 @@
 # Hansen Econometrics Solutions
 
-Bruce E. Hansen《Econometrics》习题解答（按 Hansen 体系完整解题）。
+Bruce E. Hansen《Econometrics》习题解答（按 Hansen 体系完整解题）。题号、页码和交叉引用以 Princeton University Press 2022 年出版版 `hansen/manuscripts/Econometrics_Fullbook.pdf` 为准。
 
 ## 章节进度
 
-| 章节 | 内容 | 书稿 PDF 页（约） | 格式 |
-|------|------|------------------|------|
-| Ch.2 | Conditional Expectation and Projection | 80–81 | `.md` / `.ipynb` |
-| Ch.3 | The Algebra of Least Squares | 112–116 | `.md` / `.ipynb` |
-| Ch.4 | Least Squares Regression | 152–156 | `.md` / `.ipynb` |
-| Ch.5 | Normal Regression | 172–173 | `.md` / `.ipynb` |
-| Ch.7 | Asymptotic Theory for Least Squares | 209–215 | `.md` / `.ipynb` |
-| **Ch.8** | **Restricted Estimation** | **238–240** | **`.md` / `.ipynb`** |
-| **Ch.9** | **Hypothesis Testing** | **270–276** | **`.md` / `.ipynb`** |
-| **Ch.10** | **Resampling Methods**（**10.1–10.31 全文**） | **321–325** | **`.md` / `.ipynb`** |
-| **Ch.11** | **Multivariate Regression**（**11.1–11.15 全文**） | **350–351** | **`.md` / `.ipynb`** |
-| **Ch.12** | **Instrumental Variables**（**12.1–12.28 全文**） | **425–431** | **`.md` / `.ipynb`** |
-| **Ch.13** | **Generalized Method of Moments**（**13.1–13.28 全文**） | **455–460** | **`.md` / `.ipynb`** |
-| **Ch.14** | **Time Series**（**14.1–14.22 全文**） | **525–528** | **`.md` / `.ipynb`** |
-| **Ch.15** | **Multivariate Time Series**（**15.1–15.20 全文**） | **563–566** | **`.md` / `.ipynb`** |
-| **Ch.16** | **Non-Stationary Time Series**（**16.1–16.14 全文**） | **615–616** | **`.md` / `.ipynb`** |
-| **Ch.17** | **Panel Data**（**17.1–17.18 全文**） | **667–669** | **`.md` / `.ipynb`** |
-| **Ch.18** | **Difference in Differences**（**18.1–18.8 全文**） | **682–684** | **`.md` / `.ipynb`** |
-| **Ch.19** | **Nonparametric Regression**（**19.1–19.11 全文**） | **718–719** | **`.md` / `.ipynb`** |
-| **Ch.20** | **Series Regression**（**20.1–20.18 全文**） | **755–758** | **`.md` / `.ipynb`** |
-| **Ch.21** | **Regression Discontinuity**（**21.1–21.9 全文**） | **771** | **`.md` / `.ipynb`** |
-| **Ch.22** | **M-Estimators**（**22.1–22.4 全文**） | **约 780s** | **`.md` / `.ipynb`** |
-| **Ch.23** | **Nonlinear Least Squares**（**23.1–23.10 全文**） | **798–799** | **`.md` / `.ipynb`** |
-| **Ch.24** | **Quantile Regression**（**24.1–24.16 全文**） | **约 820s** | **`.md` / `.ipynb`** |
-| **Ch.25** | **Binary Choice**（**25.1–25.19 全文**） | **836–838** | **`.md` / `.ipynb`** |
-| **Ch.26** | **Multiple Choice**（**26.1–26.18 全文**） | **860–861** | **`.md` / `.ipynb`** |
-| **Ch.27** | **Censoring and Selection**（**27.1–27.11 全文**） | **876–878** | **`.md` / `.ipynb`** |
-| **Ch.28** | **Model Selection, Stein Shrinkage, Model Averaging**（**28.1–28.12 全文**） | **927–929** | **`.md` / `.ipynb`** |
-| Ch.29 | Machine Learning | 943 等 | `.md` / `.qmd` / `.html` |
+| 章节 | 内容与出版版题号 | 出版版 PDF 页 | 格式 |
+|------|------------------|--------------|------|
+| Ch.2 | Conditional Expectation and Projection（2.1–2.22） | 94–96 | `.md` / `.qmd` / `.ipynb` |
+| Ch.3 | The Algebra of Least Squares（3.1–3.26） | 129–132 | `.md` / `.qmd` / `.ipynb` |
+| Ch.4 | Least Squares Regression（4.1–4.26） | 169–173 | `.md` / `.qmd` / `.ipynb` |
+| Ch.5 | Normal Regression（5.1–5.12） | 189–193 | `.md` / `.qmd` / `.ipynb` |
+| Ch.7 | Asymptotic Theory for Least Squares（7.1–7.28） | 227–233 | `.md` / `.qmd` / `.ipynb` |
+| Ch.8 | Restricted Estimation（8.1–8.22） | 256–259 | `.md` / `.qmd` / `.ipynb` |
+| Ch.9 | Hypothesis Testing（9.1–9.29） | 290–296 | `.md` / `.qmd` / `.ipynb` |
+| Ch.10 | Resampling Methods（10.1–10.31） | 342–349 | `.md` / `.qmd` / `.ipynb` |
+| Ch.11 | Multivariate Regression（11.1–11.15） | 374–375 | `.md` / `.qmd` / `.ipynb` |
+| Ch.12 | Instrumental Variables（12.1–12.27） | 453–458 | `.md` / `.qmd` / `.ipynb` |
+| Ch.13 | Generalized Method of Moments（13.1–13.28） | 482–489 | `.md` / `.qmd` / `.ipynb` |
+| Ch.14 | Time Series（14.1–14.22） | 554–558 | `.md` / `.qmd` / `.ipynb` |
+| Ch.15 | Multivariate Time Series（15.1–15.20） | 592–595 | `.md` / `.qmd` / `.ipynb` |
+| Ch.16 | Non-Stationary Time Series（16.1–16.14） | 645–647 | `.md` / `.qmd` / `.ipynb` |
+| Ch.17 | Panel Data（17.1–17.18） | 701–703 | `.md` / `.qmd` / `.ipynb` |
+| Ch.18 | Difference in Differences（18.1–18.8） | 717–721 | `.md` / `.qmd` / `.ipynb` |
+| Ch.19 | Nonparametric Regression（19.1–19.11） | 755–757 | `.md` / `.qmd` / `.ipynb` |
+| Ch.20 | Series Regression（20.1–20.18） | 794–797 | `.md` / `.qmd` / `.ipynb` |
+| Ch.21 | Regression Discontinuity（21.1–21.9） | 810–813 | `.md` / `.qmd` / `.ipynb` |
+| Ch.22 | M-Estimators（22.1–22.4） | 823–824 | `.md` / `.qmd` / `.ipynb` |
+| Ch.23 | Nonlinear Least Squares（23.1–23.10） | 840–841 | `.md` / `.qmd` / `.ipynb` |
+| Ch.24 | Quantile Regression（24.1–24.16） | 862–863 | `.md` / `.qmd` / `.ipynb` |
+| Ch.25 | Binary Choice（25.1–25.19） | 880–881 | `.md` / `.qmd` / `.ipynb` |
+| Ch.26 | Multiple Choice（26.1–26.18） | 905–906 | `.md` / `.qmd` / `.ipynb` |
+| Ch.27 | Censoring and Selection（27.1–27.11） | 921–923 | `.md` / `.qmd` / `.ipynb` |
+| Ch.28 | Model Selection, Stein Shrinkage, Model Averaging（28.1–28.12） | 974–975 | `.md` / `.qmd` / `.ipynb` |
+| Ch.29 | Machine Learning（29.1–29.10） | 1009 | `.md` / `.qmd` |
 
-解答位于 `docs/chXX/`。
+解答位于 `docs/chXX/`。Chapter 1 与 Chapter 6 没有章末 Exercises；其余 27 章共 **486 道**出版版习题全部覆盖。逐章差异和页码映射见 [`docs/PUBLISHED_EXERCISES_AUDIT.md`](docs/PUBLISHED_EXERCISES_AUDIT.md)。
+
+直接从本地出版版 PDF 核对题号，并检查 Markdown/QMD 连续覆盖：
+
+```bash
+python3 scripts/check_published_exercises.py --include-generated --check-pdf
+```
 
 ## 全年中文 Quarto 课程
 

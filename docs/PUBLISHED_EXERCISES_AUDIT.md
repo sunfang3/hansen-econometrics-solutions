@@ -84,6 +84,7 @@ Chapter 1 与 Chapter 6 没有章末 Exercises，因此仓库没有为它们建�
 | 12.27 | 12.28 | 弱工具下渐近/bootstrap/BC 推断 |
 
 因此正确更新方式是删除旧 12.21 的解答，再重编号旧 12.22–12.28；只删除旧 12.28 会让七道答案全部错位。
+出版版 Exercise 13.27 也相应改为续接 Exercise 12.22，跨章引用必须同步前移。
 
 ### Chapter 21：带宽约定写得更明确
 
@@ -99,10 +100,18 @@ Chapter 1 与 Chapter 6 没有章末 Exercises，因此仓库没有为它们建�
 
 ## 更新验收标准
 
-- [ ] 27 章解答首页全部指向 `Econometrics_Fullbook.pdf` 的出版版页码和习题节。
-- [ ] 每章解答标题覆盖本表中的全部题号；组合解答须能展开为连续题号集合。
-- [ ] Chapter 4 的公式、定理和小节引用全部采用出版版编号。
-- [ ] Chapter 12 的 Markdown、Quarto、notebook、R companion 题号同步前移且不再出现 Exercise 12.28。
-- [ ] Chapter 21 明确标准化/未标准化三角核的带宽换算。
-- [ ] 重新生成所有 `.qmd` 与合订 HTML，并运行出版版覆盖检查。
-- [ ] 更新根 `README.md` 的出版版页码和完成状态。
+- [x] 27 章解答首页全部指向 `Econometrics_Fullbook.pdf` 的出版版页码和习题节。
+- [x] 每章解答标题覆盖本表中的全部题号；组合解答可展开为连续题号集合。
+- [x] Chapter 4 的公式、定理和小节引用全部采用出版版编号。
+- [x] Chapter 12 的 Markdown、Quarto、notebook 题号同步前移且不再出现 Exercise 12.28。
+- [x] Chapter 21 明确标准化/未标准化三角核的带宽换算，Python notebook 与 R companion 均已验证。
+- [x] 重新生成所有 `.qmd` 与合订 HTML，并运行出版版覆盖检查。
+- [x] 更新根 `README.md` 的出版版页码和完成状态。
+
+最终验收使用：
+
+```bash
+python3 scripts/check_published_exercises.py --include-generated --check-pdf
+```
+
+检查器直接从出版版 PDF 的指定页提取到 **486 个** Exercise 标签，并确认 27 章 Markdown、QMD 与 README 均连续覆盖。另将 27 份 QMD 全部用 Quarto 1.10.18 / knitr / Pandoc 实际渲染为 HTML；Ch.21 notebook 的 5 个 Python 代码单元已使用本地 `LM2007` 数据顺序执行，R companion 的两种三角核带宽约定也已作数值等价检查。
